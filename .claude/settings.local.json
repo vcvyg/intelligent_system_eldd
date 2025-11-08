@@ -19,7 +19,10 @@
       "Bash(FIGMA_PERSONAL_ACCESS_TOKEN=NkCciin1mR0zTu9jL0IjbiIJ3Ft2Kg npx:*)",
       "WebFetch(domain:www.awwwards.com)",
       "WebFetch(domain:vcvyg.github.io)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(gemini --help:*)",
+      "Bash(git pull https://vcvyg:15e7861d8e8608964dd7453b588e2a3a@gitee.com/vcvyg/intelligent_pension_system.git master --rebase)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

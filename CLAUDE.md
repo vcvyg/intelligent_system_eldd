@@ -1,1 +1,1 @@
-推送到远程仓库地址是：https://github.com/vcvyg/intelligent_pension_system
+推送到远程仓库地址是：https://gitee.com/vcvyg/intelligent_pension_system

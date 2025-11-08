@@ -67,6 +67,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const userInfo = checkLogin();
     if (!userInfo) return;
 
+    // 管理员角色直接跳转到管理后台
+    if (userInfo.role === 'ADMIN') {
+        window.location.href = 'admin-dashboard.html';
+        return;
+    }
+
     // 显示欢迎信息
     const welcomeText = document.getElementById('welcomeText');
     welcomeText.textContent = `欢迎, ${userInfo.realName || userInfo.username}!`;

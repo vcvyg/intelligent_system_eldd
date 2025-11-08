@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理员仪表盘 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item active">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>数据仪表盘</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，管理员！</span>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon users">👥</div>
+                        <div class="stat-info">
+                            <h3>总用户数</h3>
+                            <p class="stat-value" id="totalUsers">加载中...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon elderly">👴</div>
+                        <div class="stat-info">
+                            <h3>老人总数</h3>
+                            <p class="stat-value" id="totalElderly">加载中...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon active">✓</div>
+                        <div class="stat-info">
+                            <h3>活跃用户</h3>
+                            <p class="stat-value" id="activeUsers">加载中...</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon health">💓</div>
+                        <div class="stat-info">
+                            <h3>今日健康记录</h3>
+                            <p class="stat-value" id="todayHealthRecords">加载中...</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 角色分布 -->
+            <section class="role-section">
+                <h2>用户角色分布</h2>
+                <div class="role-grid">
+                    <div class="role-card">
+                        <div class="role-header">
+                            <span class="role-icon">👨‍💼</span>
+                            <h3>管理员</h3>
+                        </div>
+                        <p class="role-count" id="adminCount">-</p>
+                    </div>
+                    <div class="role-card">
+                        <div class="role-header">
+                            <span class="role-icon">👨‍👩‍👧</span>
+                            <h3>子女用户</h3>
+                        </div>
+                        <p class="role-count" id="familyCount">-</p>
+                    </div>
+                    <div class="role-card">
+                        <div class="role-header">
+                            <span class="role-icon">👨‍⚕️</span>
+                            <h3>医护人员</h3>
+                        </div>
+                        <p class="role-count" id="medicalCount">-</p>
+                    </div>
+                    <div class="role-card">
+                        <div class="role-header">
+                            <span class="role-icon">👴👵</span>
+                            <h3>老人用户</h3>
+                        </div>
+                        <p class="role-count" id="elderlyCount">-</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 快捷操作 -->
+            <section class="quick-actions">
+                <h2>快捷操作</h2>
+                <div class="action-grid">
+                    <a href="admin-users.html" class="action-btn">
+                        <span class="action-icon">➕</span>
+                        <span>新增用户</span>
+                    </a>
+                    <a href="admin-elderly.html" class="action-btn">
+                        <span class="action-icon">📝</span>
+                        <span>添加老人信息</span>
+                    </a>
+                    <a href="#" class="action-btn">
+                        <span class="action-icon">📊</span>
+                        <span>数据报表</span>
+                    </a>
+                    <a href="#" class="action-btn">
+                        <span class="action-icon">⚙️</span>
+                        <span>系统配置</span>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-dashboard.js"></script>
+</body>
+</html>

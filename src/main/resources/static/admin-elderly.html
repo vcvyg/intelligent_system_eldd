@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老人信息管理 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item active">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>老人信息管理</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，管理员！</span>
+                </div>
+            </header>
+
+            <!-- 操作栏 -->
+            <section class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索姓名、身份证或紧急联系人">
+                    <button onclick="searchElderly()">搜索</button>
+                </div>
+                <button class="btn-primary" onclick="showCreateElderlyModal()">➕ 新增老人信息</button>
+            </section>
+
+            <!-- 老人列表 -->
+            <section class="table-section">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>姓名</th>
+                            <th>年龄</th>
+                            <th>性别</th>
+                            <th>出生日期</th>
+                            <th>紧急联系人</th>
+                            <th>紧急电话</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="elderlyTableBody">
+                        <tr>
+                            <td colspan="8" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 分页 -->
+                <div class="pagination">
+                    <button id="prevBtn" onclick="prevPage()">上一页</button>
+                    <span id="pageInfo">第 1 页</span>
+                    <button id="nextBtn" onclick="nextPage()">下一页</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 新增/编辑老人信息模态框 -->
+    <div id="elderlyModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增老人信息</h2>
+                <span class="close" onclick="closeElderlyModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="elderlyForm">
+                    <input type="hidden" id="elderlyId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>关联用户ID *</label>
+                            <input type="number" id="userId" required>
+                        </div>
+                        <div class="form-group">
+                            <label>姓名 *</label>
+                            <input type="text" id="name" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>年龄 *</label>
+                            <input type="number" id="age" required>
+                        </div>
+                        <div class="form-group">
+                            <label>性别 *</label>
+                            <select id="gender" required>
+                                <option value="">请选择</option>
+                                <option value="男">男</option>
+                                <option value="女">女</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>出生日期</label>
+                            <input type="date" id="birthday">
+                        </div>
+                        <div class="form-group">
+                            <label>身份证号</label>
+                            <input type="text" id="idCard">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>居住地址</label>
+                        <input type="text" id="address">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>紧急联系人</label>
+                            <input type="text" id="emergencyContact">
+                        </div>
+                        <div class="form-group">
+                            <label>紧急联系电话</label>
+                            <input type="tel" id="emergencyPhone">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>病史</label>
+                        <textarea id="medicalHistory" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>过敏史</label>
+                        <textarea id="allergyHistory" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeElderlyModal()">取消</button>
+                <button class="btn-primary" onclick="saveElderly()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看详情模态框 -->
+    <div id="detailModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>老人详细信息</h2>
+                <span class="close" onclick="closeDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-elderly.js"></script>
+</body>
+</html>

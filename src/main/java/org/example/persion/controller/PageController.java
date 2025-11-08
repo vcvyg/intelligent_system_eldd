@@ -10,10 +10,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class PageController {
 
     /**
-     * 根路径跳转到欢迎页
+     * 根路径跳转到登录页
      */
     @GetMapping("/")
     public String index() {
-        return "redirect:/welcome.html";
+        return "redirect:/login.html";
     }
 }

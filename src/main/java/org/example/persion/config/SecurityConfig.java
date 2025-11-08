@@ -35,6 +35,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 静态资源(HTML、CSS、JS等)
                         .requestMatchers("/", "/login.html", "/register.html", "/index.html").permitAll()
+                        .requestMatchers("/admin-dashboard.html", "/admin-users.html", "/admin-elderly.html").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                         // 公开接口(登录、注册等)
                         .requestMatchers("/api/auth/**").permitAll()

@@ -34,7 +34,7 @@ public class SecurityConfig {
                 // 配置请求授权
                 .authorizeHttpRequests(auth -> auth
                         // 根路径和静态资源(HTML、CSS、JS等) - 所有HTML页面都允许访问，由前端JS控制登录跳转
-                        .requestMatchers("/", "/*.html").permitAll()
+                        .requestMatchers("/", "/*.html", "/admin-*.html").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                         // 公开接口(登录、注册等)
                         .requestMatchers("/api/auth/**").permitAll()

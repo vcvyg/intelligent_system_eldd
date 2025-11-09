@@ -117,4 +117,22 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(User::getUsername, username);
         return userMapper.selectCount(wrapper) > 0;
     }
+
+    @Override
+    public boolean isEmailExists(String email) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getEmail, email);
+        return userMapper.selectCount(wrapper) > 0;
+    }
+
+    @Override
+    public boolean isPhoneExists(String phone) {
+        // 手机号为空时不检查
+        if (phone == null || phone.trim().isEmpty()) {
+            return false;
+        }
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getPhone, phone);
+        return userMapper.selectCount(wrapper) > 0;
+    }
 }

@@ -64,6 +64,26 @@ public class AuthController {
     }
 
     /**
+     * 检查邮箱是否已存在
+     */
+    @GetMapping("/checkEmail")
+    public Result<Boolean> checkEmail(@RequestParam String email) {
+        boolean exists = userService.isEmailExists(email);
+        // 返回true表示可用,false表示已存在
+        return Result.success(!exists);
+    }
+
+    /**
+     * 检查手机号是否已存在
+     */
+    @GetMapping("/checkPhone")
+    public Result<Boolean> checkPhone(@RequestParam String phone) {
+        boolean exists = userService.isPhoneExists(phone);
+        // 返回true表示可用,false表示已存在
+        return Result.success(!exists);
+    }
+
+    /**
      * 测试接口
      */
     @GetMapping("/test")

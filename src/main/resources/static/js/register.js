@@ -237,8 +237,12 @@ function showMessage(message, type) {
 }
 
 // 验证手机号
-function validatePhone(phone) {
-    if (!phone) return true; // 手机号改为可选
+async function validatePhone(phone) {
+    if (!phone) {
+        showValidationHint('phone', '', '');
+        return true; // 手机号是可选的
+    }
+
     const phoneRegex = /^1[3-9]\d{9}$/;
 
     if (!phoneRegex.test(phone)) {
@@ -246,12 +250,35 @@ function validatePhone(phone) {
         return false;
     }
 
-    showValidationHint('phone', '✓ 格式正确', 'success');
-    return true;
+    // 检查手机号是否已存在
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/checkPhone?phone=${encodeURIComponent(phone)}`);
+
+        // 检查网络层面是否成功
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
+        const result = await response.json();
+
+        if (result.code === 200 && result.data === true) {
+            // 后端返回true代表可用
+            showValidationHint('phone', '✓ 手机号可用', 'success');
+            return true;
+        } else {
+            showValidationHint('phone', '该手机号已被注册', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('无法验证手机号:', error);
+        // 当API请求失败时,给出错误提示
+        showValidationHint('phone', '无法验证手机号,请稍后重试', 'error');
+        return false;
+    }
 }
 
 // 验证邮箱
-function validateEmail(email) {
+async function validateEmail(email) {
     if (!email || email.length === 0) {
         showValidationHint('email', '邮箱为必填项', 'error');
         return false;
@@ -263,8 +290,31 @@ function validateEmail(email) {
         return false;
     }
 
-    showValidationHint('email', '✓ 格式正确', 'success');
-    return true;
+    // 检查邮箱是否已存在
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/checkEmail?email=${encodeURIComponent(email)}`);
+
+        // 检查网络层面是否成功
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
+        const result = await response.json();
+
+        if (result.code === 200 && result.data === true) {
+            // 后端返回true代表可用
+            showValidationHint('email', '✓ 邮箱可用', 'success');
+            return true;
+        } else {
+            showValidationHint('email', '该邮箱已被注册', 'error');
+            return false;
+        }
+    } catch (error) {
+        console.error('无法验证邮箱:', error);
+        // 当API请求失败时,给出错误提示
+        showValidationHint('email', '无法验证邮箱,请稍后重试', 'error');
+        return false;
+    }
 }
 
 // 初始化Swiper轮播
@@ -328,15 +378,17 @@ function setupRealtimeValidation() {
         validateConfirmPassword(password, confirmPassword);
     });
 
-    // 邮箱验证
-    emailInput.addEventListener('input', (e) => {
-        validateEmail(e.target.value.trim());
-    });
+    // 邮箱验证(使用防抖)
+    const debouncedEmailValidation = debounce(async (e) => {
+        await validateEmail(e.target.value.trim());
+    }, 500);
+    emailInput.addEventListener('input', debouncedEmailValidation);
 
-    // 手机号验证
-    phoneInput.addEventListener('input', (e) => {
-        validatePhone(e.target.value.trim());
-    });
+    // 手机号验证(使用防抖)
+    const debouncedPhoneValidation = debounce(async (e) => {
+        await validatePhone(e.target.value.trim());
+    }, 500);
+    phoneInput.addEventListener('input', debouncedPhoneValidation);
 }
 
 // 发送验证码
@@ -344,7 +396,8 @@ sendCodeBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim();
 
     // 验证邮箱
-    if (!validateEmail(email)) {
+    const isValid = await validateEmail(email);
+    if (!isValid) {
         emailInput.focus();
         return;
     }

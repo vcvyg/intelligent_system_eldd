@@ -34,4 +34,14 @@ public interface UserService {
      * 检查用户名是否已存在
      */
     boolean isUsernameExists(String username);
+
+    /**
+     * 检查邮箱是否已存在
+     */
+    boolean isEmailExists(String email);
+
+    /**
+     * 检查手机号是否已存在
+     */
+    boolean isPhoneExists(String phone);
 }

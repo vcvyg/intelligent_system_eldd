@@ -1,6 +1,191 @@
 // API基础URL
 const API_BASE_URL = 'http://localhost:8080/api';
 
+// 防抖函数
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 显示验证提示
+function showValidationHint(inputId, message, type) {
+    const hintElement = document.getElementById(inputId + 'Hint');
+    const inputElement = document.getElementById(inputId);
+
+    if (hintElement) {
+        hintElement.textContent = message;
+        hintElement.className = 'validation-hint ' + type;
+    }
+
+    if (inputElement) {
+        inputElement.classList.remove('valid', 'invalid');
+        if (type === 'success') {
+            inputElement.classList.add('valid');
+        } else if (type === 'error') {
+            inputElement.classList.add('invalid');
+        }
+    }
+}
+
+// 验证用户名
+async function validateUsername(username) {
+    if (!username || username.length === 0) {
+        showValidationHint('username', '', '');
+        return false;
+    }
+
+    if (username.length < 3) {
+        showValidationHint('username', '用户名至少3个字符', 'error');
+        return false;
+    }
+
+    if (username.length > 20) {
+        showValidationHint('username', '用户名不能超过20个字符', 'error');
+        return false;
+    }
+
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]+$/.test(username)) {
+        showValidationHint('username', '用户名只能包含字母、数字、下划线和中文', 'error');
+        return false;
+    }
+
+    // 检查用户名是否已存在
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/checkUsername?username=${encodeURIComponent(username)}`);
+        const result = await response.json();
+
+        if (result.code === 200 && result.data === false) {
+            showValidationHint('username', '✓ 用户名可用', 'success');
+            return true;
+        } else {
+            showValidationHint('username', '用户名已被使用', 'error');
+            return false;
+        }
+    } catch (error) {
+        // 如果接口未实现,暂时显示格式正确
+        showValidationHint('username', '✓ 格式正确', 'success');
+        return true;
+    }
+}
+
+// 验证真实姓名
+function validateRealName(realName) {
+    if (!realName || realName.length === 0) {
+        showValidationHint('realName', '', '');
+        return false;
+    }
+
+    if (realName.length < 2) {
+        showValidationHint('realName', '姓名至少2个字符', 'error');
+        return false;
+    }
+
+    if (realName.length > 20) {
+        showValidationHint('realName', '姓名不能超过20个字符', 'error');
+        return false;
+    }
+
+    if (!/^[\u4e00-\u9fa5a-zA-Z\s]+$/.test(realName)) {
+        showValidationHint('realName', '姓名只能包含中文、字母和空格', 'error');
+        return false;
+    }
+
+    showValidationHint('realName', '✓ 格式正确', 'success');
+    return true;
+}
+
+// 计算密码强度
+function calculatePasswordStrength(password) {
+    if (!password || password.length === 0) {
+        return { strength: 0, text: '' };
+    }
+
+    let strength = 0;
+
+    // 长度加分
+    if (password.length >= 6) strength += 1;
+    if (password.length >= 10) strength += 1;
+
+    // 包含小写字母
+    if (/[a-z]/.test(password)) strength += 1;
+
+    // 包含大写字母
+    if (/[A-Z]/.test(password)) strength += 1;
+
+    // 包含数字
+    if (/[0-9]/.test(password)) strength += 1;
+
+    // 包含特殊字符
+    if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+
+    if (strength <= 2) {
+        return { strength: 1, text: '弱', level: 'weak' };
+    } else if (strength <= 4) {
+        return { strength: 2, text: '中等', level: 'medium' };
+    } else {
+        return { strength: 3, text: '强', level: 'strong' };
+    }
+}
+
+// 验证密码
+function validatePassword(password) {
+    const strengthIndicator = document.querySelector('.password-strength');
+    const strengthBar = document.querySelector('.strength-bar-fill');
+    const strengthText = document.querySelector('.strength-text');
+
+    if (!password || password.length === 0) {
+        showValidationHint('password', '', '');
+        strengthIndicator.classList.remove('show');
+        return false;
+    }
+
+    if (password.length < 6) {
+        showValidationHint('password', '密码至少6个字符', 'error');
+        strengthIndicator.classList.remove('show');
+        return false;
+    }
+
+    // 显示密码强度
+    const { strength, text, level } = calculatePasswordStrength(password);
+    strengthIndicator.classList.add('show');
+    strengthBar.className = 'strength-bar-fill ' + level;
+    strengthText.className = 'strength-text ' + level;
+    strengthText.textContent = '密码强度: ' + text;
+
+    if (level === 'weak') {
+        showValidationHint('password', '建议使用字母、数字和特殊字符组合', 'info');
+    } else if (level === 'medium') {
+        showValidationHint('password', '✓ 密码强度中等', 'success');
+    } else {
+        showValidationHint('password', '✓ 密码强度很高', 'success');
+    }
+
+    return true;
+}
+
+// 验证确认密码
+function validateConfirmPassword(password, confirmPassword) {
+    if (!confirmPassword || confirmPassword.length === 0) {
+        showValidationHint('confirmPassword', '', '');
+        return false;
+    }
+
+    if (password !== confirmPassword) {
+        showValidationHint('confirmPassword', '两次密码输入不一致', 'error');
+        return false;
+    }
+
+    showValidationHint('confirmPassword', '✓ 密码一致', 'success');
+    return true;
+}
+
 // 初始化Swiper轮播
 document.addEventListener('DOMContentLoaded', () => {
     // 初始化特性卡片轮播
@@ -47,14 +232,103 @@ function showMessage(message, type) {
 function validatePhone(phone) {
     if (!phone) return true; // 手机号改为可选
     const phoneRegex = /^1[3-9]\d{9}$/;
-    return phoneRegex.test(phone);
+
+    if (!phoneRegex.test(phone)) {
+        showValidationHint('phone', '手机号格式不正确', 'error');
+        return false;
+    }
+
+    showValidationHint('phone', '✓ 格式正确', 'success');
+    return true;
 }
 
 // 验证邮箱
 function validateEmail(email) {
-    if (!email) return false; // 邮箱是必填的
+    if (!email || email.length === 0) {
+        showValidationHint('email', '邮箱为必填项', 'error');
+        return false;
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    if (!emailRegex.test(email)) {
+        showValidationHint('email', '邮箱格式不正确', 'error');
+        return false;
+    }
+
+    showValidationHint('email', '✓ 格式正确', 'success');
+    return true;
+}
+
+// 初始化Swiper轮播
+document.addEventListener('DOMContentLoaded', () => {
+    // 初始化特性卡片轮播
+    const swiper = new Swiper('.slider-features', {
+        slidesPerView: 1,
+        spaceBetween: 30,
+        loop: true,
+        autoplay: {
+            delay: 4000,
+            disableOnInteraction: false,
+        },
+        pagination: {
+            el: '.swiper-pagination',
+            clickable: true,
+        },
+        effect: 'slide',
+        speed: 600,
+    });
+
+    // 绑定实时验证事件
+    setupRealtimeValidation();
+});
+
+// 设置实时验证
+function setupRealtimeValidation() {
+    const usernameInput = document.getElementById('username');
+    const realNameInput = document.getElementById('realName');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+
+    // 用户名验证(使用防抖,避免频繁请求)
+    const debouncedUsernameValidation = debounce(async (e) => {
+        await validateUsername(e.target.value.trim());
+    }, 500);
+    usernameInput.addEventListener('input', debouncedUsernameValidation);
+
+    // 真实姓名验证
+    realNameInput.addEventListener('input', (e) => {
+        validateRealName(e.target.value.trim());
+    });
+
+    // 密码验证
+    passwordInput.addEventListener('input', (e) => {
+        const password = e.target.value;
+        validatePassword(password);
+        // 同时验证确认密码
+        const confirmPassword = confirmPasswordInput.value;
+        if (confirmPassword) {
+            validateConfirmPassword(password, confirmPassword);
+        }
+    });
+
+    // 确认密码验证
+    confirmPasswordInput.addEventListener('input', (e) => {
+        const password = passwordInput.value;
+        const confirmPassword = e.target.value;
+        validateConfirmPassword(password, confirmPassword);
+    });
+
+    // 邮箱验证
+    emailInput.addEventListener('input', (e) => {
+        validateEmail(e.target.value.trim());
+    });
+
+    // 手机号验证
+    phoneInput.addEventListener('input', (e) => {
+        validatePhone(e.target.value.trim());
+    });
 }
 
 // 发送验证码
@@ -62,14 +336,7 @@ sendCodeBtn.addEventListener('click', async () => {
     const email = emailInput.value.trim();
 
     // 验证邮箱
-    if (!email) {
-        showMessage('请先输入邮箱', 'error');
-        emailInput.focus();
-        return;
-    }
-
     if (!validateEmail(email)) {
-        showMessage('邮箱格式不正确', 'error');
         emailInput.focus();
         return;
     }
@@ -122,44 +389,6 @@ sendCodeBtn.addEventListener('click', async () => {
         showMessage('网络错误,请检查后端服务是否启动', 'error');
         sendCodeBtn.disabled = false;
         sendCodeBtn.textContent = '获取验证码';
-    }
-});
-
-// 实时验证输入
-document.getElementById('phone').addEventListener('blur', function() {
-    const phone = this.value.trim();
-    if (phone && !validatePhone(phone)) {
-        this.classList.add('invalid');
-        this.classList.remove('valid');
-        showMessage('手机号格式不正确', 'error');
-    } else if (phone) {
-        this.classList.add('valid');
-        this.classList.remove('invalid');
-    }
-});
-
-document.getElementById('email').addEventListener('blur', function() {
-    const email = this.value.trim();
-    if (email && !validateEmail(email)) {
-        this.classList.add('invalid');
-        this.classList.remove('valid');
-        showMessage('邮箱格式不正确', 'error');
-    } else if (email) {
-        this.classList.add('valid');
-        this.classList.remove('invalid');
-    }
-});
-
-document.getElementById('confirmPassword').addEventListener('blur', function() {
-    const password = document.getElementById('password').value;
-    const confirmPassword = this.value;
-    if (confirmPassword && password !== confirmPassword) {
-        this.classList.add('invalid');
-        this.classList.remove('valid');
-        showMessage('两次密码输入不一致', 'error');
-    } else if (confirmPassword) {
-        this.classList.add('valid');
-        this.classList.remove('invalid');
     }
 });
 

@@ -903,6 +903,103 @@ body {
     border-color: #f5c6cb;
 }
 
+/* === 实时验证反馈样式 === */
+.input-wrapper,
+.code-input-wrapper input {
+    position: relative;
+}
+
+/* 输入框验证状态 */
+.input-wrapper input.valid,
+.code-input-wrapper input.valid {
+    border-color: #28a745;
+    background: #f0fdf4;
+}
+
+.input-wrapper input.invalid,
+.code-input-wrapper input.invalid {
+    border-color: #dc3545;
+    background: #fef2f2;
+}
+
+/* 验证提示文字 */
+.validation-hint {
+    display: block;
+    font-size: 12px;
+    margin-top: 6px;
+    min-height: 18px;
+    transition: all 0.2s ease;
+}
+
+.validation-hint.success {
+    color: #28a745;
+}
+
+.validation-hint.error {
+    color: #dc3545;
+}
+
+.validation-hint.info {
+    color: #666;
+}
+
+/* 密码强度指示器 */
+.password-strength {
+    margin-top: 8px;
+    display: none;
+}
+
+.password-strength.show {
+    display: block;
+}
+
+.strength-bar {
+    height: 4px;
+    background: #e8e8e8;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.strength-bar-fill {
+    height: 100%;
+    width: 0;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-bar-fill.weak {
+    width: 33%;
+    background: #dc3545;
+}
+
+.strength-bar-fill.medium {
+    width: 66%;
+    background: #ffc107;
+}
+
+.strength-bar-fill.strong {
+    width: 100%;
+    background: #28a745;
+}
+
+.strength-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.strength-text.weak {
+    color: #dc3545;
+}
+
+.strength-text.medium {
+    color: #ffc107;
+}
+
+.strength-text.strong {
+    color: #28a745;
+}
+
 /* Logo图标旋转动画优化 */
 .logo-icon svg {
     transition: transform 0.3s ease;

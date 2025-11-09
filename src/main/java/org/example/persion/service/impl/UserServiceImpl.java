@@ -110,4 +110,11 @@ public class UserServiceImpl implements UserService {
     public User getUserById(Long id) {
         return userMapper.selectById(id);
     }
+
+    @Override
+    public boolean isUsernameExists(String username) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getUsername, username);
+        return userMapper.selectCount(wrapper) > 0;
+    }
 }

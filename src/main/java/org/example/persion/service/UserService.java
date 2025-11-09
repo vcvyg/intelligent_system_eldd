@@ -29,4 +29,9 @@ public interface UserService {
      * 根据ID查询用户
      */
     User getUserById(Long id);
+
+    /**
+     * 检查用户名是否已存在
+     */
+    boolean isUsernameExists(String username);
 }

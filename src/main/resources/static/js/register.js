@@ -59,9 +59,16 @@ async function validateUsername(username) {
     // 检查用户名是否已存在
     try {
         const response = await fetch(`${API_BASE_URL}/auth/checkUsername?username=${encodeURIComponent(username)}`);
+
+        // 检查网络层面是否成功
+        if (!response.ok) {
+            throw new Error('Network response was not ok.');
+        }
+
         const result = await response.json();
 
-        if (result.code === 200 && result.data === false) {
+        if (result.code === 200 && result.data === true) {
+            // 后端返回true代表可用
             showValidationHint('username', '✓ 用户名可用', 'success');
             return true;
         } else {
@@ -69,9 +76,10 @@ async function validateUsername(username) {
             return false;
         }
     } catch (error) {
-        // 如果接口未实现,暂时显示格式正确
-        showValidationHint('username', '✓ 格式正确', 'success');
-        return true;
+        console.error('无法验证用户名:', error);
+        // 当API请求失败时,给出错误提示
+        showValidationHint('username', '无法验证用户名,请稍后重试', 'error');
+        return false;
     }
 }
 

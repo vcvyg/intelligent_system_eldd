@@ -54,6 +54,16 @@ public class AuthController {
     }
 
     /**
+     * 检查用户名是否已存在
+     */
+    @GetMapping("/checkUsername")
+    public Result<Boolean> checkUsername(@RequestParam String username) {
+        boolean exists = userService.isUsernameExists(username);
+        // 返回true表示可用,false表示已存在
+        return Result.success(!exists);
+    }
+
+    /**
      * 测试接口
      */
     @GetMapping("/test")

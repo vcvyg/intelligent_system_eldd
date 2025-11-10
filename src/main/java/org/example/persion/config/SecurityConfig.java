@@ -36,6 +36,9 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+                // 启用CORS支持(必须在其他配置之前)
+                .cors(cors -> {})
+
                 // 禁用CSRF(使用JWT不需要CSRF保护)
                 .csrf(AbstractHttpConfigurer::disable)
 

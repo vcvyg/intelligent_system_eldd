@@ -24,7 +24,8 @@
       "Bash(git pull https://vcvyg:15e7861d8e8608964dd7453b588e2a3a@gitee.com/vcvyg/intelligent_pension_system.git master --rebase)",
       "Bash(git stash:*)",
       "Bash(gemini -p \"请审查这次代码修改。修改内容: 在SecurityConfig的authorizeHttpRequests配置中,将requestMatchers从\"\"/\"\", \"\"/*.html\"\"修改为\"\"/\"\", \"\"/*.html\"\", \"\"/admin-*.html\"\",添加了admin-开头的HTML页面到Spring Security白名单。这是为了解决admin-users.html和admin-elderly.html两个管理员端页面访问时显示无权限的问题。请评估: 1.这个修改是否合理 2.是否存在安全风险 3.有没有更好的解决方案\")",
-      "Bash(gemini:*)"
+      "Bash(gemini:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

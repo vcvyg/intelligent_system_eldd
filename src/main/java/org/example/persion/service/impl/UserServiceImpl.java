@@ -135,4 +135,25 @@ public class UserServiceImpl implements UserService {
         wrapper.eq(User::getPhone, phone);
         return userMapper.selectCount(wrapper) > 0;
     }
+
+    @Override
+    public void resetPassword(String email, String code, String newPassword) {
+        // 验证邮箱验证码
+        if (!emailService.verifyCode(email, code)) {
+            throw new BusinessException("验证码错误或已过期");
+        }
+
+        // 查询用户
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getEmail, email);
+        User user = userMapper.selectOne(wrapper);
+
+        if (user == null) {
+            throw new BusinessException("该邮箱未注册");
+        }
+
+        // 更新密码
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userMapper.updateById(user);
+    }
 }

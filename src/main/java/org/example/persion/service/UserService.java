@@ -44,4 +44,12 @@ public interface UserService {
      * 检查手机号是否已存在
      */
     boolean isPhoneExists(String phone);
+
+    /**
+     * 重置密码
+     * @param email 邮箱
+     * @param code 验证码
+     * @param newPassword 新密码
+     */
+    void resetPassword(String email, String code, String newPassword);
 }

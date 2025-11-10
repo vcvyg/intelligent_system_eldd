@@ -3,6 +3,7 @@ package org.example.persion.controller;
 import jakarta.validation.Valid;
 import org.example.persion.common.Result;
 import org.example.persion.dto.LoginDTO;
+import org.example.persion.dto.ResetPasswordDTO;
 import org.example.persion.dto.SendEmailCodeDTO;
 import org.example.persion.dto.UserRegisterDTO;
 import org.example.persion.entity.User;
@@ -81,6 +82,29 @@ public class AuthController {
         boolean exists = userService.isPhoneExists(phone);
         // 返回true表示可用,false表示已存在
         return Result.success(!exists);
+    }
+
+    /**
+     * 发送重置密码验证码
+     */
+    @PostMapping("/sendResetPasswordCode")
+    public Result<String> sendResetPasswordCode(@Valid @RequestBody SendEmailCodeDTO dto) {
+        // 检查邮箱是否存在
+        if (!userService.isEmailExists(dto.getEmail())) {
+            return Result.error("该邮箱未注册");
+        }
+
+        String code = emailService.sendVerificationCode(dto.getEmail());
+        return Result.success("验证码已发送到邮箱: " + dto.getEmail());
+    }
+
+    /**
+     * 重置密码
+     */
+    @PostMapping("/resetPassword")
+    public Result<String> resetPassword(@Valid @RequestBody ResetPasswordDTO dto) {
+        userService.resetPassword(dto.getEmail(), dto.getCode(), dto.getNewPassword());
+        return Result.success("密码重置成功");
     }
 
     /**

@@ -154,8 +154,30 @@ function validatePassword(password) {
         return false;
     }
 
-    if (password.length < 6) {
-        showValidationHint('password', '密码至少6个字符', 'error');
+    // 检查长度
+    if (password.length < 8) {
+        showValidationHint('password', '密码至少8个字符', 'error');
+        strengthIndicator.classList.remove('show');
+        return false;
+    }
+
+    // 检查是否包含数字
+    if (!/\d/.test(password)) {
+        showValidationHint('password', '密码必须包含数字', 'error');
+        strengthIndicator.classList.remove('show');
+        return false;
+    }
+
+    // 检查是否包含小写字母
+    if (!/[a-z]/.test(password)) {
+        showValidationHint('password', '密码必须包含小写字母', 'error');
+        strengthIndicator.classList.remove('show');
+        return false;
+    }
+
+    // 检查是否包含大写字母
+    if (!/[A-Z]/.test(password)) {
+        showValidationHint('password', '密码必须包含大写字母', 'error');
         strengthIndicator.classList.remove('show');
         return false;
     }
@@ -167,14 +189,7 @@ function validatePassword(password) {
     strengthText.className = 'strength-text ' + level;
     strengthText.textContent = '密码强度: ' + text;
 
-    if (level === 'weak') {
-        showValidationHint('password', '建议使用字母、数字和特殊字符组合', 'info');
-    } else if (level === 'medium') {
-        showValidationHint('password', '✓ 密码强度中等', 'success');
-    } else {
-        showValidationHint('password', '✓ 密码强度很高', 'success');
-    }
-
+    showValidationHint('password', '✓ 密码符合要求', 'success');
     return true;
 }
 

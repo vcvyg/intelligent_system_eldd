@@ -29,6 +29,7 @@ public class ResetPasswordDTO {
      * 新密码
      */
     @NotBlank(message = "新密码不能为空")
-    @Size(min = 6, max = 20, message = "密码长度必须在6-20位之间")
+    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$",
+             message = "密码必须至少8位,且包含数字、大写字母和小写字母")
     private String newPassword;
 }

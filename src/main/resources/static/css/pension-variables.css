@@ -1,55 +1,55 @@
 /* ============================================
    pension-variables.css
-   智慧养老系统 + 民宿风格 融合配色方案
+   智慧养老系统 - 莫兰迪配色方案
    ============================================ */
 
 :root {
-    /* === 主题渐变色 (保留原始设计) === */
-    --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-pink: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --gradient-blue: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gradient-orange: linear-gradient(135deg, #FA5D29 0%, #502bd8 100%);
+    /* === 莫兰迪色系 - 沉静、高级 === */
 
-    /* === 中性色系统 (借鉴民宿) === */
+    /* === 主色/点缀色 === */
+    --color-primary: #6A8EAD;         /* 灰蓝色 (替换原 #667eea) */
+    --color-secondary: #6A8EAD;       /* 统一为主色 (替换原 #764ba2) */
+
+    /* === 中性色系统 === */
     --color-white: #ffffff;
-    --color-bg-light: #fafafa;
-    --color-bg-lighter: #f8f8f8;
-    --color-bg-gray: #f5f5f5;
+    --color-bg-light: #F4F6F8;        /* 浅灰背景 (替换原 #fafafa) */
+    --color-bg-lighter: #ffffff;     /* 卡片背景 (替换原 #f8f8f8) */
+    --color-bg-gray: #F4F6F8;         /* 统一背景色 (替换原 #f5f5f5) */
 
-    /* === 边框色 (民宿风格:极细) === */
-    --color-border: #e8e8e8;
-    --color-border-light: #f0f0f0;
-    --color-border-lighter: #f5f5f5;
+    /* === 边框色 === */
+    --color-border: #DEE2E6;         /* 统一边框色 (替换原 #e8e8e8) */
+    --color-border-light: #E9ECEF;     /* 稍浅边框 (替换原 #f0f0f0) */
+    --color-border-lighter: #F1F3F5;  /* 最浅边框 (替换原 #f5f5f5) */
 
     /* === 文字颜色 === */
-    --color-text-black: #000000;      /* 民宿风格:纯黑 */
-    --color-text-dark: #1a1a1a;       /* 深灰(更友好) */
-    --color-text-gray: #666666;
-    --color-text-light: #999999;
-    --color-text-lighter: #cccccc;
+    --color-text-black: #343A40;      /* 主文字-深灰 (替换原 #000000) */
+    --color-text-dark: #343A40;       /* 统一主文字 (替换原 #1a1a1a) */
+    --color-text-gray: #6C757D;       /* 次要文字-中灰 (替换原 #666666) */
+    --color-text-light: #ADB5BD;      /* 提示文字-浅灰 (替换原 #999999) */
+    --color-text-lighter: #CED4DA;    /* 最浅文字 (替换原 #cccccc) */
 
-    /* === 功能色 === */
-    --color-primary: #667eea;         /* 主蓝色 */
-    --color-secondary: #764ba2;       /* 辅紫色 */
-    --color-success: #51cf66;
-    --color-warning: #ffd43b;
-    --color-danger: #ff6b6b;
-    --color-info: #4dabf7;
+    /* === 功能色 (低饱和度版本) === */
+    --color-success: #64B587;         /* 柔和绿 (替换原 #51cf66) */
+    --color-warning: #E8C576;         /* 柔和黄 (替换原 #ffd43b) */
+    --color-danger: #D98282;          /* 柔和红 (替换原 #ff6b6b) */
+    --color-info: #82A0B9;            /* 柔和蓝 (替换原 #4dabf7) */
 
-    /* === 注册页专用颜色 === */
-    --color-orange: #FA5D29;
-    --color-purple: #502bd8;
-    --color-accent: #FFF083;
-    --color-green: #AAEEC4;
+    /* === 移除或注释掉多余的颜色定义，以保持简洁 === */
+    /* --gradient-purple: ... */
+    /* --gradient-pink: ... */
+    /* --gradient-blue: ... */
+    /* --gradient-orange: ... */
+    /* --color-orange: ... */
+    /* --color-purple: ... */
+    /* --color-accent: ... */
+    /* --color-green: ... */
 
-    /* === 阴影系统 (民宿风格:多层) === */
+    /* === 阴影系统 (保留不变) === */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
     --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.16);
-
-    /* 双层阴影组合 */
     --shadow-card:
         0 2px 8px rgba(0, 0, 0, 0.04),
         0 8px 32px rgba(0, 0, 0, 0.08);
@@ -57,19 +57,19 @@
         0 4px 16px rgba(0, 0, 0, 0.06),
         0 16px 56px rgba(0, 0, 0, 0.12);
 
-    /* === 圆角 === */
+    /* === 圆角 (保留不变) === */
     --radius-sm: 8px;
     --radius-md: 10px;
     --radius-lg: 16px;
     --radius-xl: 20px;
 
-    /* === 过渡时间 === */
+    /* === 过渡时间 (保留不变) === */
     --transition-fast: 0.15s;
     --transition-base: 0.2s;
     --transition-slow: 0.3s;
     --transition-slower: 0.5s;
 
-    /* === 间距 === */
+    /* === 间距 (保留不变) === */
     --spacing-xs: 4px;
     --spacing-sm: 8px;
     --spacing-md: 16px;
@@ -78,14 +78,21 @@
     --spacing-2xl: 48px;
 }
 
-/* 深色模式 (可选,未来扩展) */
+/* 深色模式 (同步更新) */
 @media (prefers-color-scheme: dark) {
     :root {
-        --color-white: #1a1a1a;
-        --color-bg-light: #2d2d2d;
-        --color-bg-lighter: #252525;
-        --color-text-dark: #ffffff;
-        --color-text-gray: #a0a0a0;
-        --color-border: #404040;
+        --color-primary: #82A0B9; /* 深色模式下主色可以稍亮一些 */
+        --color-secondary: #82A0B9;
+
+        --color-bg-light: #212529; /* 深色背景 */
+        --color-bg-lighter: #2C3034; /* 深色卡片 */
+        --color-bg-gray: #212529;
+
+        --color-border: #495057;
+        --color-border-light: #343A40;
+
+        --color-text-dark: #F8F9FA; /* 亮色文字 */
+        --color-text-gray: #ADB5BD;
+        --color-text-light: #6C757D;
     }
 }

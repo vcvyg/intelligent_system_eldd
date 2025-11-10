@@ -1,3 +1,5 @@
+@import url('pension-variables.css');
+
 /* 全局样式重置 */
 * {
     margin: 0;
@@ -44,7 +46,7 @@ body {
     position: relative;
     z-index: 2;
     text-align: center;
-    color: white;
+    color: var(--color-white);
     padding: 40px;
     max-width: 800px;
     animation: fadeInUp 1s ease;
@@ -86,7 +88,7 @@ body {
 }
 
 .swiper-pagination-bullet-active {
-    background: white;
+    background: var(--color-white);
     width: 40px;
     border-radius: 6px;
 }
@@ -102,7 +104,7 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    color: white;
+    color: var(--color-white);
     cursor: pointer;
     animation: bounce 2s ease-in-out infinite;
 }
@@ -143,18 +145,25 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fafafa;
+    background: var(--color-bg-light);
     padding: 60px 20px;
 }
 
 .login-container {
     width: 100%;
     max-width: 460px;
-    background: white;
-    border-radius: 16px;
+    background: var(--color-bg-lighter);
+    border-radius: var(--radius-lg);
     padding: 48px 40px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-card);
     animation: fadeIn 0.6s ease;
+    border: 1px solid var(--color-border-light);
+    transition: all var(--transition-slow) ease;
+}
+
+.login-container:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-2px);
 }
 
 @keyframes fadeIn {
@@ -176,13 +185,13 @@ body {
 .login-header h2 {
     font-size: 32px;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--color-text-dark);
     margin-bottom: 8px;
 }
 
 .login-header p {
     font-size: 15px;
-    color: #666;
+    color: var(--color-text-gray);
 }
 
 /* 表单样式 */
@@ -198,7 +207,7 @@ body {
     display: block;
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: var(--color-text-dark);
     margin-bottom: 8px;
 }
 
@@ -207,28 +216,33 @@ body {
     width: 100%;
     padding: 14px 16px;
     font-size: 15px;
-    color: #1a1a1a;
-    background: #f8f8f8;
-    border: 2px solid transparent;
-    border-radius: 10px;
+    color: var(--color-text-dark);
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
     outline: none;
-    transition: all 0.3s ease;
+    transition: all var(--transition-base) ease;
 }
 
 .form-group input:focus,
 .form-group select:focus {
-    background: white;
-    border-color: #667eea;
-    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    background: var(--color-bg-lighter);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(106, 142, 173, 0.1);
 }
 
 .form-group select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236C757D' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 16px center;
     padding-right: 44px;
+}
+
+.form-group input::placeholder {
+    color: var(--color-text-light);
+    font-weight: 400;
 }
 
 /* 表单选项 */
@@ -244,25 +258,42 @@ body {
     align-items: center;
     cursor: pointer;
     font-size: 14px;
-    color: #666;
+    color: var(--color-text-gray);
 }
 
 .checkbox-wrapper input {
     width: auto;
     margin-right: 8px;
     cursor: pointer;
+    accent-color: var(--color-primary);
 }
 
 .forgot-link {
     font-size: 14px;
-    color: #667eea;
+    color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.3s ease;
+    transition: color var(--transition-base) ease;
+    position: relative;
 }
 
 .forgot-link:hover {
-    color: #764ba2;
+    filter: brightness(90%);
+}
+
+.forgot-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--color-primary);
+    transition: width var(--transition-slow) ease;
+}
+
+.forgot-link:hover::after {
+    width: 100%;
 }
 
 /* 提交按钮 */
@@ -271,22 +302,40 @@ body {
     padding: 16px;
     font-size: 16px;
     font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: var(--color-white);
+    background: var(--color-primary);
     border: none;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    transition: all var(--transition-slow) ease;
+    box-shadow: 0 4px 16px rgba(106, 142, 173, 0.2);
+    position: relative;
+    overflow: hidden;
 }
 
 .submit-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 6px 24px rgba(106, 142, 173, 0.3);
 }
 
 .submit-btn:active {
     transform: translateY(0);
+}
+
+.submit-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.6s ease;
+    pointer-events: none;
+}
+
+.submit-btn:hover::before {
+    left: 100%;
 }
 
 /* 注册链接 */
@@ -294,42 +343,58 @@ body {
     text-align: center;
     margin-top: 24px;
     font-size: 14px;
-    color: #666;
+    color: var(--color-text-gray);
 }
 
 .register-link a {
-    color: #667eea;
+    color: var(--color-primary);
     text-decoration: none;
     font-weight: 600;
-    transition: color 0.3s ease;
+    transition: color var(--transition-base) ease;
+    position: relative;
 }
 
 .register-link a:hover {
-    color: #764ba2;
+    filter: brightness(90%);
+}
+
+.register-link a::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--color-primary);
+    transition: width var(--transition-slow) ease;
+}
+
+.register-link a:hover::after {
+    width: 100%;
 }
 
 /* 消息提示 */
 .message {
     margin-top: 20px;
     padding: 14px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     text-align: center;
     font-size: 14px;
+    font-weight: 500;
     display: none;
     animation: slideDown 0.3s ease;
+    border: 1px solid transparent;
 }
 
 .message.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: var(--color-success);
+    color: var(--color-white);
     display: block;
 }
 
 .message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: var(--color-danger);
+    color: var(--color-white);
     display: block;
 }
 
@@ -401,7 +466,7 @@ body {
     content: '';
     width: 16px;
     height: 16px;
-    border: 2px solid white;
+    border: 2px solid var(--color-white);
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
@@ -413,163 +478,4 @@ body {
     to {
         transform: rotate(360deg);
     }
-}
-
-/* ============================================
-   登录页改造 - 融合民宿网站风格
-   基于 vcvyg.github.io 设计理念
-   ============================================ */
-
-/* === 任务2: 分页器改为横条样式 (民宿风格) === */
-.swiper-pagination-bullet {
-    width: 60px !important;     /* 横条宽度 */
-    height: 2px !important;     /* 细线高度 */
-    background: rgba(255, 255, 255, 0.3) !important;
-    opacity: 1 !important;
-    border-radius: 0 !important;  /* 去除圆角 */
-    transition: all 0.3s ease !important;
-}
-
-.swiper-pagination-bullet-active {
-    background: white !important;
-    width: 80px !important;     /* 激活后更长 */
-    border-radius: 0 !important;
-}
-
-/* === 任务3: 输入框改为1px细边框 (民宿风格) === */
-.form-group input,
-.form-group select {
-    border: 1px solid #e8e8e8;  /* 从2px改为1px极细边框 */
-    background: #fafafa;         /* 浅灰背景 */
-    transition: all 0.2s ease;   /* 加快过渡速度 */
-}
-
-.form-group input:focus,
-.form-group select:focus {
-    background: white;
-    border-color: #667eea;      /* 保留主题色 */
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);  /* 浅色阴影 */
-}
-
-/* === 任务4: 按钮扫光hover效果 (民宿风格) === */
-.submit-btn {
-    position: relative;
-    overflow: hidden;  /* 关键:限制伪元素 */
-}
-
-.submit-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),  /* 白色扫光 */
-        transparent
-    );
-    transition: left 0.6s ease;
-    pointer-events: none;
-}
-
-.submit-btn:hover::before {
-    left: 100%;  /* 扫光从左到右 */
-}
-
-/* === 任务5: 多层阴影系统 (民宿风格) === */
-.login-container {
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.04),   /* 浅阴影 */
-        0 8px 32px rgba(0, 0, 0, 0.08);  /* 深阴影 */
-    border: 1px solid #f0f0f0;  /* 极细边框 */
-    transition: all 0.3s ease;
-}
-
-/* 向下滚动提示增强 */
-.scroll-indicator:hover {
-    transform: translateX(-50%) translateY(-5px);
-}
-
-/* 表单卡片hover效果 */
-.login-container:hover {
-    box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.06),
-        0 12px 48px rgba(0, 0, 0, 0.12);
-    transform: translateY(-2px);
-}
-
-/* 输入框占位符颜色优化 */
-.form-group input::placeholder,
-.form-group select::placeholder {
-    color: #999;
-    font-weight: 400;
-}
-
-/* Select下拉箭头位置微调 */
-.form-group select {
-    background-position: right 14px center;
-}
-
-/* 增强checkbox样式 */
-.checkbox-wrapper input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: #667eea;
-}
-
-/* 忘记密码链接增强 */
-.forgot-link {
-    position: relative;
-}
-
-.forgot-link::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: #667eea;
-    transition: width 0.3s ease;
-}
-
-.forgot-link:hover::after {
-    width: 100%;
-}
-
-/* 注册链接增强 */
-.register-link a {
-    position: relative;
-}
-
-.register-link a::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: #667eea;
-    transition: width 0.3s ease;
-}
-
-.register-link a:hover::after {
-    width: 100%;
-}
-
-/* 消息提示优化 */
-.message {
-    border-radius: var(--radius-md, 10px);
-    font-weight: 500;
-}
-
-.message.success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-}
-
-.message.error {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
 }

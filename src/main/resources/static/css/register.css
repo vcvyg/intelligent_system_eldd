@@ -1,24 +1,4 @@
-/* CSS变量 - 参考Eduard Bodak作品集的配色方案 */
-:root {
-    --color-primary: #FA5D29;
-    --color-secondary: #502bd8;
-    --color-accent: #FFF083;
-    --color-success: #AAEEC4;
-    --color-dark: #222;
-    --color-light: #f8f8f8;
-    --color-border: #ededed;
-    --color-text-primary: #222;
-    --color-text-secondary: #666;
-    --color-text-tertiary: #999;
-    --font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-    --transition-smooth: all 0.3s ease-in-out;
-    --border-radius-sm: 8px;
-    --border-radius-md: 12px;
-    --border-radius-lg: 16px;
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
-    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
-}
+@import url('pension-variables.css');
 
 /* 全局样式重置 */
 * {
@@ -28,9 +8,9 @@
 }
 
 body {
-    font-family: var(--font-family);
-    background-color: var(--color-light);
-    color: var(--color-text-primary);
+    font-family: 'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background-color: var(--color-bg-light);
+    color: var(--color-text-dark);
     min-height: 100vh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -41,7 +21,7 @@ body {
 .page-wrapper {
     display: flex;
     min-height: 100vh;
-    background: linear-gradient(135deg, #f8f8f8 0%, #ffffff 100%);
+    background: var(--color-bg-lighter);
 }
 
 /* 左侧内容区 */
@@ -52,7 +32,7 @@ body {
     justify-content: center;
     align-items: center;
     padding: 60px 80px;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    background: var(--color-primary);
     position: relative;
     overflow: hidden;
 }
@@ -62,7 +42,7 @@ body {
     position: absolute;
     width: 500px;
     height: 500px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
     top: -200px;
     left: -200px;
     border-radius: 50%;
@@ -74,7 +54,7 @@ body {
     position: absolute;
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
     bottom: -150px;
     right: -150px;
     border-radius: 50%;
@@ -108,7 +88,7 @@ body {
 .logo-text {
     font-size: clamp(32px, 4vw, 48px);
     font-weight: 700;
-    color: white;
+    color: var(--color-white);
     margin-bottom: 12px;
     letter-spacing: -0.02em;
 }
@@ -140,19 +120,20 @@ body {
 
 /* 特性卡片 */
 .feature-card {
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: var(--border-radius-lg);
+    background: var(--color-bg-lighter);
+    border-radius: var(--radius-lg);
     padding: 40px 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    box-shadow: var(--shadow-md);
     backdrop-filter: blur(10px);
-    transition: var(--transition-smooth);
+    transition: var(--transition-slow);
     text-align: center;
     animation: slideInCard 0.6s ease;
+    border: 1px solid var(--color-border-light);
 }
 
 .feature-card:hover {
     transform: translateY(-8px);
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.16);
+    box-shadow: var(--shadow-lg);
 }
 
 .card-icon {
@@ -173,7 +154,7 @@ body {
 .feature-card h3 {
     font-size: 24px;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark);
     margin-bottom: 16px;
     letter-spacing: -0.01em;
 }
@@ -181,7 +162,7 @@ body {
 .feature-card p {
     font-size: 15px;
     line-height: 1.7;
-    color: var(--color-text-secondary);
+    color: var(--color-text-gray);
     margin-bottom: 24px;
 }
 
@@ -206,7 +187,7 @@ body {
 
 .stat-label {
     font-size: 13px;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-light);
 }
 
 /* Swiper分页器 */
@@ -215,27 +196,27 @@ body {
 }
 
 .swiper-pagination-bullet {
-    width: 8px;
-    height: 8px;
-    background: rgba(255, 255, 255, 0.4);
+    width: 40px !important;
+    height: 2px !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    border-radius: 0 !important;
     opacity: 1;
-    transition: var(--transition-smooth);
+    transition: var(--transition-slow);
 }
 
 .swiper-pagination-bullet-active {
-    background: white;
-    width: 24px;
-    border-radius: 4px;
+    background: var(--color-white) !important;
+    width: 60px !important;
 }
 
-/* 右侧表单区 - 注册页面需要更宽 */
+/* 右侧表单区 */
 .form-side {
     width: 520px;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 40px;
-    background: white;
+    background: var(--color-bg-lighter);
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.05);
     overflow-y: auto;
 }
@@ -255,14 +236,14 @@ body {
 .form-header h2 {
     font-size: 32px;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark);
     margin-bottom: 8px;
     letter-spacing: -0.02em;
 }
 
 .form-header p {
     font-size: 15px;
-    color: var(--color-text-secondary);
+    color: var(--color-text-gray);
 }
 
 /* 表单样式 */
@@ -270,7 +251,6 @@ body {
     width: 100%;
 }
 
-/* 表单网格布局 - 两列 */
 .form-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -286,7 +266,7 @@ body {
     display: block;
     font-size: 14px;
     font-weight: 500;
-    color: var(--color-text-primary);
+    color: var(--color-text-dark);
     margin-bottom: 8px;
 }
 
@@ -304,44 +284,42 @@ body {
     width: 100%;
     padding: 12px 14px;
     font-size: 14px;
-    font-family: var(--font-family);
-    color: var(--color-text-primary);
-    background: var(--color-light);
-    border: 2px solid transparent;
-    border-radius: var(--border-radius-sm);
+    font-family: 'Inter Tight', sans-serif;
+    color: var(--color-text-dark);
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
     outline: none;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
 }
 
 .input-wrapper input:focus,
 .select-wrapper select:focus {
-    background: white;
+    background: var(--color-bg-lighter);
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(250, 93, 41, 0.08);
+    box-shadow: 0 0 0 3px rgba(106, 142, 173, 0.1);
 }
 
 .input-wrapper input::placeholder {
-    color: var(--color-text-tertiary);
+    color: var(--color-text-light);
 }
 
 .select-wrapper select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%236C757D' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
     padding-right: 40px;
 }
 
-/* 提示文本 */
 .hint {
     display: block;
     font-size: 12px;
-    color: var(--color-text-tertiary);
+    color: var(--color-text-light);
     margin-top: 6px;
 }
 
-/* 验证码输入 */
 .code-input-wrapper {
     display: flex;
     gap: 12px;
@@ -351,19 +329,19 @@ body {
     flex: 1;
     padding: 12px 14px;
     font-size: 14px;
-    font-family: var(--font-family);
-    color: var(--color-text-primary);
-    background: var(--color-light);
-    border: 2px solid transparent;
-    border-radius: var(--border-radius-sm);
+    font-family: 'Inter Tight', sans-serif;
+    color: var(--color-text-dark);
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
     outline: none;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
 }
 
 .code-input-wrapper input:focus {
-    background: white;
+    background: var(--color-bg-lighter);
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 4px rgba(250, 93, 41, 0.08);
+    box-shadow: 0 0 0 3px rgba(106, 142, 173, 0.1);
 }
 
 .btn-code {
@@ -371,17 +349,17 @@ body {
     font-size: 14px;
     font-weight: 500;
     color: var(--color-primary);
-    background: rgba(250, 93, 41, 0.1);
-    border: 2px solid var(--color-primary);
-    border-radius: var(--border-radius-sm);
+    background: rgba(106, 142, 173, 0.1);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
     white-space: nowrap;
 }
 
 .btn-code:hover {
     background: var(--color-primary);
-    color: white;
+    color: var(--color-white);
 }
 
 .btn-code:disabled {
@@ -390,13 +368,12 @@ body {
     pointer-events: none;
 }
 
-/* Checkbox样式 */
 .checkbox-label {
     display: flex;
     align-items: flex-start;
     cursor: pointer;
     font-size: 13px;
-    color: var(--color-text-secondary);
+    color: var(--color-text-gray);
     user-select: none;
 }
 
@@ -409,11 +386,11 @@ body {
 .checkmark {
     width: 18px;
     height: 18px;
-    border: 2px solid var(--color-border);
+    border: 1px solid var(--color-border);
     border-radius: 4px;
     margin-right: 8px;
     margin-top: 1px;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
     position: relative;
     flex-shrink: 0;
 }
@@ -430,7 +407,7 @@ body {
     top: 2px;
     width: 4px;
     height: 8px;
-    border: solid white;
+    border: solid var(--color-white);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
 }
@@ -439,14 +416,29 @@ body {
     color: var(--color-primary);
     text-decoration: none;
     font-weight: 500;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
+    position: relative;
 }
 
 .link-text:hover {
-    color: var(--color-secondary);
+    filter: brightness(90%);
 }
 
-/* 主按钮 */
+.link-text::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+}
+
+.link-text:hover::after {
+    width: 100%;
+}
+
 .btn-primary {
     width: 100%;
     display: flex;
@@ -456,13 +448,13 @@ body {
     padding: 16px 32px;
     font-size: 16px;
     font-weight: 600;
-    color: white;
-    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    color: var(--color-white);
+    background: var(--color-primary);
     border: none;
-    border-radius: var(--border-radius-sm);
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: var(--transition-smooth);
-    box-shadow: 0 4px 16px rgba(250, 93, 41, 0.3);
+    transition: var(--transition-slow);
+    box-shadow: 0 4px 16px rgba(106, 142, 173, 0.3);
     position: relative;
     overflow: hidden;
     margin-top: 24px;
@@ -481,7 +473,7 @@ body {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 24px rgba(250, 93, 41, 0.4);
+    box-shadow: 0 6px 24px rgba(106, 142, 173, 0.4);
 }
 
 .btn-primary:hover::before {
@@ -500,12 +492,11 @@ body {
     transform: translateX(4px);
 }
 
-/* 表单底部 */
 .form-footer {
     margin-top: 20px;
     text-align: center;
     font-size: 14px;
-    color: var(--color-text-secondary);
+    color: var(--color-text-gray);
 }
 
 .link-primary {
@@ -513,39 +504,52 @@ body {
     text-decoration: none;
     font-weight: 600;
     margin-left: 4px;
-    transition: var(--transition-smooth);
+    transition: var(--transition-base);
+    position: relative;
 }
 
 .link-primary:hover {
-    color: var(--color-secondary);
+    filter: brightness(90%);
 }
 
-/* 消息提示 */
+.link-primary::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+}
+
+.link-primary:hover::after {
+    width: 100%;
+}
+
 .message-toast {
     margin-top: 20px;
     padding: 14px 18px;
-    border-radius: var(--border-radius-sm);
+    border-radius: var(--radius-sm);
     font-size: 14px;
     font-weight: 500;
     display: none;
     animation: slideInMessage 0.3s ease;
+    border: 1px solid transparent;
 }
 
 .message-toast.success {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+    background: var(--color-success);
+    color: var(--color-white);
     display: block;
 }
 
 .message-toast.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+    background: var(--color-danger);
+    color: var(--color-white);
     display: block;
 }
 
-/* 动画 */
 @keyframes fadeInUp {
     from {
         opacity: 0;
@@ -601,7 +605,6 @@ body {
     }
 }
 
-/* 响应式设计 */
 @media (max-width: 1200px) {
     .content-side {
         padding: 40px 60px;
@@ -681,13 +684,8 @@ body {
     .form-header h2 {
         font-size: 28px;
     }
-
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
-/* 加载状态 */
 .btn-primary.loading {
     pointer-events: none;
     opacity: 0.7;
@@ -697,7 +695,7 @@ body {
     content: '';
     width: 16px;
     height: 16px;
-    border: 2px solid white;
+    border: 2px solid var(--color-white);
     border-top-color: transparent;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
@@ -710,219 +708,6 @@ body {
     }
 }
 
-/* ============================================
-   注册页改造 - 融合民宿网站风格
-   基于 vcvyg.github.io 设计理念
-   ============================================ */
-
-/* === 任务6: 左侧背景装饰元素增强 (民宿风格) === */
-/* 已有的装饰在60-82行,现在增强 */
-.content-side {
-    /* 确保有overflow: hidden来限制装饰元素 */
-    overflow: hidden;
-}
-
-/* 增加第三个装饰圆环 (民宿风格的极细边框圆) */
-.content-side .logo-section::before {
-    content: '';
-    position: absolute;
-    width: 300px;
-    height: 300px;
-    border: 1px solid rgba(255, 255, 255, 0.15);  /* 极细白色边框 */
-    border-radius: 50%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    animation: rotate 20s linear infinite;
-    pointer-events: none;
-    z-index: 0;
-}
-
-@keyframes rotate {
-    from {
-        transform: translate(-50%, -50%) rotate(0deg);
-    }
-    to {
-        transform: translate(-50%, -50%) rotate(360deg);
-    }
-}
-
-/* === 任务7: 表单输入框1px细边框 (民宿风格) === */
-.input-wrapper input,
-.select-wrapper select {
-    border: 1px solid #e8e8e8;  /* 从2px改为1px */
-    background: #fafafa;
-    transition: all 0.2s ease;  /* 加快过渡 */
-}
-
-.input-wrapper input:focus,
-.select-wrapper select:focus {
-    background: white;
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(250, 93, 41, 0.06);  /* 浅色阴影 */
-}
-
-.code-input-wrapper input {
-    border: 1px solid #e8e8e8;
-    background: #fafafa;
-}
-
-.code-input-wrapper input:focus {
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px rgba(250, 93, 41, 0.06);
-}
-
-/* 验证码按钮边框优化 */
-.btn-code {
-    border: 1px solid var(--color-primary);  /* 从2px改为1px */
-}
-
-/* === 任务8: 卡片多层阴影 (民宿风格) === */
-.feature-card {
-    box-shadow:
-        0 2px 8px rgba(0, 0, 0, 0.04),
-        0 8px 32px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(0, 0, 0, 0.05);  /* 增加极细边框 */
-}
-
-.feature-card:hover {
-    transform: translateY(-12px);  /* 更大的提升 */
-    box-shadow:
-        0 4px 16px rgba(0, 0, 0, 0.06),
-        0 16px 56px rgba(0, 0, 0, 0.12);
-}
-
-/* 表单侧边栏阴影优化 */
-.form-side {
-    box-shadow: -2px 0 16px rgba(0, 0, 0, 0.04);
-}
-
-/* 主按钮扫光效果 (民宿风格) */
-.btn-primary {
-    position: relative;
-    overflow: hidden;
-}
-
-.btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.2),
-        transparent
-    );
-    transition: left 0.6s ease;
-    pointer-events: none;
-    z-index: 1;
-}
-
-.btn-primary:hover::before {
-    left: 100%;
-}
-
-.btn-primary span,
-.btn-primary svg {
-    position: relative;
-    z-index: 2;
-}
-
-/* 分页器优化为横条样式 (民宿风格) */
-.swiper-pagination-bullet {
-    width: 40px !important;     /* 横条 */
-    height: 2px !important;     /* 细线 */
-    background: rgba(255, 255, 255, 0.4) !important;
-    border-radius: 0 !important;
-}
-
-.swiper-pagination-bullet-active {
-    width: 60px !important;
-    background: white !important;
-}
-
-/* Checkbox样式增强 */
-.checkmark {
-    border: 1px solid var(--color-border);  /* 从2px改为1px */
-}
-
-/* 链接下划线动画 */
-.link-text {
-    position: relative;
-}
-
-.link-text::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: var(--color-primary);
-    transition: width 0.3s ease;
-}
-
-.link-text:hover::after {
-    width: 100%;
-}
-
-.link-primary {
-    position: relative;
-}
-
-.link-primary::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 0;
-    height: 1px;
-    background: var(--color-primary);
-    transition: width 0.3s ease;
-}
-
-.link-primary:hover::after {
-    width: 100%;
-}
-
-/* 消息提示优化 */
-.message-toast {
-    border: 1px solid transparent;
-}
-
-.message-toast.success {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    border-color: #c3e6cb;
-}
-
-.message-toast.error {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-    border-color: #f5c6cb;
-}
-
-/* === 实时验证反馈样式 === */
-.input-wrapper,
-.code-input-wrapper input {
-    position: relative;
-}
-
-/* 输入框验证状态 */
-.input-wrapper input.valid,
-.code-input-wrapper input.valid {
-    border-color: #28a745;
-    background: #f0fdf4;
-}
-
-.input-wrapper input.invalid,
-.code-input-wrapper input.invalid {
-    border-color: #dc3545;
-    background: #fef2f2;
-}
-
-/* 验证提示文字 */
 .validation-hint {
     display: block;
     font-size: 12px;
@@ -932,18 +717,17 @@ body {
 }
 
 .validation-hint.success {
-    color: #28a745;
+    color: var(--color-success);
 }
 
 .validation-hint.error {
-    color: #dc3545;
+    color: var(--color-danger);
 }
 
 .validation-hint.info {
-    color: #666;
+    color: var(--color-text-gray);
 }
 
-/* 密码强度指示器 */
 .password-strength {
     margin-top: 8px;
     display: none;
@@ -955,7 +739,7 @@ body {
 
 .strength-bar {
     height: 4px;
-    background: #e8e8e8;
+    background: var(--color-border);
     border-radius: 2px;
     overflow: hidden;
     margin-bottom: 4px;
@@ -970,17 +754,17 @@ body {
 
 .strength-bar-fill.weak {
     width: 33%;
-    background: #dc3545;
+    background: var(--color-danger);
 }
 
 .strength-bar-fill.medium {
     width: 66%;
-    background: #ffc107;
+    background: var(--color-warning);
 }
 
 .strength-bar-fill.strong {
     width: 100%;
-    background: #28a745;
+    background: var(--color-success);
 }
 
 .strength-text {
@@ -989,48 +773,13 @@ body {
 }
 
 .strength-text.weak {
-    color: #dc3545;
+    color: var(--color-danger);
 }
 
 .strength-text.medium {
-    color: #ffc107;
+    color: var(--color-warning);
 }
 
 .strength-text.strong {
-    color: #28a745;
+    color: var(--color-success);
 }
-
-/* Logo图标旋转动画优化 */
-.logo-icon svg {
-    transition: transform 0.3s ease;
-}
-
-.logo-icon:hover svg {
-    transform: rotate(5deg) scale(1.05);
-}
-
-/* 卡片图标动画增强 */
-.card-icon svg {
-    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.1));
-}
-
-/* 表单容器微动画 */
-.form-container {
-    transition: transform 0.3s ease;
-}
-
-/* 输入框占位符优化 */
-.input-wrapper input::placeholder,
-.code-input-wrapper input::placeholder {
-    color: #999;
-    font-weight: 400;
-}
-
-/* 响应式优化 */
-@media (max-width: 991px) {
-    .content-side .logo-section::before {
-        width: 200px;
-        height: 200px;
-    }
-}
-

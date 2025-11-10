@@ -1,3 +1,5 @@
+@import url('pension-variables.css');
+
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +8,7 @@
 
 body {
     font-family: 'Microsoft YaHei', Arial, sans-serif;
-    background: #f5f7fa;
+    background: var(--color-bg-light);
     min-height: 100vh;
 }
 
@@ -17,10 +19,10 @@ body {
 }
 
 .header {
-    background: white;
+    background: var(--color-bg-lighter);
     padding: 20px 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -28,7 +30,7 @@ body {
 }
 
 .logo h1 {
-    color: #667eea;
+    color: var(--color-primary);
     font-size: 24px;
 }
 
@@ -39,22 +41,22 @@ body {
 }
 
 .user-info span {
-    color: #333;
+    color: var(--color-text-dark);
     font-size: 16px;
 }
 
 .logout-btn {
     padding: 8px 20px;
-    background: #ff6b6b;
-    color: white;
+    background: var(--color-danger);
+    color: var(--color-white);
     border: none;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-base) ease;
 }
 
 .logout-btn:hover {
-    background: #ff5252;
+    filter: brightness(90%);
     transform: translateY(-2px);
 }
 
@@ -65,29 +67,29 @@ body {
 }
 
 .welcome-card {
-    background: white;
+    background: var(--color-bg-lighter);
     padding: 40px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
     text-align: center;
 }
 
 .welcome-card h2 {
-    color: #333;
+    color: var(--color-text-dark);
     font-size: 28px;
     margin-bottom: 15px;
 }
 
 .welcome-card p {
-    color: #666;
+    color: var(--color-text-gray);
     font-size: 16px;
     margin-bottom: 30px;
 }
 
 .user-details {
-    background: #f8f9fa;
+    background: var(--color-bg-light);
     padding: 20px;
-    border-radius: 8px;
+    border-radius: var(--radius-sm);
     text-align: left;
     max-width: 500px;
     margin: 0 auto;
@@ -97,7 +99,7 @@ body {
     display: flex;
     justify-content: space-between;
     padding: 10px 0;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .user-details .detail-item:last-child {
@@ -105,24 +107,24 @@ body {
 }
 
 .user-details .label {
-    color: #888;
+    color: var(--color-text-light);
     font-weight: 500;
 }
 
 .user-details .value {
-    color: #333;
+    color: var(--color-text-dark);
     font-weight: 600;
 }
 
 .quick-actions {
-    background: white;
+    background: var(--color-bg-lighter);
     padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
 }
 
 .quick-actions h3 {
-    color: #333;
+    color: var(--color-text-dark);
     font-size: 20px;
     margin-bottom: 20px;
 }
@@ -134,18 +136,18 @@ body {
 }
 
 .action-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: var(--color-primary);
+    color: var(--color-white);
     padding: 30px;
-    border-radius: 10px;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all var(--transition-base) ease;
     text-align: center;
 }
 
 .action-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 10px 25px rgba(106, 142, 173, 0.2); /* 对应新主色的阴影 */
 }
 
 .action-card h4 {
@@ -168,23 +170,23 @@ body {
 }
 
 .role-badge.admin {
-    background: #ff6b6b;
-    color: white;
+    background: var(--color-danger);
+    color: var(--color-white);
 }
 
 .role-badge.family {
-    background: #51cf66;
-    color: white;
+    background: var(--color-success);
+    color: var(--color-white);
 }
 
 .role-badge.medical {
-    background: #339af0;
-    color: white;
+    background: var(--color-info);
+    color: var(--color-white);
 }
 
 .role-badge.elderly {
-    background: #ffd43b;
-    color: #333;
+    background: var(--color-warning);
+    color: var(--color-text-dark);
 }
 
 /* 响应式设计 */

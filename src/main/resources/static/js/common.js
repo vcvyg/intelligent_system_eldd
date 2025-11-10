@@ -56,6 +56,16 @@ async function request(url, options = {}) {
 
     try {
         const response = await fetch(API_BASE_URL + url, finalOptions);
+
+        // 检查响应类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Response is not JSON:', contentType);
+            alert('服务器返回了非JSON数据，可能是未授权访问');
+            logout();
+            return null;
+        }
+
         const data = await response.json();
 
         // 处理未授权
@@ -65,15 +75,20 @@ async function request(url, options = {}) {
             return null;
         }
 
-        // 处理业务错误
-        if (!data.success) {
+        // 处理业务错误 - 修改为检查code字段
+        if (data.code !== 200) {
             throw new Error(data.message || '请求失败');
         }
 
         return data;
     } catch (error) {
         console.error('Request error:', error);
-        alert(error.message || '网络请求失败');
+        // 如果是JSON解析错误,说明返回的不是JSON
+        if (error instanceof SyntaxError) {
+            alert('服务器返回了非JSON数据，请检查后端服务');
+        } else {
+            alert(error.message || '网络请求失败');
+        }
         throw error;
     }
 }

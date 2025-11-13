@@ -1,0 +1,57 @@
+# 应用配置
+spring.application.name=Persion
+server.port=8080
+
+# 激活的配置文件
+spring.profiles.active=dev
+
+# SQL Server 数据库配置 (Azure云端数据库)
+# 请将此文件复制为 application.properties 并修改用户名和密码
+spring.datasource.driver-class-name=com.microsoft.sqlserver.jdbc.SQLServerDriver
+spring.datasource.url=jdbc:sqlserver://cjmjm-sql-server.database.windows.net:1433;databaseName=elderly_care;encrypt=true;trustServerCertificate=false
+spring.datasource.username=YOUR_USERNAME  # 改成你的用户名: admincjm / LiMei / taohy
+spring.datasource.password=YOUR_PASSWORD  # 改成你的密码
+
+# MyBatis Plus 配置
+mybatis-plus.mapper-locations=classpath:mapper/**/*.xml
+mybatis-plus.type-aliases-package=org.example.persion.entity
+mybatis-plus.configuration.map-underscore-to-camel-case=true
+mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+
+# Redis 配置
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.data.redis.password=
+spring.data.redis.database=0
+spring.data.redis.timeout=60000
+spring.data.redis.lettuce.pool.max-active=8
+spring.data.redis.lettuce.pool.max-wait=-1
+spring.data.redis.lettuce.pool.max-idle=8
+spring.data.redis.lettuce.pool.min-idle=0
+
+# JWT 配置
+jwt.secret=YourSuperSecretKeyForElderlyCarePlatform2024MinimumLengthRequired
+jwt.expiration=86400000
+
+# 邮件配置 (QQ邮箱)
+spring.mail.host=smtp.qq.com
+spring.mail.port=587
+spring.mail.username=180424490@qq.com
+spring.mail.password=evmbbucumldlbjah
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.default-encoding=UTF-8
+
+# 文件上传配置
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+
+# 日志配置
+logging.level.root=INFO
+logging.level.org.example.persion=DEBUG
+logging.level.org.springframework.web=DEBUG
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss} - %msg%n
+
+# 开发工具配置
+spring.devtools.restart.enabled=true

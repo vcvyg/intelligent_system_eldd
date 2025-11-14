@@ -1,7 +1,7 @@
 // 公共函数库
 
 // API基础URL
-const API_BASE_URL = '';
+const API_BASE_URL = 'http://localhost:8080/api';
 
 // 获取token
 function getToken() {

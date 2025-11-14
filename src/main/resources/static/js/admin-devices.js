@@ -1,5 +1,4 @@
-// API基础URL
-const API_BASE_URL = 'http://localhost:8080/api';
+// 设备管理页面脚本
 
 let currentPage = 1;
 const pageSize = 10;

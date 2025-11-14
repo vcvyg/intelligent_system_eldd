@@ -1,5 +1,4 @@
-// API基础URL
-const API_BASE_URL = 'http://localhost:8080/api';
+// 系统设置页面脚本
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', () => {

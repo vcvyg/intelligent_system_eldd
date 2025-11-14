@@ -195,11 +195,11 @@ async function saveElderly() {
     try {
         if (id) {
             // 更新老人信息
-            await put(`/api/admin/elderly/${id}`, formData);
+            await put(`/admin/elderly/${id}`, formData);
             alert('更新成功');
         } else {
             // 新增老人信息
-            await post('/api/admin/elderly', formData);
+            await post('/admin/elderly', formData);
             alert('新增成功');
         }
 

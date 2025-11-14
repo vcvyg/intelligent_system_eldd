@@ -166,11 +166,11 @@ async function saveUser() {
     try {
         if (id) {
             // 更新用户
-            await put(`/api/admin/user/${id}`, formData);
+            await put(`/admin/user/${id}`, formData);
             alert('更新成功');
         } else {
             // 新增用户
-            await post('/api/admin/user', formData);
+            await post('/admin/user', formData);
             alert('新增成功');
         }
 

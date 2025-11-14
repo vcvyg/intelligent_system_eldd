@@ -269,46 +269,168 @@ function switchRelationTab(tabName) {
 // 加载子女关联列表
 async function loadFamilyRelations() {
     const tbody = document.getElementById('familyRelationTableBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">功能开发中,暂无数据...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">加载中...</td></tr>';
 
-    // TODO: 调用后端API获取子女关联列表
-    // try {
-    //     const result = await get(`/admin/elderly/${currentElderlyId}/family`);
-    //     if (result.code === 200) {
-    //         renderFamilyList(result.data);
-    //     }
-    // } catch (error) {
-    //     console.error('加载子女关联失败:', error);
-    // }
+    try {
+        const result = await get(`/admin/elderly/${currentElderlyId}/family`);
+        if (result.code === 200 && result.data) {
+            if (result.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">暂无子女关联</td></tr>';
+            } else {
+                tbody.innerHTML = result.data.map(item => `
+                    <tr>
+                        <td>${item.username || '-'}</td>
+                        <td>${item.real_name || '-'}</td>
+                        <td>${item.phone || '-'}</td>
+                        <td>${item.email || '-'}</td>
+                        <td>${item.relation_type || '-'}</td>
+                        <td>${item.is_primary_contact == 1 ? '是' : '否'}</td>
+                        <td class="action-btns">
+                            <button class="btn-delete" onclick="removeFamilyRelation(${item.id})">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('加载子女关联失败:', error);
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:red;">加载失败</td></tr>';
+    }
 }
 
 // 加载医护分配列表
 async function loadMedicalRelations() {
     const tbody = document.getElementById('medicalRelationTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">功能开发中,暂无数据...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';
 
-    // TODO: 调用后端API获取医护分配列表
+    try {
+        const result = await get(`/admin/elderly/${currentElderlyId}/medical`);
+        if (result.code === 200 && result.data) {
+            if (result.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">暂无医护分配</td></tr>';
+            } else {
+                tbody.innerHTML = result.data.map(item => `
+                    <tr>
+                        <td>${item.username || '-'}</td>
+                        <td>${item.real_name || '-'}</td>
+                        <td>${item.phone || '-'}</td>
+                        <td>${item.is_primary_doctor == 1 ? '是' : '否'}</td>
+                        <td>${formatDateTime(item.assign_date) || '-'}</td>
+                        <td class="action-btns">
+                            <button class="btn-delete" onclick="removeMedicalRelation(${item.id})">删除</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('加载医护分配失败:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">加载失败</td></tr>';
+    }
 }
 
 // 加载设备绑定列表
 async function loadDeviceRelations() {
     const tbody = document.getElementById('deviceRelationTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">功能开发中,暂无数据...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';
 
-    // TODO: 调用后端API获取设备绑定列表
+    try {
+        const result = await get(`/admin/elderly/${currentElderlyId}/devices`);
+        if (result.code === 200 && result.data) {
+            if (result.data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">暂无设备绑定</td></tr>';
+            } else {
+                tbody.innerHTML = result.data.map(item => `
+                    <tr>
+                        <td>${item.device_code || '-'}</td>
+                        <td>${item.device_name || '-'}</td>
+                        <td>${item.device_type || '-'}</td>
+                        <td><span class="status-badge">${item.status || '-'}</span></td>
+                        <td>${formatDateTime(item.last_sync_time) || '-'}</td>
+                        <td class="action-btns">
+                            <button class="btn-view" onclick="viewDevice(${item.id})">查看</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('加载设备绑定失败:', error);
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;">加载失败</td></tr>';
+    }
 }
 
 // 显示添加子女表单
-function showAddFamilyForm() {
-    alert('添加子女功能开发中...\n\n需要实现:\n1. 选择子女用户(角色为FAMILY的用户)\n2. 设置关系类型\n3. 是否设为主要联系人');
+async function showAddFamilyForm() {
+    const familyUserId = prompt('请输入子女用户ID\n(提示:需要先在用户管理中创建角色为FAMILY的用户)');
+    if (!familyUserId) return;
+
+    const relationType = prompt('请输入关系类型\n(如: 子女/儿媳/女婿/孙子/孙女)', '子女');
+    if (!relationType) return;
+
+    const isPrimary = confirm('是否设为主要联系人?');
+
+    try {
+        await post(`/admin/elderly/${currentElderlyId}/family?familyUserId=${familyUserId}&relationType=${encodeURIComponent(relationType)}&isPrimaryContact=${isPrimary ? 1 : 0}`);
+        alert('添加成功');
+        loadFamilyRelations();
+    } catch (error) {
+        console.error('添加子女失败:', error);
+        alert('添加失败:' + (error.message || '未知错误'));
+    }
 }
 
 // 显示分配医护表单
-function showAddMedicalForm() {
-    alert('分配医护功能开发中...\n\n需要实现:\n1. 选择医护人员(角色为MEDICAL的用户)\n2. 是否设为主治医生');
+async function showAddMedicalForm() {
+    const medicalUserId = prompt('请输入医护人员用户ID\n(提示:需要先在用户管理中创建角色为MEDICAL的用户)');
+    if (!medicalUserId) return;
+
+    const isPrimary = confirm('是否设为主治医生?');
+
+    try {
+        await post(`/admin/elderly/${currentElderlyId}/medical?medicalUserId=${medicalUserId}&isPrimaryDoctor=${isPrimary ? 1 : 0}`);
+        alert('分配成功');
+        loadMedicalRelations();
+    } catch (error) {
+        console.error('分配医护失败:', error);
+        alert('分配失败:' + (error.message || '未知错误'));
+    }
 }
 
 // 显示绑定设备表单
 function showBindDeviceForm() {
-    alert('绑定设备功能开发中...\n\n需要实现:\n1. 选择未绑定的设备\n2. 确认绑定关系');
+    alert('设备绑定功能提示:\n\n请到"设备管理"页面,\n编辑设备时选择要绑定的老人即可。');
+}
+
+// 删除子女关联
+async function removeFamilyRelation(relationId) {
+    if (!confirm('确定要删除该子女关联吗?')) return;
+
+    try {
+        await del(`/admin/elderly/${currentElderlyId}/family/${relationId}`);
+        alert('删除成功');
+        loadFamilyRelations();
+    } catch (error) {
+        console.error('删除子女关联失败:', error);
+        alert('删除失败:' + (error.message || '未知错误'));
+    }
+}
+
+// 删除医护分配
+async function removeMedicalRelation(relationId) {
+    if (!confirm('确定要删除该医护分配吗?')) return;
+
+    try {
+        await del(`/admin/elderly/${currentElderlyId}/medical/${relationId}`);
+        alert('删除成功');
+        loadMedicalRelations();
+    } catch (error) {
+        console.error('删除医护分配失败:', error);
+        alert('删除失败:' + (error.message || '未知错误'));
+    }
+}
+
+// 查看设备详情(跳转到设备管理页面)
+function viewDevice(deviceId) {
+    window.location.href = `admin-devices.html?deviceId=${deviceId}`;
 }

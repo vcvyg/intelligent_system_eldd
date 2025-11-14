@@ -20,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // 加载统计数据
 async function loadStatistics() {
     try {
-        const response = await get('/api/admin/statistics');
+        const response = await get('/admin/statistics');
         if (response && response.data) {
             const stats = response.data;
 

@@ -11,17 +11,17 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'device_info')
 BEGIN
     CREATE TABLE device_info (
         id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        device_code NVARCHAR(50) NOT NULL UNIQUE COMMENT '设备编号',
-        device_name NVARCHAR(100) NOT NULL COMMENT '设备名称',
-        device_type NVARCHAR(50) NOT NULL COMMENT '设备类型: 心率监测器/血压计/血糖仪/定位设备/体温计',
-        manufacturer NVARCHAR(100) COMMENT '生产厂商',
-        model NVARCHAR(50) COMMENT '设备型号',
-        elderly_id BIGINT COMMENT '绑定的老人ID',
-        status NVARCHAR(20) DEFAULT '在线' COMMENT '设备状态: 在线/离线/故障',
-        last_sync_time DATETIME2 COMMENT '最后同步时间',
-        purchase_date DATE COMMENT '购买日期',
-        warranty_expire_date DATE COMMENT '保修到期日期',
-        remark NVARCHAR(MAX) COMMENT '备注',
+        device_code NVARCHAR(50) NOT NULL UNIQUE, -- 设备编号
+        device_name NVARCHAR(100) NOT NULL, -- 设备名称
+        device_type NVARCHAR(50) NOT NULL, -- 设备类型: 心率监测器/血压计/血糖仪/定位设备/体温计
+        manufacturer NVARCHAR(100), -- 生产厂商
+        model NVARCHAR(50), -- 设备型号
+        elderly_id BIGINT, -- 绑定的老人ID
+        status NVARCHAR(20) DEFAULT N'在线', -- 设备状态: 在线/离线/故障
+        last_sync_time DATETIME2, -- 最后同步时间
+        purchase_date DATE, -- 购买日期
+        warranty_expire_date DATE, -- 保修到期日期
+        remark NVARCHAR(MAX), -- 备注
         create_time DATETIME2 DEFAULT GETDATE(),
         update_time DATETIME2 DEFAULT GETDATE(),
         deleted INT DEFAULT 0,
@@ -40,17 +40,17 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'alert_record')
 BEGIN
     CREATE TABLE alert_record (
         id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        elderly_id BIGINT NOT NULL COMMENT '老人ID',
-        alert_type NVARCHAR(50) NOT NULL COMMENT '预警类型: 心率异常/血压异常/血糖异常/体温异常/跌倒/离家',
-        alert_level NVARCHAR(20) NOT NULL COMMENT '预警等级: 低/中/高/紧急',
-        alert_content NVARCHAR(MAX) NOT NULL COMMENT '预警内容详情',
-        alert_value NVARCHAR(100) COMMENT '异常数值',
-        alert_time DATETIME2 DEFAULT GETDATE() COMMENT '预警时间',
-        device_id BIGINT COMMENT '触发设备ID',
-        status NVARCHAR(20) DEFAULT '待处理' COMMENT '处理状态: 待处理/处理中/已处理/已忽略',
-        assigned_medical_id BIGINT COMMENT '分配的医护人员ID',
-        handle_time DATETIME2 COMMENT '处理时间',
-        handle_result NVARCHAR(MAX) COMMENT '处理结果',
+        elderly_id BIGINT NOT NULL, -- 老人ID
+        alert_type NVARCHAR(50) NOT NULL, -- 预警类型: 心率异常/血压异常/血糖异常/体温异常/跌倒/离家
+        alert_level NVARCHAR(20) NOT NULL, -- 预警等级: 低/中/高/紧急
+        alert_content NVARCHAR(MAX) NOT NULL, -- 预警内容详情
+        alert_value NVARCHAR(100), -- 异常数值
+        alert_time DATETIME2 DEFAULT GETDATE(), -- 预警时间
+        device_id BIGINT, -- 触发设备ID
+        status NVARCHAR(20) DEFAULT N'待处理', -- 处理状态: 待处理/处理中/已处理/已忽略
+        assigned_medical_id BIGINT, -- 分配的医护人员ID
+        handle_time DATETIME2, -- 处理时间
+        handle_result NVARCHAR(MAX), -- 处理结果
         create_time DATETIME2 DEFAULT GETDATE(),
         update_time DATETIME2 DEFAULT GETDATE(),
         deleted INT DEFAULT 0,
@@ -71,20 +71,20 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'operation_log')
 BEGIN
     CREATE TABLE operation_log (
         id BIGINT IDENTITY(1,1) PRIMARY KEY,
-        user_id BIGINT COMMENT '操作用户ID',
-        username NVARCHAR(50) COMMENT '操作用户名',
-        operation_type NVARCHAR(50) NOT NULL COMMENT '操作类型: 新增/修改/删除/查询/登录/登出',
-        operation_module NVARCHAR(50) NOT NULL COMMENT '操作模块: 用户管理/老人管理/设备管理/预警管理',
-        operation_desc NVARCHAR(MAX) COMMENT '操作描述',
-        request_method NVARCHAR(10) COMMENT '请求方法: GET/POST/PUT/DELETE',
-        request_url NVARCHAR(500) COMMENT '请求URL',
-        request_param NVARCHAR(MAX) COMMENT '请求参数',
-        response_result NVARCHAR(MAX) COMMENT '响应结果',
-        ip_address NVARCHAR(50) COMMENT 'IP地址',
-        user_agent NVARCHAR(MAX) COMMENT '用户代理',
-        execute_time BIGINT COMMENT '执行时长(毫秒)',
-        status NVARCHAR(20) DEFAULT '成功' COMMENT '状态: 成功/失败',
-        error_msg NVARCHAR(MAX) COMMENT '错误信息',
+        user_id BIGINT, -- 操作用户ID
+        username NVARCHAR(50), -- 操作用户名
+        operation_type NVARCHAR(50) NOT NULL, -- 操作类型: 新增/修改/删除/查询/登录/登出
+        operation_module NVARCHAR(50) NOT NULL, -- 操作模块: 用户管理/老人管理/设备管理/预警管理
+        operation_desc NVARCHAR(MAX), -- 操作描述
+        request_method NVARCHAR(10), -- 请求方法: GET/POST/PUT/DELETE
+        request_url NVARCHAR(500), -- 请求URL
+        request_param NVARCHAR(MAX), -- 请求参数
+        response_result NVARCHAR(MAX), -- 响应结果
+        ip_address NVARCHAR(50), -- IP地址
+        user_agent NVARCHAR(MAX), -- 用户代理
+        execute_time BIGINT, -- 执行时长(毫秒)
+        status NVARCHAR(20) DEFAULT N'成功', -- 状态: 成功/失败
+        error_msg NVARCHAR(MAX), -- 错误信息
         create_time DATETIME2 DEFAULT GETDATE(),
         FOREIGN KEY (user_id) REFERENCES sys_user(id)
     );
@@ -136,14 +136,21 @@ GO
 
 -- 5. 插入示例数据
 -- 示例设备数据
-INSERT INTO device_info (device_code, device_name, device_type, manufacturer, model, elderly_id, status, last_sync_time, purchase_date, warranty_expire_date)
-VALUES
-('DEV001', '心率监测器-01', '心率监测器', '华为健康', 'HW-HR-100', NULL, '在线', GETDATE(), '2024-01-15', '2026-01-15'),
-('DEV002', '血压计-01', '血压计', '欧姆龙', 'OM-BP-200', NULL, '在线', GETDATE(), '2024-02-20', '2026-02-20'),
-('DEV003', '血糖仪-01', '血糖仪', '罗氏', 'RC-BG-300', NULL, '离线', GETDATE(), '2024-03-10', '2026-03-10'),
-('DEV004', '智能手环-01', '定位设备', '小米', 'MI-Band-8', NULL, '在线', GETDATE(), '2024-04-05', '2025-04-05');
+IF NOT EXISTS (SELECT * FROM device_info WHERE device_code = 'DEV001')
+BEGIN
+    INSERT INTO device_info (device_code, device_name, device_type, manufacturer, model, elderly_id, status, last_sync_time, purchase_date, warranty_expire_date)
+    VALUES
+    (N'DEV001', N'心率监测器-01', N'心率监测器', N'华为健康', N'HW-HR-100', NULL, N'在线', GETDATE(), '2024-01-15', '2026-01-15'),
+    (N'DEV002', N'血压计-01', N'血压计', N'欧姆龙', N'OM-BP-200', NULL, N'在线', GETDATE(), '2024-02-20', '2026-02-20'),
+    (N'DEV003', N'血糖仪-01', N'血糖仪', N'罗氏', N'RC-BG-300', NULL, N'离线', GETDATE(), '2024-03-10', '2026-03-10'),
+    (N'DEV004', N'智能手环-01', N'定位设备', N'小米', N'MI-Band-8', NULL, N'在线', GETDATE(), '2024-04-05', '2025-04-05');
 
-PRINT '✅ 示例设备数据插入完成';
+    PRINT '✅ 示例设备数据插入完成';
+END
+ELSE
+BEGIN
+    PRINT '⚠️ 示例设备数据已存在';
+END
 GO
 
 -- 示例预警数据 (需要先有老人数据)

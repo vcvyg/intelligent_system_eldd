@@ -27,7 +27,7 @@ async function loadElderly() {
     const keyword = document.getElementById('searchInput').value.trim();
 
     try {
-        let url = `/api/admin/elderly/list?current=${currentPage}&size=${pageSize}`;
+        let url = `/admin/elderly/list?current=${currentPage}&size=${pageSize}`;
         if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
         const response = await get(url);
@@ -110,7 +110,7 @@ function showCreateElderlyModal() {
 // 查看老人详情
 async function viewElderlyDetail(id) {
     try {
-        const response = await get(`/api/admin/elderly/${id}`);
+        const response = await get(`/admin/elderly/${id}`);
         if (response && response.data) {
             const elderly = response.data;
 
@@ -140,7 +140,7 @@ async function viewElderlyDetail(id) {
 // 编辑老人信息
 async function editElderly(id) {
     try {
-        const response = await get(`/api/admin/elderly/${id}`);
+        const response = await get(`/admin/elderly/${id}`);
         if (response && response.data) {
             const elderly = response.data;
 
@@ -217,7 +217,7 @@ async function deleteElderly(id) {
     }
 
     try {
-        await del(`/api/admin/elderly/${id}`);
+        await del(`/admin/elderly/${id}`);
         alert('删除成功');
         loadElderly();
     } catch (error) {

@@ -29,7 +29,7 @@ async function loadUsers() {
     const status = document.getElementById('statusFilter').value;
 
     try {
-        let url = `/api/admin/user/list?current=${currentPage}&size=${pageSize}`;
+        let url = `/admin/user/list?current=${currentPage}&size=${pageSize}`;
         if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
         if (role) url += `&role=${role}`;
         if (status) url += `&status=${status}`;
@@ -114,7 +114,7 @@ function showCreateUserModal() {
 // 编辑用户
 async function editUser(id) {
     try {
-        const response = await get(`/api/admin/user/${id}`);
+        const response = await get(`/admin/user/${id}`);
         if (response && response.data) {
             const user = response.data;
 
@@ -188,7 +188,7 @@ async function deleteUser(id) {
     }
 
     try {
-        await del(`/api/admin/user/${id}`);
+        await del(`/admin/user/${id}`);
         alert('删除成功');
         loadUsers();
     } catch (error) {

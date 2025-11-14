@@ -28,4 +28,13 @@ public class AdminStatisticsController {
         SystemStatisticsVO vo = adminStatisticsService.getSystemStatistics();
         return Result.success(vo);
     }
+
+    /**
+     * 获取系统概览数据(用于系统设置页面)
+     */
+    @GetMapping("/overview")
+    public Result<SystemStatisticsVO> getSystemOverview() {
+        SystemStatisticsVO vo = adminStatisticsService.getSystemStatistics();
+        return Result.success(vo);
+    }
 }

@@ -5,17 +5,39 @@ const API_BASE_URL = 'http://localhost:8080/api';
 document.addEventListener('DOMContentLoaded', () => {
     checkAuth();
     loadSystemStatistics();
+    initTabs();
 });
 
+// 初始化标签页
+function initTabs() {
+    document.querySelectorAll('.tab-btn').forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            switchTab(this);
+        });
+    });
+}
+
 // 切换标签页
-function switchTab(tabName) {
+function switchTab(btnElement) {
+    // 获取标签名
+    const tabName = btnElement.textContent.trim();
+    let targetTab;
+
+    if (tabName.includes('系统信息')) {
+        targetTab = 'system';
+    } else if (tabName.includes('操作日志')) {
+        targetTab = 'logs';
+    } else if (tabName.includes('关于系统')) {
+        targetTab = 'about';
+    }
+
     // 移除所有active类
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
     // 添加active类到当前标签
-    event.target.classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.add('active');
+    btnElement.classList.add('active');
+    document.getElementById(`${targetTab}-tab`).classList.add('active');
 }
 
 // 加载系统统计数据

@@ -107,19 +107,19 @@ function getStatusClass(status) {
 function getActionButtons(alert) {
     if (alert.status === '待处理') {
         return `
-            <button class="btn-small btn-primary" onclick="handleAlert(${alert.id})">处理</button>
-            <button class="btn-small btn-secondary" onclick="ignoreAlert(${alert.id})">忽略</button>
-            <button class="btn-small btn-danger" onclick="deleteAlert(${alert.id})">删除</button>
+            <button class="btn-handle" onclick="handleAlert(${alert.id})">处理</button>
+            <button class="btn-ignore" onclick="ignoreAlert(${alert.id})">忽略</button>
+            <button class="btn-delete" onclick="deleteAlert(${alert.id})">删除</button>
         `;
     } else if (alert.status === '处理中') {
         return `
-            <button class="btn-small btn-primary" onclick="handleAlert(${alert.id})">完成处理</button>
-            <button class="btn-small btn-danger" onclick="deleteAlert(${alert.id})">删除</button>
+            <button class="btn-handle" onclick="handleAlert(${alert.id})">完成处理</button>
+            <button class="btn-delete" onclick="deleteAlert(${alert.id})">删除</button>
         `;
     } else {
         return `
-            <button class="btn-small btn-info" onclick="viewAlert(${alert.id})">查看</button>
-            <button class="btn-small btn-danger" onclick="deleteAlert(${alert.id})">删除</button>
+            <button class="btn-view" onclick="viewAlert(${alert.id})">查看</button>
+            <button class="btn-delete" onclick="deleteAlert(${alert.id})">删除</button>
         `;
     }
 }

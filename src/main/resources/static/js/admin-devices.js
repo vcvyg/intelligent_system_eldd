@@ -71,9 +71,9 @@ function renderDeviceTable(devices) {
             </td>
             <td>${device.lastSyncTime ? formatDateTime(device.lastSyncTime) : '-'}</td>
             <td class="action-btns">
-                <button class="btn-small btn-info" onclick="viewDevice(${device.id})">查看</button>
-                <button class="btn-small btn-warning" onclick="editDevice(${device.id})">编辑</button>
-                <button class="btn-small btn-danger" onclick="deleteDevice(${device.id})">删除</button>
+                <button class="btn-view" onclick="viewDevice(${device.id})">查看</button>
+                <button class="btn-edit" onclick="editDevice(${device.id})">编辑</button>
+                <button class="btn-delete" onclick="deleteDevice(${device.id})">删除</button>
             </td>
         </tr>
     `).join('');

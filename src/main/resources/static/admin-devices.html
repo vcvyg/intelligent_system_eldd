@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>设备管理 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="admin-devices.html" class="nav-item active">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="admin-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>设备管理</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，管理员！</span>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📱</div>
+                        <div class="stat-info">
+                            <h3>设备总数</h3>
+                            <p class="stat-value" id="totalDevices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #10b981;">✓</div>
+                        <div class="stat-info">
+                            <h3>在线设备</h3>
+                            <p class="stat-value" id="onlineDevices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f59e0b;">⏸</div>
+                        <div class="stat-info">
+                            <h3>离线设备</h3>
+                            <p class="stat-value" id="offlineDevices">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #ef4444;">⚠</div>
+                        <div class="stat-info">
+                            <h3>故障设备</h3>
+                            <p class="stat-value" id="faultDevices">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 操作栏 -->
+            <section class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="搜索设备编号或名称">
+                    <button onclick="searchDevices()">搜索</button>
+                </div>
+                <div class="filter-box">
+                    <select id="typeFilter" onchange="loadDevices()">
+                        <option value="">全部类型</option>
+                        <option value="心率监测器">心率监测器</option>
+                        <option value="血压计">血压计</option>
+                        <option value="血糖仪">血糖仪</option>
+                        <option value="定位设备">定位设备</option>
+                        <option value="体温计">体温计</option>
+                    </select>
+                    <select id="statusFilter" onchange="loadDevices()">
+                        <option value="">全部状态</option>
+                        <option value="在线">在线</option>
+                        <option value="离线">离线</option>
+                        <option value="故障">故障</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="showCreateDeviceModal()">➕ 新增设备</button>
+            </section>
+
+            <!-- 设备列表 -->
+            <section class="table-section">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>设备编号</th>
+                            <th>设备名称</th>
+                            <th>设备类型</th>
+                            <th>生产厂商</th>
+                            <th>绑定老人</th>
+                            <th>状态</th>
+                            <th>最后同步</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deviceTableBody">
+                        <tr>
+                            <td colspan="9" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 分页 -->
+                <div class="pagination">
+                    <button id="prevBtn" onclick="prevPage()">上一页</button>
+                    <span id="pageInfo">第 1 页</span>
+                    <button id="nextBtn" onclick="nextPage()">下一页</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 新增/编辑设备模态框 -->
+    <div id="deviceModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增设备</h2>
+                <span class="close" onclick="closeDeviceModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="deviceForm">
+                    <input type="hidden" id="deviceId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>设备编号 *</label>
+                            <input type="text" id="deviceCode" required>
+                        </div>
+                        <div class="form-group">
+                            <label>设备名称 *</label>
+                            <input type="text" id="deviceName" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>设备类型 *</label>
+                            <select id="deviceType" required>
+                                <option value="">请选择</option>
+                                <option value="心率监测器">心率监测器</option>
+                                <option value="血压计">血压计</option>
+                                <option value="血糖仪">血糖仪</option>
+                                <option value="定位设备">定位设备</option>
+                                <option value="体温计">体温计</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>生产厂商</label>
+                            <input type="text" id="manufacturer">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>设备型号</label>
+                            <input type="text" id="model">
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <select id="status">
+                                <option value="在线">在线</option>
+                                <option value="离线">离线</option>
+                                <option value="故障">故障</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>购买日期</label>
+                            <input type="date" id="purchaseDate">
+                        </div>
+                        <div class="form-group">
+                            <label>保修到期日期</label>
+                            <input type="date" id="warrantyExpireDate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <textarea id="remark" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeDeviceModal()">取消</button>
+                <button class="btn-primary" onclick="saveDevice()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-devices.js"></script>
+</body>
+</html>

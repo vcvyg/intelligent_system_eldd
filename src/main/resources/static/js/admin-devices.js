@@ -6,7 +6,7 @@ let totalPages = 1;
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
+    checkLogin();
     loadDevices();
     loadStatistics();
 });

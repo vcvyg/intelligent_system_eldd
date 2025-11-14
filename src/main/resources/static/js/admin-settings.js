@@ -2,7 +2,8 @@
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuth();
+    checkLogin();
+    updateUserInfo();
     loadSystemStatistics();
     initTabs();
 });
@@ -14,6 +15,17 @@ function initTabs() {
             switchTab(this);
         });
     });
+}
+
+// 更新用户信息显示
+function updateUserInfo() {
+    const userInfo = getUserInfo();
+    if (userInfo) {
+        const welcomeText = document.getElementById('welcomeText');
+        if (welcomeText) {
+            welcomeText.textContent = `欢迎,${userInfo.username || '管理员'}!`;
+        }
+    }
 }
 
 // 切换标签页

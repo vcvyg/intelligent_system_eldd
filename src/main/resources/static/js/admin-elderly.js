@@ -64,6 +64,7 @@ function renderElderlyTable(elderlyList) {
             <td class="action-btns">
                 <button class="btn-view" onclick="viewElderlyDetail(${elderly.id})">查看</button>
                 <button class="btn-edit" onclick="editElderly(${elderly.id})">编辑</button>
+                <button class="btn-relation" onclick="manageRelations(${elderly.id})">关联管理</button>
                 <button class="btn-delete" onclick="deleteElderly(${elderly.id})">删除</button>
             </td>
         </tr>
@@ -223,4 +224,91 @@ async function deleteElderly(id) {
     } catch (error) {
         console.error('删除老人信息失败:', error);
     }
+}
+
+// ========== 关联管理功能 ==========
+
+let currentElderlyId = null;
+
+// 打开关联管理弹窗
+async function manageRelations(elderlyId) {
+    currentElderlyId = elderlyId;
+    document.getElementById('relationModal').style.display = 'flex';
+    document.getElementById('relationModalTitle').textContent = `关联管理 - 老人ID: ${elderlyId}`;
+
+    // 默认显示子女关联标签页
+    switchRelationTab('family');
+}
+
+// 关闭关联管理弹窗
+function closeRelationModal() {
+    document.getElementById('relationModal').style.display = 'none';
+    currentElderlyId = null;
+}
+
+// 切换关联管理标签页
+function switchRelationTab(tabName) {
+    // 移除所有标签页的active类
+    document.querySelectorAll('.relation-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.relation-tab-content').forEach(content => content.classList.remove('active'));
+
+    // 添加当前标签页的active类
+    event.target.classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+
+    // 加载对应数据
+    if (tabName === 'family') {
+        loadFamilyRelations();
+    } else if (tabName === 'medical') {
+        loadMedicalRelations();
+    } else if (tabName === 'device') {
+        loadDeviceRelations();
+    }
+}
+
+// 加载子女关联列表
+async function loadFamilyRelations() {
+    const tbody = document.getElementById('familyRelationTableBody');
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">功能开发中,暂无数据...</td></tr>';
+
+    // TODO: 调用后端API获取子女关联列表
+    // try {
+    //     const result = await get(`/admin/elderly/${currentElderlyId}/family`);
+    //     if (result.code === 200) {
+    //         renderFamilyList(result.data);
+    //     }
+    // } catch (error) {
+    //     console.error('加载子女关联失败:', error);
+    // }
+}
+
+// 加载医护分配列表
+async function loadMedicalRelations() {
+    const tbody = document.getElementById('medicalRelationTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">功能开发中,暂无数据...</td></tr>';
+
+    // TODO: 调用后端API获取医护分配列表
+}
+
+// 加载设备绑定列表
+async function loadDeviceRelations() {
+    const tbody = document.getElementById('deviceRelationTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">功能开发中,暂无数据...</td></tr>';
+
+    // TODO: 调用后端API获取设备绑定列表
+}
+
+// 显示添加子女表单
+function showAddFamilyForm() {
+    alert('添加子女功能开发中...\n\n需要实现:\n1. 选择子女用户(角色为FAMILY的用户)\n2. 设置关系类型\n3. 是否设为主要联系人');
+}
+
+// 显示分配医护表单
+function showAddMedicalForm() {
+    alert('分配医护功能开发中...\n\n需要实现:\n1. 选择医护人员(角色为MEDICAL的用户)\n2. 是否设为主治医生');
+}
+
+// 显示绑定设备表单
+function showBindDeviceForm() {
+    alert('绑定设备功能开发中...\n\n需要实现:\n1. 选择未绑定的设备\n2. 确认绑定关系');
 }

@@ -189,6 +189,166 @@
         </div>
     </div>
 
+    <!-- 关联管理模态框 -->
+    <div id="relationModal" class="modal">
+        <div class="modal-content modal-xl">
+            <div class="modal-header">
+                <h2 id="relationModalTitle">关联管理</h2>
+                <span class="close" onclick="closeRelationModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- 标签页导航 -->
+                <div class="relation-tabs">
+                    <button class="relation-tab-btn active" onclick="switchRelationTab('family')">子女关联</button>
+                    <button class="relation-tab-btn" onclick="switchRelationTab('medical')">医护分配</button>
+                    <button class="relation-tab-btn" onclick="switchRelationTab('device')">设备绑定</button>
+                </div>
+
+                <!-- 子女关联标签页 -->
+                <div id="family-tab" class="relation-tab-content active">
+                    <div class="relation-toolbar">
+                        <button class="btn-primary" onclick="showAddFamilyForm()">+ 添加子女</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>真实姓名</th>
+                                <th>手机号</th>
+                                <th>邮箱</th>
+                                <th>关系类型</th>
+                                <th>主要联系人</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="familyRelationTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 医护分配标签页 -->
+                <div id="medical-tab" class="relation-tab-content">
+                    <div class="relation-toolbar">
+                        <button class="btn-primary" onclick="showAddMedicalForm()">+ 分配医护</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>用户名</th>
+                                <th>真实姓名</th>
+                                <th>手机号</th>
+                                <th>主治医生</th>
+                                <th>分配日期</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="medicalRelationTableBody">
+                            <tr>
+                                <td colspan="6" class="loading">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 设备绑定标签页 -->
+                <div id="device-tab" class="relation-tab-content">
+                    <div class="relation-toolbar">
+                        <button class="btn-primary" onclick="showBindDeviceForm()">+ 绑定设备</button>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>设备编号</th>
+                                <th>设备名称</th>
+                                <th>设备类型</th>
+                                <th>设备状态</th>
+                                <th>最后同步时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="deviceRelationTableBody">
+                            <tr>
+                                <td colspan="6" class="loading">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeRelationModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* 关联管理模态框样式 */
+        .modal-xl {
+            width: 90%;
+            max-width: 1200px;
+        }
+
+        .relation-tabs {
+            display: flex;
+            gap: 10px;
+            border-bottom: 2px solid #e5e7eb;
+            margin-bottom: 20px;
+        }
+
+        .relation-tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #6b7280;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .relation-tab-btn:hover {
+            color: #3b82f6;
+        }
+
+        .relation-tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .relation-tab-content {
+            display: none;
+        }
+
+        .relation-tab-content.active {
+            display: block;
+        }
+
+        .relation-toolbar {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-relation {
+            background-color: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-relation:hover {
+            background-color: #7c3aed;
+        }
+    </style>
+
     <script src="js/common.js"></script>
     <script src="js/admin-elderly.js"></script>
 </body>

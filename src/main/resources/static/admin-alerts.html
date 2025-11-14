@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预警管理 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="admin-devices.html" class="nav-item">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="admin-alerts.html" class="nav-item active">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <a href="admin-settings.html" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>预警管理</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，管理员！</span>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #6366f1;">⚠</div>
+                        <div class="stat-info">
+                            <h3>预警总数</h3>
+                            <p class="stat-value" id="totalAlerts">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #f59e0b;">⏳</div>
+                        <div class="stat-info">
+                            <h3>待处理</h3>
+                            <p class="stat-value" id="pendingAlerts">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #3b82f6;">⚙</div>
+                        <div class="stat-info">
+                            <h3>处理中</h3>
+                            <p class="stat-value" id="processingAlerts">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: #10b981;">✓</div>
+                        <div class="stat-info">
+                            <h3>已处理</h3>
+                            <p class="stat-value" id="handledAlerts">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 操作栏 -->
+            <section class="toolbar">
+                <div class="filter-box">
+                    <select id="typeFilter" onchange="loadAlerts()">
+                        <option value="">全部类型</option>
+                        <option value="心率异常">心率异常</option>
+                        <option value="血压异常">血压异常</option>
+                        <option value="血糖异常">血糖异常</option>
+                        <option value="体温异常">体温异常</option>
+                        <option value="跌倒">跌倒</option>
+                        <option value="离家">离家</option>
+                    </select>
+                    <select id="levelFilter" onchange="loadAlerts()">
+                        <option value="">全部等级</option>
+                        <option value="低">低</option>
+                        <option value="中">中</option>
+                        <option value="高">高</option>
+                        <option value="紧急">紧急</option>
+                    </select>
+                    <select id="statusFilter" onchange="loadAlerts()">
+                        <option value="">全部状态</option>
+                        <option value="待处理">待处理</option>
+                        <option value="处理中">处理中</option>
+                        <option value="已处理">已处理</option>
+                        <option value="已忽略">已忽略</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="showCreateAlertModal()">➕ 新增预警</button>
+            </section>
+
+            <!-- 预警列表 -->
+            <section class="table-section">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>老人姓名</th>
+                            <th>预警类型</th>
+                            <th>预警等级</th>
+                            <th>预警内容</th>
+                            <th>异常数值</th>
+                            <th>预警时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertTableBody">
+                        <tr>
+                            <td colspan="9" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <!-- 分页 -->
+                <div class="pagination">
+                    <button id="prevBtn" onclick="prevPage()">上一页</button>
+                    <span id="pageInfo">第 1 页</span>
+                    <button id="nextBtn" onclick="nextPage()">下一页</button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 处理预警模态框 -->
+    <div id="handleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>处理预警</h2>
+                <span class="close" onclick="closeHandleModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="handleForm">
+                    <input type="hidden" id="handleAlertId">
+                    <div class="form-group">
+                        <label>处理结果 *</label>
+                        <textarea id="handleResult" rows="4" required placeholder="请输入处理结果..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeHandleModal()">取消</button>
+                <button class="btn-primary" onclick="submitHandle()">提交处理</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-alerts.js"></script>
+</body>
+</html>

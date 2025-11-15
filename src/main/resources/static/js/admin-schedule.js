@@ -2,6 +2,17 @@
 
 // 页面加载时初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 检查登录状态
+    const userInfo = checkLogin();
+    if (!userInfo || userInfo.role !== 'ADMIN') {
+        alert('权限不足');
+        logout();
+        return;
+    }
+
+    // 显示欢迎信息
+    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.realName || userInfo.username}！`;
+
     // 设置默认日期范围(本周)
     const today = new Date();
     const startOfWeek = new Date(today);
@@ -14,23 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 加载排班列表
     loadSchedules();
-
-    // 加载用户信息
-    loadUserInfo();
 });
-
-// 加载用户信息
-async function loadUserInfo() {
-    try {
-        const userInfo = await get('/auth/info');
-        if (userInfo.code === 200 && userInfo.data) {
-            document.getElementById('welcomeText').textContent =
-                `欢迎，${userInfo.data.realName || userInfo.data.username}！`;
-        }
-    } catch (error) {
-        console.error('加载用户信息失败:', error);
-    }
-}
 
 // 加载排班列表
 async function loadSchedules() {

@@ -5,10 +5,9 @@ let scheduleData = {}; // 排班数据: {date: {timeSlot: [schedules]}}
 let medicalUsers = []; // 医护人员列表
 let userColorMap = {}; // 用户ID到颜色的映射
 
-// 时间段定义(参考图片中的时间段)
+// 时间段定义(每2小时一个时间段，参考图片样式)
 const TIME_SLOTS = [
-    '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
-    '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
+    '07:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00'
 ];
 
 // 星期映射
@@ -252,8 +251,8 @@ function openScheduleCell(date, timeSlot) {
     // 设置默认时间 - 根据点击的时间段自动填充
     const hour = parseInt(timeSlot.split(':')[0]);
     document.getElementById('startTime').value = timeSlot;
-    // 结束时间默认为开始时间+1小时
-    const endHour = (hour + 1) % 24;
+    // 结束时间默认为开始时间+2小时
+    const endHour = (hour + 2) % 24;
     document.getElementById('endTime').value = `${String(endHour).padStart(2, '0')}:00`;
 
     // 设置默认状态
@@ -281,7 +280,6 @@ async function editSchedule(id) {
         document.getElementById('scheduleDate').value = schedule.schedule_date;
         document.getElementById('startTime').value = schedule.start_time;
         document.getElementById('endTime').value = schedule.end_time;
-        document.getElementById('shiftType').value = schedule.shift_type || '';
         document.getElementById('status').value = schedule.status || '正常';
         document.getElementById('remark').value = schedule.remark || '';
 
@@ -332,7 +330,6 @@ async function saveSchedule() {
     const formData = {
         medicalUserId: parseInt(medicalUserId),
         scheduleDate: scheduleDate,
-        shiftType: document.getElementById('shiftType').value || null,
         startTime: startTime,
         endTime: endTime,
         status: document.getElementById('status').value,
@@ -384,22 +381,6 @@ async function deleteSchedule() {
     } catch (error) {
         console.error('删除排班失败:', error);
         alert('删除失败,请重试');
-    }
-}
-
-// 更新班次时间
-function updateShiftTime() {
-    const shiftType = document.getElementById('shiftType').value;
-    const timeMap = {
-        '早班': ['08:00', '16:00'],
-        '中班': ['12:00', '20:00'],
-        '晚班': ['16:00', '24:00'],
-        '夜班': ['00:00', '08:00']
-    };
-
-    if (timeMap[shiftType]) {
-        document.getElementById('startTime').value = timeMap[shiftType][0];
-        document.getElementById('endTime').value = timeMap[shiftType][1];
     }
 }
 

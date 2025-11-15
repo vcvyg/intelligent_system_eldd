@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>请假审批 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span><span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span><span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span><span>老人信息管理</span>
+                </a>
+                <a href="admin-schedule.html" class="nav-item">
+                    <span class="icon">📅</span><span>医护排班</span>
+                </a>
+                <a href="admin-leave.html" class="nav-item active">
+                    <span class="icon">📝</span><span>请假审批</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>请假审批</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎,管理员!</span>
+                </div>
+            </header>
+
+            <div class="content-wrapper" style="padding: 24px;">
+                <!-- 筛选标签 -->
+                <div style="margin-bottom: 20px; display: flex; gap: 12px;">
+                    <button class="btn-secondary active" onclick="filterByStatus('')">全部</button>
+                    <button class="btn-secondary" onclick="filterByStatus('待审批')">待审批</button>
+                    <button class="btn-secondary" onclick="filterByStatus('已同意')">已同意</button>
+                    <button class="btn-secondary" onclick="filterByStatus('已拒绝')">已拒绝</button>
+                </div>
+
+                <!-- 申请列表 -->
+                <div class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>申请人</th>
+                                <th>类型</th>
+                                <th>开始日期</th>
+                                <th>结束日期</th>
+                                <th>天数</th>
+                                <th>申请原因</th>
+                                <th>状态</th>
+                                <th>申请时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaveTableBody">
+                            <tr><td colspan="9" class="loading">加载中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 审批模态框 -->
+    <div id="reviewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>审批请假申请</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="reviewId">
+                <div id="reviewInfo" style="padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 16px;">
+                    <!-- 申请信息将在这里显示 -->
+                </div>
+                <div class="form-group">
+                    <label>审批意见</label>
+                    <textarea id="reviewRemark" rows="4" placeholder="可选填写审批意见..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn-danger" onclick="review('已拒绝')">拒绝</button>
+                <button class="btn-primary" onclick="review('已同意')">同意</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        let currentStatus = '';
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', function() {
+            const userInfo = checkLogin();
+            if (!userInfo || userInfo.role !== 'ADMIN') {
+                alert('权限不足');
+                logout();
+                return;
+            }
+            document.getElementById('welcomeText').textContent = `欢迎,${userInfo.username}!`;
+            loadLeaveRequests();
+        });
+
+        // 加载请假列表
+        async function loadLeaveRequests() {
+            const tbody = document.getElementById('leaveTableBody');
+            tbody.innerHTML = '<tr><td colspan="9" class="loading">加载中...</td></tr>';
+
+            try {
+                const url = currentStatus ? `/admin/leave/list/${currentStatus}` : '/admin/leave/list';
+                const result = await get(url);
+
+                if (result.code === 200 && result.data) {
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
+                    } else {
+                        tbody.innerHTML = result.data.map(item => `
+                            <tr>
+                                <td>${item.real_name || item.username}</td>
+                                <td>${item.leave_type}</td>
+                                <td>${item.start_date}</td>
+                                <td>${item.end_date}</td>
+                                <td>${item.days}天</td>
+                                <td style="max-width: 200px;">${item.reason}</td>
+                                <td><span class="badge ${getBadgeClass(item.status)}">${item.status}</span></td>
+                                <td>${formatDateTime(item.create_time)}</td>
+                                <td>
+                                    ${item.status === '待审批' ?
+                                        `<button class="btn-primary" onclick='showReviewModal(${JSON.stringify(item)})'>审批</button>` :
+                                        item.review_remark || '-'}
+                                </td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('加载失败:', error);
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:red;">加载失败</td></tr>';
+            }
+        }
+
+        // 按状态筛选
+        function filterByStatus(status) {
+            currentStatus = status;
+            // 更新按钮样式
+            document.querySelectorAll('.btn-secondary').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            loadLeaveRequests();
+        }
+
+        // 显示审批模态框
+        function showReviewModal(item) {
+            document.getElementById('reviewId').value = item.id;
+            document.getElementById('reviewRemark').value = '';
+            document.getElementById('reviewInfo').innerHTML = `
+                <p><strong>申请人:</strong> ${item.real_name || item.username}</p>
+                <p><strong>请假类型:</strong> ${item.leave_type}</p>
+                <p><strong>请假时间:</strong> ${item.start_date} 至 ${item.end_date} (共${item.days}天)</p>
+                <p><strong>申请原因:</strong> ${item.reason}</p>
+            `;
+            document.getElementById('reviewModal').style.display = 'flex';
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('reviewModal').style.display = 'none';
+        }
+
+        // 审批
+        async function review(status) {
+            const id = document.getElementById('reviewId').value;
+            const remark = document.getElementById('reviewRemark').value;
+
+            try {
+                const result = await put(`/admin/leave/review/${id}?status=${status}&remark=${encodeURIComponent(remark)}`, {});
+
+                if (result.code === 200) {
+                    alert(`${status}成功`);
+                    closeModal();
+                    loadLeaveRequests();
+                } else {
+                    alert(result.message || '操作失败');
+                }
+            } catch (error) {
+                console.error('审批失败:', error);
+                alert('审批失败');
+            }
+        }
+
+        // 获取徽章样式
+        function getBadgeClass(status) {
+            if (status === '已同意') return 'badge-green';
+            if (status === '已拒绝') return 'badge-red';
+            return 'badge-yellow';
+        }
+
+        // 格式化日期时间
+        function formatDateTime(dateTime) {
+            if (!dateTime) return '-';
+            return dateTime.substring(0, 16).replace('T', ' ');
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function(event) {
+            const modal = document.getElementById('reviewModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

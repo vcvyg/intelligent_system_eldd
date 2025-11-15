@@ -103,8 +103,8 @@ function updateWeekDisplay() {
 // 加载医护人员列表
 async function loadMedicalUsers() {
     try {
-        // 修改API路径：/api/admin/user/list?role=MEDICAL
-        const result = await get('/api/admin/user/list?role=MEDICAL&size=1000');
+        // 使用正确的API路径(common.js已经加了/api前缀)
+        const result = await get('/admin/user/list?role=MEDICAL&size=1000');
         if (result.code === 200 && result.data && result.data.records) {
             medicalUsers = result.data.records;
 
@@ -134,7 +134,7 @@ async function loadWeekSchedules() {
         const startDate = formatDate(currentWeekStart);
         const endDate = formatDate(weekEnd);
 
-        const result = await get(`/api/admin/schedule/range?startDate=${startDate}&endDate=${endDate}`);
+        const result = await get(`/admin/schedule/range?startDate=${startDate}&endDate=${endDate}`);
 
         if (result.code === 200 && result.data) {
             // 组织数据结构 - 保存完整的排班对象以便编辑
@@ -344,10 +344,10 @@ async function saveSchedule() {
         if (scheduleId) {
             // 更新 - 需要包含ID
             formData.id = parseInt(scheduleId);
-            result = await put('/api/admin/schedule/update', formData);
+            result = await put('/admin/schedule/update', formData);
         } else {
             // 新增
-            result = await post('/api/admin/schedule/add', formData);
+            result = await post('/admin/schedule/add', formData);
         }
 
         if (result.code === 200) {
@@ -373,7 +373,7 @@ async function deleteSchedule() {
     }
 
     try {
-        const result = await del(`/api/admin/schedule/${scheduleId}`);
+        const result = await del(`/admin/schedule/${scheduleId}`);
         if (result.code === 200) {
             alert('删除成功');
             closeScheduleModal();

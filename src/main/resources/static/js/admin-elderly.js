@@ -16,7 +16,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // 显示欢迎信息
-    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.realName || userInfo.username}！`;
+    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
     // 加载老人列表
     loadElderly();

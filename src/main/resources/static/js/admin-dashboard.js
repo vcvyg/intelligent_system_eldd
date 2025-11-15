@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // 显示欢迎信息
-    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.realName || userInfo.username}！`;
+    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
     // 加载统计数据
     loadStatistics();

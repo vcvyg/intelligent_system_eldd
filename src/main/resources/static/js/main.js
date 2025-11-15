@@ -75,7 +75,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 显示欢迎信息
     const welcomeText = document.getElementById('welcomeText');
-    welcomeText.textContent = `欢迎, ${userInfo.realName || userInfo.username}!`;
+    welcomeText.textContent = `欢迎, ${userInfo.username}!`;
 
     // 显示用户详情
     const userDetails = document.getElementById('userDetails');

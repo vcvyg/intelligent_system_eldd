@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 显示欢迎信息
-    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.realName || userInfo.username}！`;
+    document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
     // 设置默认日期范围(本周)
     const today = new Date();

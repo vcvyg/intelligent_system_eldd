@@ -29,6 +29,10 @@
                     <span class="icon">👴</span>
                     <span>老人信息管理</span>
                 </a>
+                <a href="admin-schedule.html" class="nav-item">
+                    <span class="icon">📅</span>
+                    <span>医护排班</span>
+                </a>
                 <a href="admin-devices.html" class="nav-item active">
                     <span class="icon">📱</span>
                     <span>设备管理</span>
@@ -222,6 +226,58 @@
             </div>
         </div>
     </div>
+
+    <style>
+        /* 绑定状态标签样式 */
+        .bind-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .bind-badge-yes {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+
+        .bind-badge-no {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* 按钮样式补充 */
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        .btn-warning {
+            background-color: #f59e0b;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-warning:hover {
+            background-color: #d97706;
+        }
+    </style>
 
     <script src="js/common.js"></script>
     <script src="js/admin-devices.js"></script>

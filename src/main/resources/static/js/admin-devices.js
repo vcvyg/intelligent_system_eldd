@@ -63,7 +63,12 @@ function renderDeviceTable(devices) {
             <td>${device.deviceName}</td>
             <td>${device.deviceType}</td>
             <td>${device.manufacturer || '-'}</td>
-            <td>${device.elderlyName || '未绑定'}</td>
+            <td>
+                ${device.elderlyId ?
+                    `<span class="bind-badge bind-badge-yes">${device.elderlyName || '已绑定'}</span>` :
+                    `<span class="bind-badge bind-badge-no">未绑定</span>`
+                }
+            </td>
             <td>
                 <span class="status-badge ${getStatusClass(device.status)}">
                     ${device.status}
@@ -73,6 +78,10 @@ function renderDeviceTable(devices) {
             <td class="action-btns">
                 <button class="btn-view" onclick="viewDevice(${device.id})">查看</button>
                 <button class="btn-edit" onclick="editDevice(${device.id})">编辑</button>
+                ${device.elderlyId ?
+                    `<button class="btn-warning" onclick="unbindDeviceFromElderly(${device.id}, ${device.elderlyId})">解绑</button>` :
+                    `<button class="btn-success" onclick="bindDeviceToElderly(${device.id})">绑定</button>`
+                }
                 <button class="btn-delete" onclick="deleteDevice(${device.id})">删除</button>
             </td>
         </tr>
@@ -308,4 +317,33 @@ function showSuccess(message) {
 // 显示错误消息
 function showError(message) {
     alert('错误: ' + message);
+}
+
+// 绑定设备到老人
+async function bindDeviceToElderly(deviceId) {
+    const elderlyId = prompt('请输入要绑定的老人ID\n(提示: 可在老人信息管理页面查看老人ID)');
+    if (!elderlyId) return;
+
+    try {
+        await post(`/admin/elderly/${elderlyId}/devices/bind?deviceId=${deviceId}`);
+        alert('绑定成功！');
+        loadDevices();
+    } catch (error) {
+        console.error('绑定设备失败:', error);
+        alert('绑定失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 从老人解绑设备
+async function unbindDeviceFromElderly(deviceId, elderlyId) {
+    if (!confirm('确定要解绑该设备吗？')) return;
+
+    try {
+        await del(`/admin/elderly/${elderlyId}/devices/${deviceId}`);
+        alert('解绑成功！');
+        loadDevices();
+    } catch (error) {
+        console.error('解绑设备失败:', error);
+        alert('解绑失败: ' + (error.message || '未知错误'));
+    }
 }

@@ -113,4 +113,40 @@ public class ElderlyRelationServiceImpl implements ElderlyRelationService {
         wrapper.eq(DeviceInfo::getElderlyId, elderlyId);
         return deviceInfoMapper.selectMaps(wrapper);
     }
+
+    @Override
+    public boolean bindDevice(Long elderlyId, Long deviceId) {
+        // 检查设备是否已被其他老人绑定
+        DeviceInfo device = deviceInfoMapper.selectById(deviceId);
+        if (device == null) {
+            throw new RuntimeException("设备不存在");
+        }
+        if (device.getElderlyId() != null && !device.getElderlyId().equals(elderlyId)) {
+            throw new RuntimeException("该设备已被其他老人绑定");
+        }
+
+        // 更新设备绑定
+        DeviceInfo updateDevice = new DeviceInfo();
+        updateDevice.setId(deviceId);
+        updateDevice.setElderlyId(elderlyId);
+        return deviceInfoMapper.updateById(updateDevice) > 0;
+    }
+
+    @Override
+    public boolean unbindDevice(Long elderlyId, Long deviceId) {
+        // 检查设备是否属于该老人
+        DeviceInfo device = deviceInfoMapper.selectById(deviceId);
+        if (device == null) {
+            throw new RuntimeException("设备不存在");
+        }
+        if (device.getElderlyId() == null || !device.getElderlyId().equals(elderlyId)) {
+            throw new RuntimeException("该设备未绑定到此老人");
+        }
+
+        // 解绑设备
+        DeviceInfo updateDevice = new DeviceInfo();
+        updateDevice.setId(deviceId);
+        updateDevice.setElderlyId(null);
+        return deviceInfoMapper.updateById(updateDevice) > 0;
+    }
 }

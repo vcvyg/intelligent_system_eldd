@@ -349,6 +349,7 @@ async function loadDeviceRelations() {
                         <td>${formatDateTime(item.last_sync_time) || '-'}</td>
                         <td class="action-btns">
                             <button class="btn-view" onclick="viewDevice(${item.id})">查看</button>
+                            <button class="btn-danger" onclick="unbindDevice(${item.id})">解绑</button>
                         </td>
                     </tr>
                 `).join('');
@@ -398,8 +399,32 @@ async function showAddMedicalForm() {
 }
 
 // 显示绑定设备表单
-function showBindDeviceForm() {
-    alert('设备绑定功能提示:\n\n请到"设备管理"页面,\n编辑设备时选择要绑定的老人即可。');
+async function showBindDeviceForm() {
+    const deviceId = prompt('请输入要绑定的设备ID\n(提示:可在设备管理页面查看未绑定的设备列表)');
+    if (!deviceId) return;
+
+    try {
+        await post(`/admin/elderly/${currentElderlyId}/devices/bind?deviceId=${deviceId}`);
+        alert('绑定成功');
+        loadDeviceRelations();
+    } catch (error) {
+        console.error('绑定设备失败:', error);
+        alert('绑定失败:' + (error.message || '未知错误'));
+    }
+}
+
+// 解绑设备
+async function unbindDevice(deviceId) {
+    if (!confirm('确定要解绑该设备吗?')) return;
+
+    try {
+        await del(`/admin/elderly/${currentElderlyId}/devices/${deviceId}`);
+        alert('解绑成功');
+        loadDeviceRelations();
+    } catch (error) {
+        console.error('解绑设备失败:', error);
+        alert('解绑失败:' + (error.message || '未知错误'));
+    }
 }
 
 // 删除子女关联

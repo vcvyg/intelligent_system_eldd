@@ -22,4 +22,14 @@ public interface ElderlyMedicalRelationMapper extends BaseMapper<ElderlyMedicalR
             "LEFT JOIN sys_user u ON emr.medical_user_id = u.id " +
             "WHERE emr.elderly_id = #{elderlyId} AND emr.deleted = 0")
     List<Map<String, Object>> selectMedicalListWithUserInfo(Long elderlyId);
+
+    /**
+     * 反向查询: 查询某个医护人员负责的老人列表(包含老人信息)
+     */
+    @Select("SELECT emr.*, e.name, e.age, e.gender, e.birthday, e.id_card, e.address, " +
+            "e.emergency_contact, e.emergency_phone, e.medical_history, e.allergy_history " +
+            "FROM elderly_medical_relation emr " +
+            "LEFT JOIN elderly_info e ON emr.elderly_id = e.id " +
+            "WHERE emr.medical_user_id = #{medicalUserId} AND emr.deleted = 0")
+    List<Map<String, Object>> selectElderlyListByMedicalUser(Long medicalUserId);
 }

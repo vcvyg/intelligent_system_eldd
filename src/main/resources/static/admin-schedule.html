@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医护排班管理 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="admin-schedule.html" class="nav-item active">
+                    <span class="icon">📅</span>
+                    <span>医护排班管理</span>
+                </a>
+                <a href="admin-devices.html" class="nav-item">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="admin-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <a href="admin-settings.html" class="nav-item">
+                    <span class="icon">⚙️</span>
+                    <span>系统设置</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>医护排班管理</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，管理员！</span>
+                </div>
+            </header>
+
+            <!-- 操作栏 -->
+            <section class="toolbar">
+                <div class="filter-group">
+                    <label>选择日期范围:</label>
+                    <input type="date" id="startDate">
+                    <span>至</span>
+                    <input type="date" id="endDate">
+                    <button onclick="loadSchedules()">查询</button>
+                </div>
+                <button class="btn-primary" onclick="showAddScheduleModal()">➕ 新增排班</button>
+            </section>
+
+            <!-- 排班列表 -->
+            <section class="table-section">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>医护人员</th>
+                            <th>姓名</th>
+                            <th>排班日期</th>
+                            <th>班次类型</th>
+                            <th>开始时间</th>
+                            <th>结束时间</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleTableBody">
+                        <tr>
+                            <td colspan="9" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <!-- 新增/编辑排班模态框 -->
+    <div id="scheduleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">新增排班</h2>
+                <span class="close" onclick="closeScheduleModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="scheduleForm">
+                    <input type="hidden" id="scheduleId">
+                    <div class="form-group">
+                        <label>医护人员ID *</label>
+                        <input type="number" id="medicalUserId" required>
+                        <small>提示: 需要先在用户管理中创建角色为MEDICAL的用户</small>
+                    </div>
+                    <div class="form-group">
+                        <label>排班日期 *</label>
+                        <input type="date" id="scheduleDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>班次类型 *</label>
+                        <select id="shiftType" required>
+                            <option value="">请选择</option>
+                            <option value="早班">早班</option>
+                            <option value="中班">中班</option>
+                            <option value="晚班">晚班</option>
+                            <option value="夜班">夜班</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>开始时间 *</label>
+                            <input type="time" id="startTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>结束时间 *</label>
+                            <input type="time" id="endTime" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="status">
+                            <option value="正常">正常</option>
+                            <option value="请假">请假</option>
+                            <option value="调班">调班</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <textarea id="remark" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeScheduleModal()">取消</button>
+                <button class="btn-primary" onclick="saveSchedule()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-schedule.js"></script>
+</body>
+</html>

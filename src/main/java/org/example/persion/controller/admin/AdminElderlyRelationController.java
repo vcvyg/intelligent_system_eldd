@@ -87,4 +87,26 @@ public class AdminElderlyRelationController {
         List<Map<String, Object>> list = elderlyRelationService.getDeviceRelations(elderlyId);
         return Result.success(list);
     }
+
+    /**
+     * 绑定设备到老人
+     */
+    @PostMapping("/{elderlyId}/devices/bind")
+    public Result<Void> bindDevice(
+            @PathVariable Long elderlyId,
+            @RequestParam Long deviceId) {
+        elderlyRelationService.bindDevice(elderlyId, deviceId);
+        return Result.success();
+    }
+
+    /**
+     * 解绑设备
+     */
+    @DeleteMapping("/{elderlyId}/devices/{deviceId}")
+    public Result<Void> unbindDevice(
+            @PathVariable Long elderlyId,
+            @PathVariable Long deviceId) {
+        elderlyRelationService.unbindDevice(elderlyId, deviceId);
+        return Result.success();
+    }
 }

@@ -44,4 +44,14 @@ public interface ElderlyRelationService {
      * 获取老人绑定的设备列表
      */
     List<Map<String, Object>> getDeviceRelations(Long elderlyId);
+
+    /**
+     * 绑定设备到老人
+     */
+    boolean bindDevice(Long elderlyId, Long deviceId);
+
+    /**
+     * 解绑设备
+     */
+    boolean unbindDevice(Long elderlyId, Long deviceId);
 }

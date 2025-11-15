@@ -7,6 +7,312 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* 排班系统专用样式 */
+        .schedule-container {
+            display: flex;
+            height: calc(100vh - 80px);
+            overflow: hidden;
+        }
+
+        /* 主内容区 */
+        .schedule-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #f9fafb;
+            overflow: hidden;
+        }
+
+        /* 顶部工具栏 */
+        .schedule-toolbar {
+            background: #fff;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .week-navigator {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .week-info {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            min-width: 280px;
+            text-align: center;
+        }
+
+        /* 排班视图区域 */
+        .schedule-view {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+
+        /* 周视图容器 */
+        .week-view {
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 周视图网格 */
+        .week-schedule-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            background: #e5e7eb;
+            gap: 1px;
+        }
+
+        /* 表头 */
+        .grid-header {
+            background: #f8fafc;
+            padding: 16px 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #374151;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .grid-header.time-col {
+            background: #fff;
+        }
+
+        .grid-header .date {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+
+        .grid-header .weekday {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 400;
+        }
+
+        .grid-header.today {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .grid-header.today .weekday {
+            color: #3b82f6;
+        }
+
+        /* 时间列 */
+        .time-cell {
+            background: #fff;
+            padding: 12px 8px;
+            font-size: 12px;
+            color: #6b7280;
+            text-align: center;
+            border-right: 2px solid #e5e7eb;
+            font-weight: 500;
+        }
+
+        /* 排班单元格 */
+        .schedule-cell {
+            background: #fff;
+            min-height: 60px;
+            padding: 4px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .schedule-cell:hover {
+            background: #f0f9ff;
+        }
+
+        .schedule-cell.has-schedule:hover {
+            background: #fff;
+        }
+
+        /* 排班卡片 */
+        .schedule-card {
+            padding: 6px 8px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .schedule-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .schedule-card-name {
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .schedule-card-time {
+            font-size: 11px;
+            opacity: 0.9;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* 不同颜色的排班卡片 */
+        .schedule-card.color-1 {
+            background: linear-gradient(135deg, #a8c0ff 0%, #8ec5fc 100%);
+            color: #1e3a8a;
+        }
+
+        .schedule-card.color-2 {
+            background: linear-gradient(135deg, #fbc2eb 0%, #fda4ba 100%);
+            color: #831843;
+        }
+
+        .schedule-card.color-3 {
+            background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+            color: #0c4a6e;
+        }
+
+        .schedule-card.color-4 {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #7c2d12;
+        }
+
+        .schedule-card.color-5 {
+            background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+            color: #14532d;
+        }
+
+        .schedule-card.color-6 {
+            background: linear-gradient(135deg, #e0c3fc 0%, #d4a5f9 100%);
+            color: #581c87;
+        }
+
+        .schedule-card.color-7 {
+            background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+            color: #78350f;
+        }
+
+        .schedule-card.color-8 {
+            background: linear-gradient(135deg, #74ebd5 0%, #9face6 100%);
+            color: #164e63;
+        }
+
+        /* 添加按钮 */
+        .add-schedule-btn {
+            width: 100%;
+            height: 100%;
+            min-height: 60px;
+            border: 2px dashed #cbd5e1;
+            background: transparent;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .add-schedule-btn:hover {
+            border-color: #3b82f6;
+            background: #f0f9ff;
+            color: #3b82f6;
+        }
+
+        /* 徽章 */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .badge-red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-yellow {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-green {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-blue {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* 统计信息栏 */
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            padding: 16px 20px;
+            background: #f8fafc;
+            border-top: 1px solid #e5e7eb;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .stat-item .label {
+            color: #6b7280;
+        }
+
+        .stat-item .value {
+            font-weight: 600;
+            color: #111827;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1200px) {
+            .week-schedule-grid {
+                grid-template-columns: 60px repeat(7, 1fr);
+            }
+            .schedule-card-name,
+            .schedule-card-time {
+                font-size: 11px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -31,7 +337,7 @@
                 </a>
                 <a href="admin-schedule.html" class="nav-item active">
                     <span class="icon">📅</span>
-                    <span>医护排班管理</span>
+                    <span>医护排班</span>
                 </a>
                 <a href="admin-devices.html" class="nav-item">
                     <span class="icon">📱</span>
@@ -52,50 +358,71 @@
         </aside>
 
         <!-- 主内容区 -->
-        <main class="main-content">
+        <main class="main-content" style="padding: 0;">
             <!-- 顶部栏 -->
-            <header class="top-bar">
+            <header class="top-bar" style="padding: 16px 24px;">
                 <h1>医护排班管理</h1>
                 <div class="user-info">
+                    <span class="badge badge-red" id="conflictBadge" style="margin-right: 12px; display: none;">
+                        冲突 <span id="conflictCount">0</span>
+                    </span>
                     <span id="welcomeText">欢迎，管理员！</span>
                 </div>
             </header>
 
-            <!-- 操作栏 -->
-            <section class="toolbar">
-                <div class="filter-group">
-                    <label>选择日期范围:</label>
-                    <input type="date" id="startDate">
-                    <span>至</span>
-                    <input type="date" id="endDate">
-                    <button onclick="loadSchedules()">查询</button>
-                </div>
-                <button class="btn-primary" onclick="showAddScheduleModal()">➕ 新增排班</button>
-            </section>
+            <!-- 排班容器 -->
+            <div class="schedule-container">
+                <!-- 主内容区 -->
+                <div class="schedule-main">
+                    <!-- 工具栏 -->
+                    <div class="schedule-toolbar">
+                        <div class="toolbar-left">
+                            <div class="week-navigator">
+                                <button class="btn-secondary" onclick="previousWeek()">← 上一周</button>
+                                <div class="week-info" id="weekInfo">第14周 (3月31日 - 4月6日)</div>
+                                <button class="btn-secondary" onclick="nextWeek()">下一周 →</button>
+                            </div>
+                            <button class="btn-secondary" onclick="goToCurrentWeek()">本周</button>
+                        </div>
 
-            <!-- 排班列表 -->
-            <section class="table-section">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>医护人员</th>
-                            <th>姓名</th>
-                            <th>排班日期</th>
-                            <th>班次类型</th>
-                            <th>开始时间</th>
-                            <th>结束时间</th>
-                            <th>状态</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="scheduleTableBody">
-                        <tr>
-                            <td colspan="9" class="loading">加载中...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </section>
+                        <div class="toolbar-right">
+                            <button class="btn-secondary" onclick="exportSchedules()">📤 导出排班</button>
+                            <button class="btn-secondary" onclick="printSchedule()">🖨️ 打印</button>
+                        </div>
+                    </div>
+
+                    <!-- 视图区域 -->
+                    <div class="schedule-view">
+                        <!-- 周视图 -->
+                        <div class="week-view">
+                            <!-- 周视图网格 -->
+                            <div class="week-schedule-grid" id="weekScheduleGrid">
+                                <!-- 将由JavaScript动态生成 -->
+                            </div>
+
+                            <!-- 统计信息栏 -->
+                            <div class="stats-bar">
+                                <div class="stat-item">
+                                    <span class="label">本周排班:</span>
+                                    <span class="value" id="weekTotalSchedules">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">医护人员:</span>
+                                    <span class="value" id="weekMedicalStaff">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">总工作时长:</span>
+                                    <span class="value" id="weekTotalHours">0小时</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="label">平均每天:</span>
+                                    <span class="value" id="weekAvgPerDay">0人次</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -103,31 +430,29 @@
     <div id="scheduleModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="modalTitle">新增排班</h2>
+                <h2 id="modalTitle">添加排班</h2>
                 <span class="close" onclick="closeScheduleModal()">&times;</span>
             </div>
             <div class="modal-body">
                 <form id="scheduleForm">
                     <input type="hidden" id="scheduleId">
+                    <input type="hidden" id="scheduleDate">
+                    <input type="hidden" id="scheduleTimeSlot">
+
                     <div class="form-group">
-                        <label>医护人员ID *</label>
-                        <input type="number" id="medicalUserId" required>
-                        <small>提示: 需要先在用户管理中创建角色为MEDICAL的用户</small>
+                        <label>日期时间</label>
+                        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px; font-size: 14px; color: #374151;">
+                            <div id="scheduleDateTimeDisplay">-</div>
+                        </div>
                     </div>
+
                     <div class="form-group">
-                        <label>排班日期 *</label>
-                        <input type="date" id="scheduleDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>班次类型 *</label>
-                        <select id="shiftType" required>
-                            <option value="">请选择</option>
-                            <option value="早班">早班</option>
-                            <option value="中班">中班</option>
-                            <option value="晚班">晚班</option>
-                            <option value="夜班">夜班</option>
+                        <label>医护人员 *</label>
+                        <select id="medicalUserId" required>
+                            <option value="">请选择医护人员</option>
                         </select>
                     </div>
+
                     <div class="form-row">
                         <div class="form-group">
                             <label>开始时间 *</label>
@@ -138,6 +463,18 @@
                             <input type="time" id="endTime" required>
                         </div>
                     </div>
+
+                    <div class="form-group">
+                        <label>班次类型</label>
+                        <select id="shiftType" onchange="updateShiftTime()">
+                            <option value="">自定义时间</option>
+                            <option value="早班">早班 (08:00-16:00)</option>
+                            <option value="中班">中班 (12:00-20:00)</option>
+                            <option value="晚班">晚班 (16:00-24:00)</option>
+                            <option value="夜班">夜班 (00:00-08:00)</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label>状态</label>
                         <select id="status">
@@ -146,20 +483,22 @@
                             <option value="调班">调班</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label>备注</label>
-                        <textarea id="remark" rows="3"></textarea>
+                        <textarea id="remark" rows="3" placeholder="可选填写备注信息..."></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeScheduleModal()">取消</button>
+                <button class="btn-danger" id="deleteBtn" onclick="deleteSchedule()" style="display: none;">删除</button>
                 <button class="btn-primary" onclick="saveSchedule()">保存</button>
             </div>
         </div>
     </div>
 
     <script src="js/common.js"></script>
-    <script src="js/admin-schedule.js"></script>
+    <script src="js/admin-schedule-week.js"></script>
 </body>
 </html>

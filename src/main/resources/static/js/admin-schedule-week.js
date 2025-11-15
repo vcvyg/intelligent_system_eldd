@@ -103,9 +103,10 @@ function updateWeekDisplay() {
 // 加载医护人员列表
 async function loadMedicalUsers() {
     try {
-        const result = await get('/admin/users/role/MEDICAL');
-        if (result.code === 200 && result.data) {
-            medicalUsers = result.data;
+        // 修改API路径：/api/admin/user/list?role=MEDICAL
+        const result = await get('/api/admin/user/list?role=MEDICAL&size=1000');
+        if (result.code === 200 && result.data && result.data.records) {
+            medicalUsers = result.data.records;
 
             // 为每个医护人员分配颜色
             medicalUsers.forEach((user, index) => {
@@ -116,7 +117,7 @@ async function loadMedicalUsers() {
             const select = document.getElementById('medicalUserId');
             select.innerHTML = '<option value="">请选择医护人员</option>' +
                 medicalUsers.map(user =>
-                    `<option value="${user.id}">${user.realName || user.username} - ${user.username}</option>`
+                    `<option value="${user.id}">${user.realName || user.username}</option>`
                 ).join('');
         }
     } catch (error) {
@@ -133,12 +134,17 @@ async function loadWeekSchedules() {
         const startDate = formatDate(currentWeekStart);
         const endDate = formatDate(weekEnd);
 
-        const result = await get(`/admin/schedule/range?startDate=${startDate}&endDate=${endDate}`);
+        const result = await get(`/api/admin/schedule/range?startDate=${startDate}&endDate=${endDate}`);
 
         if (result.code === 200 && result.data) {
-            // 组织数据结构
+            // 组织数据结构 - 保存完整的排班对象以便编辑
             scheduleData = {};
+            const allSchedules = {};  // 用于存储所有排班对象
+
             result.data.forEach(schedule => {
+                // 保存完整对象
+                allSchedules[schedule.id] = schedule;
+
                 const date = schedule.schedule_date;
                 const timeSlot = schedule.start_time.substring(0, 5); // 取HH:mm
 
@@ -150,6 +156,9 @@ async function loadWeekSchedules() {
                 }
                 scheduleData[date][timeSlot].push(schedule);
             });
+
+            // 保存到全局变量供编辑使用
+            window.allSchedules = allSchedules;
 
             // 渲染周视图
             renderWeekView();
@@ -259,32 +268,34 @@ function openScheduleCell(date, timeSlot) {
 // 编辑排班
 async function editSchedule(id) {
     try {
-        const result = await get(`/admin/schedule/${id}`);
-        if (result.code === 200 && result.data) {
-            const schedule = result.data;
-
-            document.getElementById('modalTitle').textContent = '编辑排班';
-            document.getElementById('scheduleId').value = schedule.id;
-            document.getElementById('medicalUserId').value = schedule.medical_user_id;
-            document.getElementById('scheduleDate').value = schedule.schedule_date;
-            document.getElementById('startTime').value = schedule.start_time;
-            document.getElementById('endTime').value = schedule.end_time;
-            document.getElementById('shiftType').value = schedule.shift_type || '';
-            document.getElementById('status').value = schedule.status || '正常';
-            document.getElementById('remark').value = schedule.remark || '';
-
-            // 显示日期时间
-            const dateObj = new Date(schedule.schedule_date);
-            const weekday = WEEKDAYS[dateObj.getDay()];
-            const timeSlot = schedule.start_time.substring(0, 5);
-            document.getElementById('scheduleDateTimeDisplay').textContent =
-                `${formatDate(schedule.schedule_date, 'M月d日')} ${weekday} ${timeSlot}`;
-
-            // 显示删除按钮
-            document.getElementById('deleteBtn').style.display = 'inline-block';
-
-            document.getElementById('scheduleModal').style.display = 'flex';
+        // 从缓存中获取排班数据
+        const schedule = window.allSchedules && window.allSchedules[id];
+        if (!schedule) {
+            alert('未找到排班信息');
+            return;
         }
+
+        document.getElementById('modalTitle').textContent = '编辑排班';
+        document.getElementById('scheduleId').value = schedule.id;
+        document.getElementById('medicalUserId').value = schedule.medical_user_id;
+        document.getElementById('scheduleDate').value = schedule.schedule_date;
+        document.getElementById('startTime').value = schedule.start_time;
+        document.getElementById('endTime').value = schedule.end_time;
+        document.getElementById('shiftType').value = schedule.shift_type || '';
+        document.getElementById('status').value = schedule.status || '正常';
+        document.getElementById('remark').value = schedule.remark || '';
+
+        // 显示日期时间
+        const dateObj = new Date(schedule.schedule_date);
+        const weekday = WEEKDAYS[dateObj.getDay()];
+        const timeSlot = schedule.start_time.substring(0, 5);
+        document.getElementById('scheduleDateTimeDisplay').textContent =
+            `${formatDate(schedule.schedule_date, 'M月d日')} ${weekday} ${timeSlot}`;
+
+        // 显示删除按钮
+        document.getElementById('deleteBtn').style.display = 'inline-block';
+
+        document.getElementById('scheduleModal').style.display = 'flex';
     } catch (error) {
         console.error('加载排班详情失败:', error);
         alert('加载排班详情失败');
@@ -319,7 +330,7 @@ async function saveSchedule() {
     }
 
     const formData = {
-        medicalUserId: medicalUserId,
+        medicalUserId: parseInt(medicalUserId),
         scheduleDate: scheduleDate,
         shiftType: document.getElementById('shiftType').value || null,
         startTime: startTime,
@@ -331,11 +342,12 @@ async function saveSchedule() {
     try {
         let result;
         if (scheduleId) {
-            // 更新
-            result = await put(`/admin/schedule/${scheduleId}`, formData);
+            // 更新 - 需要包含ID
+            formData.id = parseInt(scheduleId);
+            result = await put('/api/admin/schedule/update', formData);
         } else {
             // 新增
-            result = await post('/admin/schedule', formData);
+            result = await post('/api/admin/schedule/add', formData);
         }
 
         if (result.code === 200) {
@@ -361,7 +373,7 @@ async function deleteSchedule() {
     }
 
     try {
-        const result = await del(`/admin/schedule/${scheduleId}`);
+        const result = await del(`/api/admin/schedule/${scheduleId}`);
         if (result.code === 200) {
             alert('删除成功');
             closeScheduleModal();

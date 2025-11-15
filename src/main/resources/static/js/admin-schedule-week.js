@@ -5,9 +5,9 @@ let scheduleData = {}; // 排班数据: {date: {timeSlot: [schedules]}}
 let medicalUsers = []; // 医护人员列表
 let userColorMap = {}; // 用户ID到颜色的映射
 
-// 时间段定义(每2小时一个时间段，参考图片样式)
+// 时间段定义(每2小时一个时间段，覆盖全天)
 const TIME_SLOTS = [
-    '07:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00'
+    '07:00', '09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00', '23:00'
 ];
 
 // 星期映射
@@ -194,9 +194,15 @@ function renderWeekView() {
     }
 
     // 数据行
-    TIME_SLOTS.forEach(timeSlot => {
+    TIME_SLOTS.forEach((timeSlot, index) => {
+        // 计算结束时间
+        const startHour = parseInt(timeSlot.split(':')[0]);
+        const endHour = (startHour + 2) % 24;
+        const endTime = `${String(endHour).padStart(2, '0')}:00`;
+        const timeRange = `${timeSlot}-${endTime}`;
+
         // 时间列
-        html += `<div class="time-cell">${timeSlot}</div>`;
+        html += `<div class="time-cell">${timeRange}</div>`;
 
         // 每天的单元格
         for (let i = 0; i < 7; i++) {

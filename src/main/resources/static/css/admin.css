@@ -415,9 +415,11 @@
     background: var(--color-primary);
 }
 
-.data-table .btn-delete {
-    background: var(--color-text-light);
-}
+.data-table .btn-delete { background: var(--color-danger); }
+
+.data-table .btn-handle { background: var(--color-success); }
+
+.data-table .btn-ignore { background: var(--color-info); }
 
 /* 分页 */
 .pagination {

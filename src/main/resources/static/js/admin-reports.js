@@ -79,7 +79,7 @@ async function populateStaffFilter() {
             response.data.forEach(staff => {
                 const option = document.createElement('option');
                 option.value = staff.id;
-                option.textContent = staff.username;
+                option.textContent = staff.realName;
                 select.appendChild(option);
             });
             staffListPopulated = true;

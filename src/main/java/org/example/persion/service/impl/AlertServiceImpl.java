@@ -7,7 +7,9 @@ import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.AlertCreateDTO;
 import org.example.persion.dto.AlertHandleDTO;
 import org.example.persion.entity.AlertRecord;
+import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.repository.AlertRecordMapper;
+import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.service.AlertService;
 import org.example.persion.vo.AlertRecordVO;
 import org.springframework.beans.BeanUtils;
@@ -29,6 +31,7 @@ import java.util.Map;
 public class AlertServiceImpl implements AlertService {
 
     private final AlertRecordMapper alertRecordMapper;
+    private final ElderlyInfoMapper elderlyInfoMapper;
 
     @Override
     public Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status) {
@@ -63,6 +66,13 @@ public class AlertServiceImpl implements AlertService {
         List<AlertRecordVO> voList = alertPage.getRecords().stream().map(alert -> {
             AlertRecordVO vo = new AlertRecordVO();
             BeanUtils.copyProperties(alert, vo);
+            // 查询并设置老人姓名
+            if (alert.getElderlyId() != null) {
+                ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(alert.getElderlyId());
+                if (elderlyInfo != null) {
+                    vo.setElderlyName(elderlyInfo.getName());
+                }
+            }
             return vo;
         }).toList();
 

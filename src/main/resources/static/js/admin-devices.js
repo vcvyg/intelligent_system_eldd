@@ -320,13 +320,54 @@ function showError(message) {
 }
 
 // 绑定设备到老人
+let currentBindingDeviceId = null;
+
 async function bindDeviceToElderly(deviceId) {
-    const elderlyId = prompt('请输入要绑定的老人ID\n(提示: 可在老人信息管理页面查看老人ID)');
-    if (!elderlyId) return;
+    currentBindingDeviceId = deviceId;
+
+    // 加载老人列表
+    try {
+        const response = await get('/admin/elderly/all');
+        if (response && response.data) {
+            const elderlyList = response.data;
+            const select = document.getElementById('elderlySelect');
+            select.innerHTML = '<option value="">请选择老人</option>';
+
+            elderlyList.forEach(elderly => {
+                const option = document.createElement('option');
+                option.value = elderly.id;
+                option.textContent = `${elderly.name} (${elderly.age}岁, ${elderly.gender || '未知性别'})`;
+                select.appendChild(option);
+            });
+
+            // 显示模态框
+            document.getElementById('bindElderlyModal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('加载老人列表失败:', error);
+        alert('加载老人列表失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 关闭绑定老人模态框
+function closeBindElderlyModal() {
+    document.getElementById('bindElderlyModal').style.display = 'none';
+    currentBindingDeviceId = null;
+}
+
+// 确认绑定老人
+async function confirmBindElderly() {
+    const elderlyId = document.getElementById('elderlySelect').value;
+
+    if (!elderlyId) {
+        alert('请选择老人');
+        return;
+    }
 
     try {
-        await post(`/admin/elderly/${elderlyId}/devices/bind?deviceId=${deviceId}`);
+        await post(`/admin/elderly/${elderlyId}/devices/bind?deviceId=${currentBindingDeviceId}`);
         alert('绑定成功！');
+        closeBindElderlyModal();
         loadDevices();
     } catch (error) {
         console.error('绑定设备失败:', error);

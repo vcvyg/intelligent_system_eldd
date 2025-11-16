@@ -127,4 +127,16 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
         BeanUtils.copyProperties(elderlyInfo, vo);
         return vo;
     }
+
+    @Override
+    public java.util.List<ElderlyInfoVO> getAllElderly() {
+        LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(ElderlyInfo::getCreateTime);
+
+        return elderlyInfoMapper.selectList(wrapper).stream().map(elderly -> {
+            ElderlyInfoVO vo = new ElderlyInfoVO();
+            BeanUtils.copyProperties(elderly, vo);
+            return vo;
+        }).toList();
+    }
 }

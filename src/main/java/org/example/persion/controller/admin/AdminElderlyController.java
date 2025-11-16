@@ -70,4 +70,13 @@ public class AdminElderlyController {
         adminElderlyService.deleteElderly(id);
         return Result.success();
     }
+
+    /**
+     * 获取所有老人信息列表(不分页)
+     */
+    @GetMapping("/all")
+    public Result<java.util.List<ElderlyInfoVO>> getAllElderly() {
+        java.util.List<ElderlyInfoVO> list = adminElderlyService.getAllElderly();
+        return Result.success(list);
+    }
 }

@@ -364,6 +364,77 @@
         }
     </style>
 
+    <!-- 添加子女模态框 -->
+    <div id="addFamilyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>添加子女关联</h2>
+                <span class="close" onclick="closeAddFamilyModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addFamilyForm">
+                    <div class="form-group">
+                        <label>选择子女用户 *</label>
+                        <select id="familyUserSelect" required>
+                            <option value="">请选择子女用户</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>关系类型 *</label>
+                        <select id="relationType" required>
+                            <option value="">请选择关系类型</option>
+                            <option value="子女">子女</option>
+                            <option value="儿媳">儿媳</option>
+                            <option value="女婿">女婿</option>
+                            <option value="孙子">孙子</option>
+                            <option value="孙女">孙女</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isPrimaryContact">
+                            设为主要联系人
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAddFamilyModal()">取消</button>
+                <button class="btn-primary" onclick="confirmAddFamily()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加医护模态框 -->
+    <div id="addMedicalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>分配医护人员</h2>
+                <span class="close" onclick="closeAddMedicalModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="addMedicalForm">
+                    <div class="form-group">
+                        <label>选择医护人员 *</label>
+                        <select id="medicalUserSelect" required>
+                            <option value="">请选择医护人员</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isPrimaryDoctor">
+                            设为主治医生
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAddMedicalModal()">取消</button>
+                <button class="btn-primary" onclick="confirmAddMedical()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/common.js"></script>
     <script src="js/admin-elderly.js"></script>
 </body>

@@ -283,6 +283,30 @@
         }
     </style>
 
+    <!-- 绑定老人模态框 -->
+    <div id="bindElderlyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>绑定设备到老人</h2>
+                <span class="close" onclick="closeBindElderlyModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bindElderlyForm">
+                    <div class="form-group">
+                        <label>选择老人 *</label>
+                        <select id="elderlySelect" required>
+                            <option value="">请选择老人</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeBindElderlyModal()">取消</button>
+                <button class="btn-primary" onclick="confirmBindElderly()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/common.js"></script>
     <script src="js/admin-devices.js"></script>
 </body>

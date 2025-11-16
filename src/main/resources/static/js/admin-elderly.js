@@ -426,17 +426,56 @@ async function loadDeviceRelations() {
 
 // 显示添加子女表单
 async function showAddFamilyForm() {
-    const familyUserId = prompt('请输入子女用户ID\n(提示:需要先在用户管理中创建角色为FAMILY的用户)');
-    if (!familyUserId) return;
+    // 加载子女用户列表
+    try {
+        const response = await get('/admin/users/by-role?role=FAMILY');
+        if (response && response.data) {
+            const familyUsers = response.data;
+            const select = document.getElementById('familyUserSelect');
+            select.innerHTML = '<option value="">请选择子女用户</option>';
 
-    const relationType = prompt('请输入关系类型\n(如: 子女/儿媳/女婿/孙子/孙女)', '子女');
-    if (!relationType) return;
+            familyUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.realName || user.username} (${user.phone || '无手机号'})`;
+                select.appendChild(option);
+            });
 
-    const isPrimary = confirm('是否设为主要联系人?');
+            // 重置表单
+            document.getElementById('addFamilyForm').reset();
+            document.getElementById('addFamilyModal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('加载子女用户列表失败:', error);
+        alert('加载子女用户列表失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 关闭添加子女模态框
+function closeAddFamilyModal() {
+    document.getElementById('addFamilyModal').style.display = 'none';
+}
+
+// 确认添加子女
+async function confirmAddFamily() {
+    const familyUserId = document.getElementById('familyUserSelect').value;
+    const relationType = document.getElementById('relationType').value;
+    const isPrimary = document.getElementById('isPrimaryContact').checked;
+
+    if (!familyUserId) {
+        alert('请选择子女用户');
+        return;
+    }
+
+    if (!relationType) {
+        alert('请选择关系类型');
+        return;
+    }
 
     try {
         await post(`/admin/elderly/${currentElderlyId}/family?familyUserId=${familyUserId}&relationType=${encodeURIComponent(relationType)}&isPrimaryContact=${isPrimary ? 1 : 0}`);
         alert('添加成功');
+        closeAddFamilyModal();
         loadFamilyRelations();
     } catch (error) {
         console.error('添加子女失败:', error);
@@ -446,14 +485,50 @@ async function showAddFamilyForm() {
 
 // 显示分配医护表单
 async function showAddMedicalForm() {
-    const medicalUserId = prompt('请输入医护人员用户ID\n(提示:需要先在用户管理中创建角色为MEDICAL的用户)');
-    if (!medicalUserId) return;
+    // 加载医护人员列表
+    try {
+        const response = await get('/admin/users/by-role?role=MEDICAL');
+        if (response && response.data) {
+            const medicalUsers = response.data;
+            const select = document.getElementById('medicalUserSelect');
+            select.innerHTML = '<option value="">请选择医护人员</option>';
 
-    const isPrimary = confirm('是否设为主治医生?');
+            medicalUsers.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user.id;
+                option.textContent = `${user.realName || user.username} (${user.phone || '无手机号'})`;
+                select.appendChild(option);
+            });
+
+            // 重置表单
+            document.getElementById('addMedicalForm').reset();
+            document.getElementById('addMedicalModal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('加载医护人员列表失败:', error);
+        alert('加载医护人员列表失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 关闭添加医护模态框
+function closeAddMedicalModal() {
+    document.getElementById('addMedicalModal').style.display = 'none';
+}
+
+// 确认分配医护
+async function confirmAddMedical() {
+    const medicalUserId = document.getElementById('medicalUserSelect').value;
+    const isPrimary = document.getElementById('isPrimaryDoctor').checked;
+
+    if (!medicalUserId) {
+        alert('请选择医护人员');
+        return;
+    }
 
     try {
         await post(`/admin/elderly/${currentElderlyId}/medical?medicalUserId=${medicalUserId}&isPrimaryDoctor=${isPrimary ? 1 : 0}`);
         alert('分配成功');
+        closeAddMedicalModal();
         loadMedicalRelations();
     } catch (error) {
         console.error('分配医护失败:', error);

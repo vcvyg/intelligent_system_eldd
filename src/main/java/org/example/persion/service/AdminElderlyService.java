@@ -35,4 +35,9 @@ public interface AdminElderlyService {
      * 查询老人详细信息
      */
     ElderlyInfoVO getElderlyDetail(Long id);
+
+    /**
+     * 获取所有老人信息列表(不分页)
+     */
+    java.util.List<ElderlyInfoVO> getAllElderly();
 }

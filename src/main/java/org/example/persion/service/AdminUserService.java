@@ -40,4 +40,9 @@ public interface AdminUserService {
      * 重置用户密码
      */
     void resetPassword(Long id, String newPassword);
+
+    /**
+     * 根据角色获取用户列表(不分页)
+     */
+    java.util.List<UserInfoVO> getUsersByRole(String role);
 }

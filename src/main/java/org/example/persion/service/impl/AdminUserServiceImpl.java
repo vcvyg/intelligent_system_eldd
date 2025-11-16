@@ -137,4 +137,18 @@ public class AdminUserServiceImpl implements AdminUserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userMapper.updateById(user);
     }
+
+    @Override
+    public java.util.List<UserInfoVO> getUsersByRole(String role) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(User::getRole, role)
+               .eq(User::getStatus, 1) // 只返回启用的用户
+               .orderByDesc(User::getCreateTime);
+
+        return userMapper.selectList(wrapper).stream().map(user -> {
+            UserInfoVO vo = new UserInfoVO();
+            BeanUtils.copyProperties(user, vo);
+            return vo;
+        }).toList();
+    }
 }

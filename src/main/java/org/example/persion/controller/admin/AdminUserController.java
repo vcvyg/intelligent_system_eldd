@@ -81,4 +81,13 @@ public class AdminUserController {
         adminUserService.resetPassword(id, newPassword);
         return Result.success();
     }
+
+    /**
+     * 根据角色获取用户列表(不分页)
+     */
+    @GetMapping("/by-role")
+    public Result<java.util.List<UserInfoVO>> getUsersByRole(@RequestParam String role) {
+        java.util.List<UserInfoVO> users = adminUserService.getUsersByRole(role);
+        return Result.success(users);
+    }
 }

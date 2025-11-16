@@ -13,6 +13,7 @@ import org.example.persion.vo.SystemStatisticsVO;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 管理员端-系统统计服务实现类
@@ -29,41 +30,28 @@ public class AdminStatisticsServiceImpl implements AdminStatisticsService {
     public SystemStatisticsVO getSystemStatistics() {
         SystemStatisticsVO vo = new SystemStatisticsVO();
 
-        // 总用户数
-        vo.setTotalUsers(userMapper.selectCount(null));
+        // 优化: 一次性查询所有用户,在内存中统计,避免多次数据库查询
+        List<User> allUsers = userMapper.selectList(null);
+
+        // 统计各类数据
+        long totalUsers = allUsers.size();
+        long activeUsers = allUsers.stream().filter(u -> u.getStatus() == 1).count();
+        long disabledUsers = allUsers.stream().filter(u -> u.getStatus() == 0).count();
+        long adminCount = allUsers.stream().filter(u -> "ADMIN".equals(u.getRole())).count();
+        long familyCount = allUsers.stream().filter(u -> "FAMILY".equals(u.getRole())).count();
+        long medicalCount = allUsers.stream().filter(u -> "MEDICAL".equals(u.getRole())).count();
+        long elderlyCount = allUsers.stream().filter(u -> "ELDERLY".equals(u.getRole())).count();
+
+        vo.setTotalUsers(totalUsers);
+        vo.setActiveUsers(activeUsers);
+        vo.setDisabledUsers(disabledUsers);
+        vo.setAdminCount(adminCount);
+        vo.setFamilyCount(familyCount);
+        vo.setMedicalCount(medicalCount);
+        vo.setElderlyCount(elderlyCount);
 
         // 总老人数
         vo.setTotalElderly(elderlyInfoMapper.selectCount(null));
-
-        // 活跃用户数（状态为1）
-        LambdaQueryWrapper<User> activeWrapper = new LambdaQueryWrapper<>();
-        activeWrapper.eq(User::getStatus, 1);
-        vo.setActiveUsers(userMapper.selectCount(activeWrapper));
-
-        // 禁用用户数（状态为0）
-        LambdaQueryWrapper<User> disabledWrapper = new LambdaQueryWrapper<>();
-        disabledWrapper.eq(User::getStatus, 0);
-        vo.setDisabledUsers(userMapper.selectCount(disabledWrapper));
-
-        // 管理员数量
-        LambdaQueryWrapper<User> adminWrapper = new LambdaQueryWrapper<>();
-        adminWrapper.eq(User::getRole, "ADMIN");
-        vo.setAdminCount(userMapper.selectCount(adminWrapper));
-
-        // 子女用户数量
-        LambdaQueryWrapper<User> familyWrapper = new LambdaQueryWrapper<>();
-        familyWrapper.eq(User::getRole, "FAMILY");
-        vo.setFamilyCount(userMapper.selectCount(familyWrapper));
-
-        // 医护人员数量
-        LambdaQueryWrapper<User> medicalWrapper = new LambdaQueryWrapper<>();
-        medicalWrapper.eq(User::getRole, "MEDICAL");
-        vo.setMedicalCount(userMapper.selectCount(medicalWrapper));
-
-        // 老人用户数量
-        LambdaQueryWrapper<User> elderlyWrapper = new LambdaQueryWrapper<>();
-        elderlyWrapper.eq(User::getRole, "ELDERLY");
-        vo.setElderlyCount(userMapper.selectCount(elderlyWrapper));
 
         // 今日健康数据记录数
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);

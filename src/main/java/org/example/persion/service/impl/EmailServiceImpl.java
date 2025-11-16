@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -40,7 +41,22 @@ public class EmailServiceImpl implements EmailService {
         // 生成6位数字验证码
         String code = CodeUtil.generateCode();
 
-        // 发送邮件
+        // 先存储到Redis,有效期5分钟
+        String key = CODE_PREFIX + email;
+        redisTemplate.opsForValue().set(key, code, CODE_EXPIRE_TIME, TimeUnit.MINUTES);
+
+        // 异步发送邮件,不阻塞主线程
+        sendEmailAsync(email, code);
+
+        log.info("验证码已生成并存储, 邮箱: {}, 验证码: {}", email, code);
+        return code;
+    }
+
+    /**
+     * 异步发送邮件
+     */
+    @Async
+    public void sendEmailAsync(String email, String code) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -55,16 +71,11 @@ public class EmailServiceImpl implements EmailService {
 
             mailSender.send(message);
 
-            // 存储到Redis,有效期5分钟
-            String key = CODE_PREFIX + email;
-            redisTemplate.opsForValue().set(key, code, CODE_EXPIRE_TIME, TimeUnit.MINUTES);
-
             log.info("验证码邮件发送成功, 邮箱: {}, 验证码: {}", email, code);
-            return code;
 
         } catch (MessagingException e) {
-            log.error("验证码邮件发送失败, 邮箱: {}", email, e);
-            throw new RuntimeException("邮件发送失败,请检查邮箱地址");
+            log.error("验证码邮件发送失败, 邮箱: {}, 验证码: {}", email, code, e);
+            // 邮件发送失败不影响验证码的使用,用户可以稍后再试
         }
     }
 

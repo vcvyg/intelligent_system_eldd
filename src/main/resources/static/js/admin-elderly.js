@@ -5,6 +5,10 @@ let currentPage = 1;
 let pageSize = 10;
 let totalPages = 1;
 
+// 房间列表缓存
+let roomList = [];
+let roomMap = new Map(); // 房间ID到房间对象的映射
+
 // 页面加载完成
 window.addEventListener('DOMContentLoaded', () => {
     // 检查登录状态
@@ -18,9 +22,28 @@ window.addEventListener('DOMContentLoaded', () => {
     // 显示欢迎信息
     document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
+    // 加载房间列表
+    loadRooms();
     // 加载老人列表
     loadElderly();
 });
+
+// 加载房间列表
+async function loadRooms() {
+    try {
+        const response = await get('/admin/rooms/available');
+        if (response && response.data) {
+            roomList = response.data;
+            // 构建房间映射
+            roomMap.clear();
+            roomList.forEach(room => {
+                roomMap.set(room.id, room);
+            });
+        }
+    } catch (error) {
+        console.error('加载房间列表失败:', error);
+    }
+}
 
 // 加载老人列表
 async function loadElderly() {
@@ -48,16 +71,22 @@ function renderElderlyTable(elderlyList) {
     const tbody = document.getElementById('elderlyTableBody');
 
     if (!elderlyList || elderlyList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="loading">暂无数据</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">暂无数据</td></tr>';
         return;
     }
 
-    tbody.innerHTML = elderlyList.map(elderly => `
+    tbody.innerHTML = elderlyList.map(elderly => {
+        // 获取房间号
+        const room = elderly.roomId ? roomMap.get(elderly.roomId) : null;
+        const roomNumber = room ? room.roomNumber : '-';
+
+        return `
         <tr>
             <td>${elderly.id}</td>
             <td>${elderly.name}</td>
             <td>${elderly.age || '-'}</td>
             <td>${elderly.gender || '-'}</td>
+            <td>${roomNumber}</td>
             <td>${formatDate(elderly.birthday)}</td>
             <td>${elderly.emergencyContact || '-'}</td>
             <td>${elderly.emergencyPhone || '-'}</td>
@@ -68,7 +97,8 @@ function renderElderlyTable(elderlyList) {
                 <button class="btn-delete" onclick="deleteElderly(${elderly.id})">删除</button>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 更新分页
@@ -105,7 +135,27 @@ function showCreateElderlyModal() {
     document.getElementById('modalTitle').textContent = '新增老人信息';
     document.getElementById('elderlyForm').reset();
     document.getElementById('elderlyId').value = '';
+
+    // 填充房间下拉列表
+    populateRoomSelect();
+
     document.getElementById('elderlyModal').style.display = 'block';
+}
+
+// 填充房间下拉列表
+function populateRoomSelect(selectedRoomId = null) {
+    const roomSelect = document.getElementById('roomId');
+    roomSelect.innerHTML = '<option value="">未分配</option>';
+
+    roomList.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room.id;
+        option.textContent = `${room.roomNumber} - ${room.roomType} (${room.occupiedBeds}/${room.bedCount})`;
+        if (selectedRoomId && room.id === selectedRoomId) {
+            option.selected = true;
+        }
+        roomSelect.appendChild(option);
+    });
 }
 
 // 查看老人详情
@@ -115,6 +165,10 @@ async function viewElderlyDetail(id) {
         if (response && response.data) {
             const elderly = response.data;
 
+            // 获取房间信息
+            const room = elderly.roomId ? roomMap.get(elderly.roomId) : null;
+            const roomInfo = room ? `${room.roomNumber} (${room.roomType})` : '未分配';
+
             const detailHTML = `
                 <div class="detail-grid">
                     <div class="detail-item"><strong>姓名：</strong>${elderly.name}</div>
@@ -122,6 +176,7 @@ async function viewElderlyDetail(id) {
                     <div class="detail-item"><strong>性别：</strong>${elderly.gender || '-'}</div>
                     <div class="detail-item"><strong>出生日期：</strong>${formatDate(elderly.birthday)}</div>
                     <div class="detail-item"><strong>身份证号：</strong>${elderly.idCard || '-'}</div>
+                    <div class="detail-item"><strong>房间号：</strong>${roomInfo}</div>
                     <div class="detail-item"><strong>居住地址：</strong>${elderly.address || '-'}</div>
                     <div class="detail-item"><strong>紧急联系人：</strong>${elderly.emergencyContact || '-'}</div>
                     <div class="detail-item"><strong>紧急电话：</strong>${elderly.emergencyPhone || '-'}</div>
@@ -159,6 +214,9 @@ async function editElderly(id) {
             document.getElementById('medicalHistory').value = elderly.medicalHistory || '';
             document.getElementById('allergyHistory').value = elderly.allergyHistory || '';
 
+            // 填充房间下拉列表并选中当前房间
+            populateRoomSelect(elderly.roomId);
+
             document.getElementById('elderlyModal').style.display = 'block';
         }
     } catch (error) {
@@ -179,6 +237,8 @@ function closeDetailModal() {
 // 保存老人信息
 async function saveElderly() {
     const id = document.getElementById('elderlyId').value;
+    const roomIdValue = document.getElementById('roomId').value;
+
     const formData = {
         userId: parseInt(document.getElementById('userId').value),
         name: document.getElementById('name').value.trim(),
@@ -187,6 +247,7 @@ async function saveElderly() {
         birthday: document.getElementById('birthday').value || null,
         idCard: document.getElementById('idCard').value.trim() || null,
         address: document.getElementById('address').value.trim() || null,
+        roomId: roomIdValue ? parseInt(roomIdValue) : null,
         emergencyContact: document.getElementById('emergencyContact').value.trim() || null,
         emergencyPhone: document.getElementById('emergencyPhone').value.trim() || null,
         medicalHistory: document.getElementById('medicalHistory').value.trim() || null,
@@ -205,6 +266,8 @@ async function saveElderly() {
         }
 
         closeElderlyModal();
+        // 重新加载房间列表和老人列表
+        await loadRooms();
         loadElderly();
     } catch (error) {
         console.error('保存老人信息失败:', error);

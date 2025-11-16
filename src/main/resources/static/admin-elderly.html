@@ -83,6 +83,7 @@
                             <th>姓名</th>
                             <th>年龄</th>
                             <th>性别</th>
+                            <th>房间号</th>
                             <th>出生日期</th>
                             <th>紧急联系人</th>
                             <th>紧急电话</th>
@@ -91,7 +92,7 @@
                     </thead>
                     <tbody id="elderlyTableBody">
                         <tr>
-                            <td colspan="8" class="loading">加载中...</td>
+                            <td colspan="9" class="loading">加载中...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -153,6 +154,12 @@
                     <div class="form-group">
                         <label>居住地址</label>
                         <input type="text" id="address">
+                    </div>
+                    <div class="form-group">
+                        <label>房间号</label>
+                        <select id="roomId">
+                            <option value="">未分配</option>
+                        </select>
                     </div>
                     <div class="form-row">
                         <div class="form-group">

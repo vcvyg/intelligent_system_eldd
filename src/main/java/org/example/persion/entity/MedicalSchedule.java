@@ -48,4 +48,9 @@ public class MedicalSchedule extends BaseEntity {
      * 备注
      */
     private String remark;
+
+    /**
+     * 房间ID
+     */
+    private Long roomId;
 }

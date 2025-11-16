@@ -34,4 +34,6 @@ public class ElderlyInfo extends BaseEntity {
     private String medicalHistory; // 病史
 
     private String allergyHistory; // 过敏史
+
+    private Long roomId; // 房间ID
 }

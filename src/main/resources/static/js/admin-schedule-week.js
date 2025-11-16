@@ -4,6 +4,8 @@ let currentWeekStart = null; // 当前周的开始日期
 let scheduleData = {}; // 排班数据: {date: {timeSlot: [schedules]}}
 let medicalUsers = []; // 医护人员列表
 let userColorMap = {}; // 用户ID到颜色的映射
+let roomList = []; // 房间列表
+let roomMap = new Map(); // 房间ID到房间对象的映射
 
 // 时间段定义(每2小时一个时间段，覆盖全天)
 const TIME_SLOTS = [
@@ -26,8 +28,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 显示欢迎信息
     document.getElementById('welcomeText').textContent = `欢迎,${userInfo.username}!`;
 
-    // 先加载医护人员列表(等待完成)
+    // 先加载医护人员列表和房间列表(等待完成)
     await loadMedicalUsers();
+    await loadRooms();
 
     // 初始化当前周并加载数据
     goToCurrentWeek();
@@ -122,6 +125,39 @@ async function loadMedicalUsers() {
     } catch (error) {
         console.error('加载医护人员列表失败:', error);
     }
+}
+
+// 加载房间列表
+async function loadRooms() {
+    try {
+        const response = await get('/admin/rooms/available');
+        if (response && response.data) {
+            roomList = response.data;
+            // 构建房间映射
+            roomMap.clear();
+            roomList.forEach(room => {
+                roomMap.set(room.id, room);
+            });
+        }
+    } catch (error) {
+        console.error('加载房间列表失败:', error);
+    }
+}
+
+// 填充房间下拉列表
+function populateRoomSelect(selectedRoomId = null) {
+    const roomSelect = document.getElementById('roomId');
+    roomSelect.innerHTML = '<option value="">未指定</option>';
+
+    roomList.forEach(room => {
+        const option = document.createElement('option');
+        option.value = room.id;
+        option.textContent = `${room.roomNumber} - ${room.roomType}`;
+        if (selectedRoomId && room.id === selectedRoomId) {
+            option.selected = true;
+        }
+        roomSelect.appendChild(option);
+    });
 }
 
 // 加载本周排班数据
@@ -220,12 +256,15 @@ function renderWeekView() {
                 schedules.forEach(schedule => {
                     const colorClass = `color-${userColorMap[schedule.medical_user_id] || 1}`;
                     const name = schedule.real_name || schedule.username || '未知';
-                    const time = `${schedule.start_time.substring(0, 5)}-${schedule.end_time.substring(0, 5)}`;
+
+                    // 获取房间号
+                    const room = schedule.room_id ? roomMap.get(schedule.room_id) : null;
+                    const roomNumber = room ? room.roomNumber : '';
 
                     html += `
                         <div class="schedule-card ${colorClass}" onclick="event.stopPropagation(); editSchedule(${schedule.id})">
                             <div class="schedule-card-name">${name}</div>
-                            <div class="schedule-card-time">${time}</div>
+                            ${roomNumber ? `<div class="schedule-card-room">📍 ${roomNumber}</div>` : ''}
                         </div>
                     `;
                 });
@@ -264,6 +303,9 @@ function openScheduleCell(date, timeSlot) {
     // 设置默认状态
     document.getElementById('status').value = '正常';
 
+    // 填充房间下拉列表
+    populateRoomSelect();
+
     // 隐藏删除按钮
     document.getElementById('deleteBtn').style.display = 'none';
 
@@ -288,6 +330,9 @@ async function editSchedule(id) {
         document.getElementById('endTime').value = schedule.end_time;
         document.getElementById('status').value = schedule.status || '正常';
         document.getElementById('remark').value = schedule.remark || '';
+
+        // 填充房间下拉列表并选中当前房间
+        populateRoomSelect(schedule.room_id);
 
         // 显示日期时间
         const dateObj = new Date(schedule.schedule_date);
@@ -318,6 +363,7 @@ async function saveSchedule() {
     const scheduleDate = document.getElementById('scheduleDate').value;
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
+    const roomIdValue = document.getElementById('roomId').value;
 
     // 验证必填项
     if (!medicalUserId) {
@@ -338,6 +384,7 @@ async function saveSchedule() {
         scheduleDate: scheduleDate,
         startTime: startTime,
         endTime: endTime,
+        roomId: roomIdValue ? parseInt(roomIdValue) : null,
         status: document.getElementById('status').value,
         remark: document.getElementById('remark').value
     };

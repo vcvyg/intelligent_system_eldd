@@ -428,7 +428,7 @@ async function loadDeviceRelations() {
 async function showAddFamilyForm() {
     // 加载子女用户列表
     try {
-        const response = await get('/admin/users/by-role?role=FAMILY');
+        const response = await get('/admin/user/by-role?role=FAMILY');
         if (response && response.data) {
             const familyUsers = response.data;
             const select = document.getElementById('familyUserSelect');
@@ -487,7 +487,7 @@ async function confirmAddFamily() {
 async function showAddMedicalForm() {
     // 加载医护人员列表
     try {
-        const response = await get('/admin/users/by-role?role=MEDICAL');
+        const response = await get('/admin/user/by-role?role=MEDICAL');
         if (response && response.data) {
             const medicalUsers = response.data;
             const select = document.getElementById('medicalUserSelect');

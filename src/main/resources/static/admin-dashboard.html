@@ -7,6 +7,73 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <!-- ECharts图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        /* 使统计卡片成为定位上下文 */
+        .stats-grid .stat-card {
+            position: relative;
+            padding-bottom: 60px; /* 为按钮增加一些底部空间 */
+        }
+
+        /* “查看完整健康数据”按钮新样式 */
+        .btn-view-charts {
+            position: absolute; /* 绝对定位 */
+            bottom: 20px;       /* 定位到卡片底部 */
+            left: 25px;         /* 定位到卡片左侧 */
+            padding: 6px 14px;
+            background-color: var(--color-bg-light);
+            color: var(--color-text-dark);
+            border: 1px solid var(--color-border-light);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 13px;
+            white-space: nowrap;
+            transition: all var(--transition-base);
+        }
+
+        .btn-view-charts:hover {
+            background-color: var(--color-border-lighter);
+            border-color: var(--color-border);
+        }
+
+        /* 图表模态框样式 */
+        .modal-charts {
+            width: 95%;
+            max-width: 1400px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        /* 图表区域样式 */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .chart-card h3 {
+            font-size: 16px;
+            color: #374151;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        @media (max-width: 1200px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="admin-container">
@@ -94,6 +161,7 @@
                         <div class="stat-info">
                             <h3>今日健康记录</h3>
                             <p class="stat-value" id="todayHealthRecords">加载中...</p>
+                            <button class="btn-view-charts" onclick="showHealthChartsModal()">📊 查看完整健康数据</button>
                         </div>
                     </div>
                 </div>
@@ -139,7 +207,7 @@
                         <span class="action-icon">📝</span>
                         <span>添加老人信息</span>
                     </a>
-                    <a href="#" class="action-btn">
+                    <a href="admin-reports.html" class="action-btn">
                         <span class="action-icon">📊</span>
                         <span>数据报表</span>
                     </a>
@@ -150,6 +218,59 @@
                 </div>
             </section>
         </main>
+    </div>
+
+
+    <!-- 健康数据图表模态框 -->
+    <div id="healthChartsModal" class="modal">
+        <div class="modal-content modal-charts">
+            <div class="modal-header">
+                <h2>📊 健康数据趋势分析</h2>
+                <span class="close" onclick="closeHealthChartsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="filters" style="display: flex; gap: 15px; align-items: center; padding-bottom: 20px; border-bottom: 1px solid #eee; margin-bottom: 20px;">
+                    <div class="filter-item">
+                        <label for="elderlyFilter" style="margin-right: 5px;">选择老人:</label>
+                        <select id="elderlyFilter" class="form-select" style="width: 200px;"></select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="dateFilter" style="margin-right: 5px;">选择日期:</label>
+                        <input type="date" id="dateFilter" class="form-input">
+                    </div>
+                    <button id="applyFiltersBtn" class="btn-primary" style="padding: 8px 16px;">应用筛选</button>
+                    <button id="resetFiltersBtn" class="btn-secondary" style="padding: 8px 16px;">重置</button>
+                </div>
+                <div class="charts-grid">
+                    <!-- 心率趋势图 -->
+                    <div class="chart-card">
+                        <h3>心率趋势</h3>
+                        <div id="heartRateChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+
+                    <!-- 血压趋势图 -->
+                    <div class="chart-card">
+                        <h3>血压趋势</h3>
+                        <div id="bloodPressureChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+
+                    <!-- 血糖趋势图 -->
+                    <div class="chart-card">
+                        <h3>血糖趋势</h3>
+                        <div id="bloodSugarChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+
+                    <!-- 步数统计图 -->
+                    <div class="chart-card">
+                        <h3>步数统计</h3>
+                        <div id="stepsChart" style="width: 100%; height: 300px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeHealthChartsModal()">关闭</button>
+            </div>
+        </div>
     </div>
 
     <script src="js/common.js"></script>

@@ -567,3 +567,21 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* =================================
+   Dashboard Section Styling
+   ================================= */
+
+.role-section,
+.quick-actions {
+    margin: 0 30px 30px;
+    padding: 25px;
+    background: var(--color-bg-lighter);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+}
+
+.role-section h2,
+.quick-actions h2 {
+    margin-top: 0;
+}

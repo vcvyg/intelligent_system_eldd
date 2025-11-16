@@ -66,4 +66,9 @@ public interface DeviceService {
      * 统计各类型设备数量
      */
     Object getDeviceStatistics();
+
+    /**
+     * 获取未绑定的设备列表
+     */
+    List<DeviceInfoVO> getUnboundDevices();
 }

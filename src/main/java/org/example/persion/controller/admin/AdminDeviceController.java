@@ -134,4 +134,13 @@ public class AdminDeviceController {
         Object statistics = deviceService.getDeviceStatistics();
         return Result.success(statistics);
     }
+
+    /**
+     * 获取未绑定的设备列表
+     */
+    @GetMapping("/unbound")
+    public Result<List<DeviceInfoVO>> getUnboundDevices() {
+        List<DeviceInfoVO> devices = deviceService.getUnboundDevices();
+        return Result.success(devices);
+    }
 }

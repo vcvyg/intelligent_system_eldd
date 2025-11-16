@@ -194,4 +194,18 @@ public class DeviceServiceImpl implements DeviceService {
 
         return statistics;
     }
+
+    @Override
+    public List<DeviceInfoVO> getUnboundDevices() {
+        LambdaQueryWrapper<DeviceInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.isNull(DeviceInfo::getElderlyId)
+               .orderByDesc(DeviceInfo::getCreateTime);
+
+        List<DeviceInfo> devices = deviceInfoMapper.selectList(wrapper);
+        return devices.stream().map(device -> {
+            DeviceInfoVO vo = new DeviceInfoVO();
+            BeanUtils.copyProperties(device, vo);
+            return vo;
+        }).toList();
+    }
 }

@@ -435,6 +435,30 @@
         </div>
     </div>
 
+    <!-- 绑定设备模态框 -->
+    <div id="bindDeviceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>绑定设备</h2>
+                <span class="close" onclick="closeBindDeviceModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="bindDeviceForm">
+                    <div class="form-group">
+                        <label>选择设备 *</label>
+                        <select id="deviceSelect" required>
+                            <option value="">请选择设备</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeBindDeviceModal()">取消</button>
+                <button class="btn-primary" onclick="confirmBindDevice()">确定</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/common.js"></script>
     <script src="js/admin-elderly.js"></script>
 </body>

@@ -538,12 +538,52 @@ async function confirmAddMedical() {
 
 // 显示绑定设备表单
 async function showBindDeviceForm() {
-    const deviceId = prompt('请输入要绑定的设备ID\n(提示:可在设备管理页面查看未绑定的设备列表)');
-    if (!deviceId) return;
+    // 加载未绑定的设备列表
+    try {
+        const response = await get('/admin/devices/unbound');
+        if (response && response.data) {
+            const deviceList = response.data;
+            const select = document.getElementById('deviceSelect');
+            select.innerHTML = '<option value="">请选择设备</option>';
+
+            if (deviceList.length === 0) {
+                select.innerHTML = '<option value="">暂无可用设备</option>';
+            } else {
+                deviceList.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.id;
+                    option.textContent = `${device.deviceName} (${device.deviceType} - ${device.deviceCode})`;
+                    select.appendChild(option);
+                });
+            }
+
+            // 显示模态框
+            document.getElementById('bindDeviceModal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('加载设备列表失败:', error);
+        alert('加载设备列表失败: ' + (error.message || '未知错误'));
+    }
+}
+
+// 关闭绑定设备模态框
+function closeBindDeviceModal() {
+    document.getElementById('bindDeviceModal').style.display = 'none';
+}
+
+// 确认绑定设备
+async function confirmBindDevice() {
+    const deviceId = document.getElementById('deviceSelect').value;
+
+    if (!deviceId) {
+        alert('请选择设备');
+        return;
+    }
 
     try {
         await post(`/admin/elderly/${currentElderlyId}/devices/bind?deviceId=${deviceId}`);
         alert('绑定成功');
+        closeBindDeviceModal();
         loadDeviceRelations();
     } catch (error) {
         console.error('绑定设备失败:', error);

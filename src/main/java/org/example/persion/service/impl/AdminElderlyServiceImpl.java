@@ -7,14 +7,19 @@ import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.AdminElderlyCreateDTO;
 import org.example.persion.dto.AdminElderlyUpdateDTO;
 import org.example.persion.entity.ElderlyInfo;
+import org.example.persion.entity.Room;
 import org.example.persion.entity.User;
 import org.example.persion.repository.ElderlyInfoMapper;
+import org.example.persion.repository.RoomMapper;
 import org.example.persion.repository.UserMapper;
 import org.example.persion.service.AdminElderlyService;
 import org.example.persion.vo.ElderlyInfoVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.util.Objects;
 
 /**
  * 管理员端-老人信息管理服务实现类
@@ -25,6 +30,7 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
 
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final UserMapper userMapper;
+    private final RoomMapper roomMapper;
 
     @Override
     public Page<ElderlyInfoVO> getElderlyList(Integer current, Integer size, String keyword) {
@@ -54,6 +60,7 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
     }
 
     @Override
+    @Transactional
     public ElderlyInfo createElderly(AdminElderlyCreateDTO dto) {
         // 检查关联用户是否存在
         User user = userMapper.selectById(dto.getUserId());
@@ -77,6 +84,20 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
             }
         }
 
+        // 如果分配了房间，检查房间容量
+        if (dto.getRoomId() != null) {
+            Room room = roomMapper.selectById(dto.getRoomId());
+            if (room == null) {
+                throw new BusinessException("指定的房间不存在");
+            }
+            if (room.getOccupiedBeds() >= room.getBedCount()) {
+                throw new BusinessException("房间 " + room.getRoomNumber() + " 已满，请选择其他房间");
+            }
+            // 增加房间入住人数
+            room.setOccupiedBeds(room.getOccupiedBeds() + 1);
+            roomMapper.updateById(room);
+        }
+
         ElderlyInfo elderlyInfo = new ElderlyInfo();
         BeanUtils.copyProperties(dto, elderlyInfo);
 
@@ -85,18 +106,41 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
     }
 
     @Override
+    @Transactional
     public ElderlyInfo updateElderly(Long id, AdminElderlyUpdateDTO dto) {
         ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(id);
         if (elderlyInfo == null) {
             throw new BusinessException("老人信息不存在");
         }
 
-        // 调试日志：输出接收到的数据
-        System.out.println("========== 更新老人信息 ==========");
-        System.out.println("老人ID: " + id);
-        System.out.println("接收到的DTO: " + dto);
-        System.out.println("DTO中的roomId: " + dto.getRoomId());
-        System.out.println("更新前的roomId: " + elderlyInfo.getRoomId());
+        Long oldRoomId = elderlyInfo.getRoomId();
+        Long newRoomId = dto.getRoomId();
+
+        // 检查房间是否发生变化
+        if (!Objects.equals(oldRoomId, newRoomId)) {
+            // Case 1: 从一个房间搬出（到未分配或其他房间）
+            if (oldRoomId != null) {
+                Room oldRoom = roomMapper.selectById(oldRoomId);
+                if (oldRoom != null) {
+                    oldRoom.setOccupiedBeds(Math.max(0, oldRoom.getOccupiedBeds() - 1));
+                    roomMapper.updateById(oldRoom);
+                }
+            }
+            // Case 2: 搬入一个新房间
+            if (newRoomId != null) {
+                Room newRoom = roomMapper.selectById(newRoomId);
+                if (newRoom == null) {
+                    throw new BusinessException("指定的新房间不存在");
+                }
+                if (newRoom.getOccupiedBeds() >= newRoom.getBedCount()) {
+                    // 注意：由于这是一个事务，如果这里抛出异常，上面对旧房间的修改会回滚
+                    throw new BusinessException("新房间 " + newRoom.getRoomNumber() + " 已满，无法入住");
+                }
+                newRoom.setOccupiedBeds(newRoom.getOccupiedBeds() + 1);
+                roomMapper.updateById(newRoom);
+            }
+        }
+
 
         // 检查身份证号是否被其他老人使用
         if (StringUtils.hasText(dto.getIdCard()) && !dto.getIdCard().equals(elderlyInfo.getIdCard())) {
@@ -114,19 +158,26 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
         // 特殊处理 roomId，允许设置为 null（未分配房间）
         elderlyInfo.setRoomId(dto.getRoomId());
 
-        System.out.println("更新后的roomId: " + elderlyInfo.getRoomId());
-        System.out.println("====================================");
-
         // MyBatis Plus 会自动更新 update_time
         elderlyInfoMapper.updateById(elderlyInfo);
         return elderlyInfo;
     }
 
     @Override
+    @Transactional
     public void deleteElderly(Long id) {
         ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(id);
         if (elderlyInfo == null) {
             throw new BusinessException("老人信息不存在");
+        }
+
+        // 如果老人在房间里，删除时需要更新房间入住人数
+        if (elderlyInfo.getRoomId() != null) {
+            Room room = roomMapper.selectById(elderlyInfo.getRoomId());
+            if (room != null) {
+                room.setOccupiedBeds(Math.max(0, room.getOccupiedBeds() - 1));
+                roomMapper.updateById(room);
+            }
         }
 
         elderlyInfoMapper.deleteById(id);

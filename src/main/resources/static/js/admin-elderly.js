@@ -150,6 +150,12 @@ function populateRoomSelect(selectedRoomId = null) {
         const option = document.createElement('option');
         option.value = room.id;
         option.textContent = `${room.roomNumber} - ${room.roomType} (${room.occupiedBeds}/${room.bedCount})`;
+
+        // 如果房间已满，并且不是当前选中的房间，则禁用
+        if (room.occupiedBeds >= room.bedCount && room.id !== selectedRoomId) {
+            option.disabled = true;
+        }
+
         if (selectedRoomId && room.id === selectedRoomId) {
             option.selected = true;
         }

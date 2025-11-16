@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.Room;
+import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.RoomMapper;
 import org.example.persion.service.RoomService;
 import org.springframework.stereotype.Service;
@@ -12,6 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 房间管理服务实现类
@@ -22,6 +26,7 @@ import java.util.List;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomMapper roomMapper;
+    private final ElderlyInfoMapper elderlyInfoMapper;
 
     @Override
     public Page<Room> getRoomList(int current, int size, String keyword, String roomType, String status) {
@@ -47,18 +52,46 @@ public class RoomServiceImpl implements RoomService {
         // 按楼层、房间号排序
         wrapper.orderByAsc(Room::getFloor, Room::getRoomNumber);
 
-        return roomMapper.selectPage(page, wrapper);
+        Page<Room> roomPage = roomMapper.selectPage(page, wrapper);
+
+        // 动态计算入住人数
+        if (!roomPage.getRecords().isEmpty()) {
+            List<Long> roomIds = roomPage.getRecords().stream().map(Room::getId).collect(Collectors.toList());
+            Map<Long, Long> occupancyMap = getRoomOccupancyMap(roomIds);
+            roomPage.getRecords().forEach(room -> room.setOccupiedBeds(occupancyMap.getOrDefault(room.getId(), 0L).intValue()));
+        }
+
+        return roomPage;
     }
 
     @Override
     public List<Room> getAvailableRooms() {
-        LambdaQueryWrapper<Room> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Room::getStatus, "可用")
-                .or()
-                .apply("occupied_beds < bed_count") // 还有空床位
-                .orderByAsc(Room::getFloor, Room::getRoomNumber);
+        // 1. 获取所有房间
+        List<Room> allRooms = roomMapper.selectList(new LambdaQueryWrapper<Room>().orderByAsc(Room::getFloor, Room::getRoomNumber));
 
-        return roomMapper.selectList(wrapper);
+        // 2. 动态计算所有房间的入住人数
+        if (!allRooms.isEmpty()) {
+            List<Long> roomIds = allRooms.stream().map(Room::getId).collect(Collectors.toList());
+            Map<Long, Long> occupancyMap = getRoomOccupancyMap(roomIds);
+            allRooms.forEach(room -> room.setOccupiedBeds(occupancyMap.getOrDefault(room.getId(), 0L).intValue()));
+        }
+
+        return allRooms;
+    }
+
+    /**
+     * 根据房间ID列表获取入住人数映射
+     */
+    private Map<Long, Long> getRoomOccupancyMap(List<Long> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        LambdaQueryWrapper<ElderlyInfo> elderlyWrapper = new LambdaQueryWrapper<>();
+        elderlyWrapper.in(ElderlyInfo::getRoomId, roomIds);
+        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(elderlyWrapper);
+
+        return elderlyList.stream()
+                .collect(Collectors.groupingBy(ElderlyInfo::getRoomId, Collectors.counting()));
     }
 
     @Override

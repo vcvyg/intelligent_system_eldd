@@ -34,4 +34,6 @@ public class UserRegisterDTO {
 
     @NotBlank(message = "验证码不能为空")
     private String code; // 邮箱验证码
+
+    private String adminCode; // 管理员邀请码，仅在注册管理员时需要
 }

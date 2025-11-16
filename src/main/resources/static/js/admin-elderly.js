@@ -10,7 +10,7 @@ let roomList = [];
 let roomMap = new Map(); // 房间ID到房间对象的映射
 
 // 页面加载完成
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     // 检查登录状态
     const userInfo = checkLogin();
     if (!userInfo || userInfo.role !== 'ADMIN') {
@@ -22,10 +22,9 @@ window.addEventListener('DOMContentLoaded', () => {
     // 显示欢迎信息
     document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
-    // 加载房间列表
-    loadRooms();
-    // 加载老人列表
-    loadElderly();
+    // 先加载房间列表，等待完成后再加载老人列表
+    await loadRooms();
+    await loadElderly();
 });
 
 // 加载房间列表
@@ -254,21 +253,28 @@ async function saveElderly() {
         allergyHistory: document.getElementById('allergyHistory').value.trim() || null
     };
 
+    // 调试日志：输出要发送的数据
+    console.log('保存老人信息 - 发送数据:', formData);
+    console.log('roomId 原始值:', roomIdValue);
+    console.log('roomId 转换后:', formData.roomId);
+
     try {
         if (id) {
             // 更新老人信息
-            await put(`/admin/elderly/${id}`, formData);
+            const response = await put(`/admin/elderly/${id}`, formData);
+            console.log('更新响应:', response);
             alert('更新成功');
         } else {
             // 新增老人信息
-            await post('/admin/elderly', formData);
+            const response = await post('/admin/elderly', formData);
+            console.log('新增响应:', response);
             alert('新增成功');
         }
 
         closeElderlyModal();
-        // 重新加载房间列表和老人列表
+        // 先重新加载房间列表，等待完成后再加载老人列表
         await loadRooms();
-        loadElderly();
+        await loadElderly();
     } catch (error) {
         console.error('保存老人信息失败:', error);
     }
@@ -477,6 +483,10 @@ async function confirmAddFamily() {
         alert('添加成功');
         closeAddFamilyModal();
         loadFamilyRelations();
+        // 如果设置了主要联系人，则刷新老人列表以更新紧急联系人信息
+        if (isPrimary) {
+            loadElderly();
+        }
     } catch (error) {
         console.error('添加子女失败:', error);
         alert('添加失败:' + (error.message || '未知错误'));

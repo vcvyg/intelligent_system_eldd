@@ -13,6 +13,7 @@ import org.example.persion.vo.LoginVO;
 import org.example.persion.vo.UserInfoVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -34,8 +35,18 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private EmailService emailService;
 
+    @Value("${admin.invitation-code}")
+    private String requiredAdminCode;
+
     @Override
     public User register(UserRegisterDTO dto) {
+        // 如果是管理员注册，校验邀请码
+        if ("ADMIN".equals(dto.getRole())) {
+            if (dto.getAdminCode() == null || !dto.getAdminCode().equals(requiredAdminCode)) {
+                throw new BusinessException("管理员邀请码无效");
+            }
+        }
+
         // 验证邮箱验证码
         if (!emailService.verifyCode(dto.getEmail(), dto.getCode())) {
             throw new BusinessException("验证码错误或已过期");

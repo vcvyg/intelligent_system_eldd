@@ -4,12 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.example.persion.entity.DeviceInfo;
 import org.example.persion.entity.ElderlyFamilyRelation;
+import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.ElderlyMedicalRelation;
+import org.example.persion.entity.User;
 import org.example.persion.repository.DeviceInfoMapper;
 import org.example.persion.repository.ElderlyFamilyRelationMapper;
+import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.ElderlyMedicalRelationMapper;
+import org.example.persion.repository.UserMapper;
 import org.example.persion.service.ElderlyRelationService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +30,8 @@ public class ElderlyRelationServiceImpl implements ElderlyRelationService {
     private final ElderlyFamilyRelationMapper familyRelationMapper;
     private final ElderlyMedicalRelationMapper medicalRelationMapper;
     private final DeviceInfoMapper deviceInfoMapper;
+    private final ElderlyInfoMapper elderlyInfoMapper;
+    private final UserMapper userMapper;
 
     @Override
     public List<Map<String, Object>> getFamilyRelations(Long elderlyId) {
@@ -32,6 +39,7 @@ public class ElderlyRelationServiceImpl implements ElderlyRelationService {
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean addFamilyRelation(Long elderlyId, Long familyUserId, String relationType, Integer isPrimaryContact) {
         // 检查是否已存在关联
         LambdaQueryWrapper<ElderlyFamilyRelation> wrapper = new LambdaQueryWrapper<>();
@@ -50,6 +58,22 @@ public class ElderlyRelationServiceImpl implements ElderlyRelationService {
             updateWrapper.eq(ElderlyFamilyRelation::getElderlyId, elderlyId)
                     .eq(ElderlyFamilyRelation::getIsPrimaryContact, 1);
             familyRelationMapper.update(updateRelation, updateWrapper);
+
+            // 更新老人信息表中的紧急联系人和紧急电话
+            User familyUser = userMapper.selectById(familyUserId);
+            if (familyUser != null) {
+                ElderlyInfo elderlyInfo = new ElderlyInfo();
+                elderlyInfo.setId(elderlyId);
+                elderlyInfo.setEmergencyContact(familyUser.getRealName() != null ? familyUser.getRealName() : familyUser.getUsername());
+                elderlyInfo.setEmergencyPhone(familyUser.getPhone());
+                elderlyInfoMapper.updateById(elderlyInfo);
+
+                System.out.println("========== 更新紧急联系人 ==========");
+                System.out.println("老人ID: " + elderlyId);
+                System.out.println("紧急联系人: " + elderlyInfo.getEmergencyContact());
+                System.out.println("紧急电话: " + elderlyInfo.getEmergencyPhone());
+                System.out.println("====================================");
+            }
         }
 
         // 创建新关联

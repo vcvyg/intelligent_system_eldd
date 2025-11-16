@@ -69,47 +69,108 @@
             border-radius: var(--radius-sm);
         }
         #attendanceTable {
-            border-collapse: separate; /* 为了让sticky+border生效 */
-            border-spacing: 0;
+            border-collapse: collapse; /* 改为collapse让边框紧密 */
+            width: 100%;
         }
         #attendanceTable th,
         #attendanceTable td {
-            padding: 8px 12px;
+            padding: 10px 12px;
             text-align: center;
             font-size: 13px;
-            border-bottom: 1px solid var(--color-border-light);
-        }
-        /* 斑马条纹 */
-        #attendanceTable tbody tr:nth-child(odd) td {
-            background-color: var(--color-bg-light);
+            border: 1px solid var(--color-border-light);
+            white-space: nowrap;
         }
 
-        /* --- 冻结列核心样式 --- */
-        #attendanceTable th:nth-child(-n+4),
-        #attendanceTable td:nth-child(-n+4) {
-            position: sticky;
-            z-index: 1;
+        #attendanceTable thead th {
             background-color: var(--color-bg-lighter);
+            font-weight: 600;
+            color: var(--color-text-dark);
         }
-        #attendanceTable th:nth-child(1), #attendanceTable td:nth-child(1) { left: 0; width: 120px; }
-        #attendanceTable th:nth-child(2), #attendanceTable td:nth-child(2) { left: 120px; width: 70px; }
-        #attendanceTable th:nth-child(3), #attendanceTable td:nth-child(3) { left: 190px; width: 70px; }
-        #attendanceTable th:nth-child(4), #attendanceTable td:nth-child(4) { left: 260px; width: 70px; }
-        
-        /* 冻结列右侧的分隔线 */
+
+        /* --- 冻结列核心样式 - 紧密连续 --- */
+        #attendanceTable th:nth-child(1),
+        #attendanceTable td:nth-child(1),
+        #attendanceTable th:nth-child(2),
+        #attendanceTable td:nth-child(2),
+        #attendanceTable th:nth-child(3),
+        #attendanceTable td:nth-child(3),
         #attendanceTable th:nth-child(4),
         #attendanceTable td:nth-child(4) {
-            border-right: 2px solid var(--color-border);
+            position: sticky;
+            z-index: 2;
+            background-color: #ffffff;
         }
 
-        /* 状态单元格样式 */
-        .status-on_duty { color: #0c4a6e; }
-        .status-on_leave { color: #713f12; }
-        .status-off_duty { color: #4b5563; }
-        #attendanceTable td.status-on_duty { background-color: #e0f2fe; }
-        #attendanceTable td.status-on_leave { background-color: #fef9c3; }
-        #attendanceTable tr:nth-child(odd) td.status-off_duty { background-color: #f3f4f6; }
+        /* 精确设置每列的位置，确保紧密连续无间隔 */
+        #attendanceTable th:nth-child(1),
+        #attendanceTable td:nth-child(1) {
+            left: 0;
+            min-width: 100px;
+        }
 
+        #attendanceTable th:nth-child(2),
+        #attendanceTable td:nth-child(2) {
+            left: 100px;
+            min-width: 60px;
+        }
+
+        #attendanceTable th:nth-child(3),
+        #attendanceTable td:nth-child(3) {
+            left: 160px;
+            min-width: 60px;
+        }
+
+        #attendanceTable th:nth-child(4),
+        #attendanceTable td:nth-child(4) {
+            left: 220px;
+            min-width: 60px;
+            border-right: 3px solid var(--color-border) !important; /* 加粗右边框作为分隔 */
+        }
+
+        /* 表头冻结列的特殊背景 */
+        #attendanceTable thead th:nth-child(1),
+        #attendanceTable thead th:nth-child(2),
+        #attendanceTable thead th:nth-child(3),
+        #attendanceTable thead th:nth-child(4) {
+            background-color: #f8f9fa;
+            z-index: 3;
+        }
+
+        /* 数据列的最小宽度 */
+        #attendanceTable td:nth-child(n+5) {
+            min-width: 50px;
+        }
+
+        /* --- 状态单元格强化样式 --- */
+        /* 在班 - 蓝色系 */
+        #attendanceTable td.status-on_duty {
+            background-color: #dbeafe !important;
+            color: #1e40af;
+            font-weight: 500;
+        }
+
+        /* 请假 - 黄色系 */
+        #attendanceTable td.status-on_leave {
+            background-color: #fef3c7 !important;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        /* 休息 - 灰色系 */
+        #attendanceTable td.status-off_duty {
+            background-color: #f3f4f6 !important;
+            color: #6b7280;
+        }
+
+        /* 斑马条纹 - 仅应用于非状态单元格 */
+        #attendanceTable tbody tr:nth-child(even) td:not(.status-on_duty):not(.status-on_leave):not(.status-off_duty) {
+            background-color: #fafafa;
+        }
+
+        /* 确保冻结列在偶数行也有正确的背景 */
+        #attendanceTable tbody tr:nth-child(even) td:nth-child(-n+4):not(.status-on_duty):not(.status-on_leave):not(.status-off_duty) {
+            background-color: #fafafa;
+        }
     </style>
 </head>
 <body>

@@ -33,6 +33,8 @@ public class AdminElderlyCreateDTO {
 
     private String address;
 
+    private Long roomId;  // 添加房间ID字段
+
     private String emergencyContact;
 
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "紧急联系电话格式不正确")

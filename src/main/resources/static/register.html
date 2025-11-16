@@ -198,6 +198,14 @@
                         </div>
                     </div>
 
+                    <!-- 管理员邀请码输入框 -->
+                    <div class="input-group" id="adminCodeGroup" style="display: none;">
+                        <label for="adminCode">管理员邀请码 <span class="required">*</span></label>
+                        <div class="input-wrapper">
+                            <input type="text" id="adminCode" name="adminCode" placeholder="请输入管理员邀请码">
+                        </div>
+                    </div>
+
                     <div class="input-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="agree" required>
@@ -226,5 +234,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script src="js/register.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const roleSelect = document.getElementById('role');
+            const adminCodeGroup = document.getElementById('adminCodeGroup');
+            const adminCodeInput = document.getElementById('adminCode');
+
+            roleSelect.addEventListener('change', function () {
+                if (this.value === 'ADMIN') {
+                    adminCodeGroup.style.display = 'block';
+                    adminCodeInput.required = true;
+                } else {
+                    adminCodeGroup.style.display = 'none';
+                    adminCodeInput.required = false;
+                    adminCodeInput.value = ''; // 清空值
+                }
+            });
+        });
+    </script>
 </body>
 </html>

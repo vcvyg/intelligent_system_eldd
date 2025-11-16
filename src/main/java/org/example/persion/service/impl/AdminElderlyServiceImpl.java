@@ -91,6 +91,13 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
             throw new BusinessException("老人信息不存在");
         }
 
+        // 调试日志：输出接收到的数据
+        System.out.println("========== 更新老人信息 ==========");
+        System.out.println("老人ID: " + id);
+        System.out.println("接收到的DTO: " + dto);
+        System.out.println("DTO中的roomId: " + dto.getRoomId());
+        System.out.println("更新前的roomId: " + elderlyInfo.getRoomId());
+
         // 检查身份证号是否被其他老人使用
         if (StringUtils.hasText(dto.getIdCard()) && !dto.getIdCard().equals(elderlyInfo.getIdCard())) {
             LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
@@ -101,7 +108,16 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
             }
         }
 
-        BeanUtils.copyProperties(dto, elderlyInfo, "id", "userId");
+        // 使用 BeanUtils 复制属性，但排除 id、userId、createTime、updateTime
+        BeanUtils.copyProperties(dto, elderlyInfo, "id", "userId", "createTime", "updateTime");
+
+        // 特殊处理 roomId，允许设置为 null（未分配房间）
+        elderlyInfo.setRoomId(dto.getRoomId());
+
+        System.out.println("更新后的roomId: " + elderlyInfo.getRoomId());
+        System.out.println("====================================");
+
+        // MyBatis Plus 会自动更新 update_time
         elderlyInfoMapper.updateById(elderlyInfo);
         return elderlyInfo;
     }

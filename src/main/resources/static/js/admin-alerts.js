@@ -89,7 +89,7 @@ function getLevelClass(level) {
         '高': 'level-high',
         '紧急': 'level-urgent'
     };
-    return levelMap[level] || '';
+    return levelMap[level] || 'level-low';
 }
 
 // 获取状态样式类

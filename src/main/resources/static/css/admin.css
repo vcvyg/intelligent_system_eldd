@@ -162,6 +162,30 @@
     color: var(--color-text-gray);
 }
 
+/* 预警页面专属样式 */
+.stat-icon.alerts-total { background: var(--color-primary); color: var(--color-white); }
+.stat-icon.alerts-pending { background: var(--color-warning); color: var(--color-white); }
+.stat-icon.alerts-processing { background: var(--color-info); color: var(--color-white); }
+.stat-icon.alerts-handled { background: var(--color-success); color: var(--color-white); }
+
+.level-badge, .status-badge {
+    padding: 4px 10px;
+    border-radius: var(--radius-xl);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.level-low { background-color: #e9ecef; color: #6c757d; }
+.level-medium { background-color: var(--color-info); color: var(--color-white); }
+.level-high { background-color: var(--color-warning); color: var(--color-white); }
+.level-urgent { background-color: var(--color-danger); color: var(--color-white); }
+
+.status-warning { background-color: var(--color-warning); color: var(--color-white); }
+.status-info { background-color: var(--color-info); color: var(--color-white); }
+.status-success { background-color: var(--color-success); color: var(--color-white); }
+.status-disabled { background-color: #e9ecef; color: #6c757d; }
+
 .stat-info h3 {
     margin: 0 0 8px 0;
     font-size: 14px;

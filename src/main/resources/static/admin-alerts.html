@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
+
 <body>
     <div class="admin-container">
         <!-- 侧边栏导航 -->
@@ -65,32 +67,31 @@
                 </div>
             </header>
 
-            <!-- 统计卡片 -->
             <section class="stats-section">
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #6366f1;">⚠</div>
+                        <div class="stat-icon alerts-total">⚠</div>
                         <div class="stat-info">
                             <h3>预警总数</h3>
                             <p class="stat-value" id="totalAlerts">0</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #f59e0b;">⏳</div>
+                        <div class="stat-icon alerts-pending">⏳</div>
                         <div class="stat-info">
                             <h3>待处理</h3>
                             <p class="stat-value" id="pendingAlerts">0</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #3b82f6;">⚙</div>
+                        <div class="stat-icon alerts-processing">⚙</div>
                         <div class="stat-info">
                             <h3>处理中</h3>
                             <p class="stat-value" id="processingAlerts">0</p>
                         </div>
                     </div>
                     <div class="stat-card">
-                        <div class="stat-icon" style="background: #10b981;">✓</div>
+                        <div class="stat-icon alerts-handled">✓</div>
                         <div class="stat-info">
                             <h3>已处理</h3>
                             <p class="stat-value" id="handledAlerts">0</p>
@@ -188,4 +189,5 @@
     <script src="js/common.js"></script>
     <script src="js/admin-alerts.js"></script>
 </body>
+
 </html>

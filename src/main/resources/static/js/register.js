@@ -481,11 +481,18 @@ registerForm.addEventListener('submit', async (e) => {
     const code = document.getElementById('code').value.trim();
     const email = document.getElementById('email').value.trim();
     const role = document.getElementById('role').value;
+    const adminCode = document.getElementById('adminCode').value.trim();
     const agree = document.getElementById('agree').checked;
 
     // 验证表单
     if (!username || !password || !realName || !email || !code || !role) {
         showMessage('请填写所有必填项', 'error');
+        return;
+    }
+
+    // 如果选择管理员角色,验证邀请码是否已填写
+    if (role === 'ADMIN' && !adminCode) {
+        showMessage('请输入管理员邀请码', 'error');
         return;
     }
 
@@ -529,7 +536,8 @@ registerForm.addEventListener('submit', async (e) => {
                 phone: phone || null,
                 email: email,
                 code: code,
-                role: role
+                role: role,
+                adminCode: adminCode || null
             })
         });
 

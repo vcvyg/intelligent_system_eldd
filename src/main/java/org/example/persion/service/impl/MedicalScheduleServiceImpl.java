@@ -41,11 +41,12 @@ public class MedicalScheduleServiceImpl implements MedicalScheduleService {
         // 检查该医护人员在该日期该时间段是否已有排班
         LambdaQueryWrapper<MedicalSchedule> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MedicalSchedule::getMedicalUserId, schedule.getMedicalUserId())
-                .eq(MedicalSchedule::getScheduleDate, schedule.getScheduleDate());
+                .eq(MedicalSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(MedicalSchedule::getShiftType, schedule.getShiftType());
         Long count = scheduleMapper.selectCount(wrapper);
 
         if (count > 0) {
-            throw new RuntimeException("该医护人员在该日期已有排班安排");
+            throw new RuntimeException("该医护人员在该日期的同一班次已有排班安排");
         }
 
         return scheduleMapper.insert(schedule) > 0;
@@ -53,6 +54,18 @@ public class MedicalScheduleServiceImpl implements MedicalScheduleService {
 
     @Override
     public boolean updateSchedule(MedicalSchedule schedule) {
+        // 检查更新后的排班是否与他人的排班冲突
+        LambdaQueryWrapper<MedicalSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(MedicalSchedule::getMedicalUserId, schedule.getMedicalUserId())
+                .eq(MedicalSchedule::getScheduleDate, schedule.getScheduleDate())
+                .eq(MedicalSchedule::getShiftType, schedule.getShiftType())
+                .ne(MedicalSchedule::getId, schedule.getId()); // 排除当前正在更新的记录
+        Long count = scheduleMapper.selectCount(wrapper);
+
+        if (count > 0) {
+            throw new RuntimeException("更新失败，该医护人员在该日期的同一班次已有排班安排");
+        }
+
         return scheduleMapper.updateById(schedule) > 0;
     }
 

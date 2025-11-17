@@ -463,13 +463,63 @@ function updateWeekStats(schedules) {
 }
 
 // 导出排班
-function exportSchedules() {
+async function exportSchedules() {
     const weekEnd = new Date(currentWeekStart);
     weekEnd.setDate(weekEnd.getDate() + 6);
     const startDate = formatDate(currentWeekStart);
     const endDate = formatDate(weekEnd);
+    const url = `/api/admin/schedule/export?startDate=${startDate}&endDate=${endDate}`;
 
-    window.location.href = `/admin/schedule/export?startDate=${startDate}&endDate=${endDate}`;
+    try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        if (!token) {
+            alert('未找到登录凭证，请重新登录');
+            return;
+        }
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}` // 修正：添加 "Bearer " 前缀
+            }
+        });
+
+        if (!response.ok) {
+            // 如果服务器返回错误，尝试解析JSON错误信息
+            try {
+                const err = await response.json();
+                throw new Error(err.message || '导出失败');
+            } catch (e) {
+                // 如果返回的不是JSON，则显示通用错误
+                throw new Error(`导出失败，服务器状态: ${response.status}`);
+            }
+        }
+
+        // 从响应头中获取文件名
+        const disposition = response.headers.get('Content-Disposition');
+        let filename = `schedules_${startDate}_to_${endDate}.csv`; // 默认文件名
+        if (disposition && disposition.indexOf('attachment') !== -1) {
+            const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+            const matches = filenameRegex.exec(disposition);
+            if (matches != null && matches[1]) {
+                filename = decodeURI(matches[1].replace(/['"]/g, ''));
+            }
+        }
+
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(a);
+
+    } catch (error) {
+        console.error('导出操作失败:', error);
+        alert(error.message);
+    }
 }
 
 // 打印排班

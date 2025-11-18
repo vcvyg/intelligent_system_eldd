@@ -25,16 +25,36 @@ async function loadLeaveRequests(userId) {
         }
 
         data.forEach(req => {
+            // 处理请假类型的中文显示
+            const leaveTypeMap = {
+                'SICK_LEAVE': '病假',
+                'PERSONAL_LEAVE': '事假',
+                'ANNUAL_LEAVE': '年假',
+                'ADJUSTMENT_LEAVE': '调休'
+            };
+            const leaveTypeText = leaveTypeMap[req.leave_type] || req.leave_type;
+            
+            // 处理状态的中文显示
+            const statusMap = {
+                'PENDING': '待审批',
+                'APPROVED': '已同意',
+                'REJECTED': '已拒绝'
+            };
+            const statusText = statusMap[req.status] || req.status;
+            
+            // 格式化时间
+            const createTime = req.create_time ? req.create_time.replace('T', ' ').substring(0, 16) : '-';
+            
             const row = `
                 <tr>
-                    <td>${req.leaveType}</td>
-                    <td>${req.startDate}</td>
-                    <td>${req.endDate}</td>
-                    <td>${req.days}</td>
-                    <td>${req.reason}</td>
-                    <td><span class="status-${getStatusClass(req.status)}">${req.status}</span></td>
-                    <td>${req.approverRemark || '-'}</td>
-                    <td>${req.createTime}</td>
+                    <td>${leaveTypeText}</td>
+                    <td>${req.start_date || '-'}</td>
+                    <td>${req.end_date || '-'}</td>
+                    <td>${req.days || 0}</td>
+                    <td>${req.reason || '-'}</td>
+                    <td><span class="status-${getStatusClass(req.status)}">${statusText}</span></td>
+                    <td>${req.approver_remark || '-'}</td>
+                    <td>${createTime}</td>
                     <td>
                         <button class="btn-danger btn-sm" onclick="cancelRequest(${req.id})" ${req.status !== 'PENDING' ? 'disabled' : ''}>撤销</button>
                     </td>
@@ -59,11 +79,11 @@ function getStatusClass(status) {
 }
 
 function showAddModal() {
-    document.getElementById('leaveModal').style.display = 'block';
+    document.getElementById('addLeaveModal').style.display = 'flex';
 }
 
 function closeModal() {
-    document.getElementById('leaveModal').style.display = 'none';
+    document.getElementById('addLeaveModal').style.display = 'none';
     document.getElementById('leaveForm').reset();
     document.getElementById('daysCount').textContent = '0';
 }

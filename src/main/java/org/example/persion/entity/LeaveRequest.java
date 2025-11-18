@@ -1,87 +1,40 @@
 package org.example.persion.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import org.example.persion.enums.LeaveRequestStatus;
+import org.example.persion.enums.LeaveType;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * 请假/调休申请实体
- */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @TableName("leave_request")
-public class LeaveRequest {
+public class LeaveRequest extends BaseEntity {
 
-    @TableId(type = IdType.AUTO)
-    private Long id;
+    private Long medicalUserId; // 申请人ID
 
-    /**
-     * 申请人ID(医护人员)
-     */
-    private Long medicalUserId;
+    @TableField("reviewer_id")
+    private Long approverId; // 审批人ID (数据库列名: reviewer_id)
 
-    /**
-     * 请假类型: 事假/病假/年假/调休
-     */
-    private String leaveType;
+    private LeaveType leaveType; // 请假类型
 
-    /**
-     * 开始日期
-     */
-    private LocalDate startDate;
+    private LocalDate startDate; // 开始日期
 
-    /**
-     * 结束日期
-     */
-    private LocalDate endDate;
+    private LocalDate endDate; // 结束日期
 
-    /**
-     * 请假天数
-     */
-    private BigDecimal days;
+    private Integer days; // 天数
 
-    /**
-     * 请假原因
-     */
-    private String reason;
+    private String reason; // 申请原因
 
-    /**
-     * 审批状态: 待审批/已同意/已拒绝
-     */
-    private String status;
+    private LeaveRequestStatus status; // 状态
 
-    /**
-     * 审批人ID
-     */
-    private Long reviewerId;
+    @TableField("review_time")
+    private LocalDateTime approveTime; // 审批时间 (数据库列名: review_time)
 
-    /**
-     * 审批时间
-     */
-    private LocalDateTime reviewTime;
-
-    /**
-     * 审批备注
-     */
-    private String reviewRemark;
-
-    /**
-     * 创建时间
-     */
-    @TableField(fill = FieldFill.INSERT)
-    private LocalDateTime createTime;
-
-    /**
-     * 更新时间
-     */
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    /**
-     * 逻辑删除
-     */
-    @TableLogic
-    private Integer deleted;
+    @TableField("review_remark")
+    private String approverRemark; // 审批备注 (数据库列名: review_remark)
 }

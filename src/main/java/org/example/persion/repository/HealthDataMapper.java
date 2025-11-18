@@ -62,4 +62,24 @@ public interface HealthDataMapper extends BaseMapper<HealthData> {
     List<HealthData> findByDateTimeRange(@Param("startDateTime") LocalDateTime startDateTime,
                                          @Param("endDateTime") LocalDateTime endDateTime,
                                          @Param("elderlyId") Long elderlyId);
+
+    /**
+     * 查询指定日期时间范围内、指定老人ID列表的所有健康数据记录
+     * @param startDateTime 开始时间
+     ** @param endDateTime 结束时间
+     * @param elderlyIds 老人ID列表
+     * @return 健康数据记录列表
+     */
+    @Select("<script>" +
+            "SELECT * FROM health_data " +
+            "WHERE measure_time &gt;= #{startDateTime} AND measure_time &lt; #{endDateTime} " +
+            "AND elderly_id IN " +
+            "<foreach item='id' collection='elderlyIds' open='(' separator=',' close=')'>" +
+            "#{id}" +
+            "</foreach>" +
+            "ORDER BY measure_time ASC" +
+            "</script>")
+    List<HealthData> findByDateTimeRangeAndElderlyIds(@Param("startDateTime") LocalDateTime startDateTime,
+                                                      @Param("endDateTime") LocalDateTime endDateTime,
+                                                      @Param("elderlyIds") List<Long> elderlyIds);
 }

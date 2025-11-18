@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="profile-item"><h4>姓名</h4><p>${patient.name || '-'}</p></div>
             <div class="profile-item"><h4>年龄</h4><p>${patient.age || '-'}</p></div>
             <div class="profile-item"><h4>性别</h4><p>${patient.gender || '-'}</p></div>
-            <div class="profile-item"><h4>房间号</h4><p>${patient.roomId || '未分配'}</p></div>
+            <div class="profile-item"><h4>房间号</h4><p>${patient.roomNumber ? `${patient.roomNumber} (${patient.roomType || '未知类型'})` : '未分配'}</p></div>
             <div class="profile-item"><h4>紧急联系人</h4><p>${patient.emergencyContact || '-'}</p></div>
             <div class="profile-item"><h4>紧急电话</h4><p>${patient.emergencyPhone || '-'}</p></div>
         `;

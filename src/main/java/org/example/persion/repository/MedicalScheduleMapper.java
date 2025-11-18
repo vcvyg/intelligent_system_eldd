@@ -53,4 +53,6 @@ public interface MedicalScheduleMapper extends BaseMapper<MedicalSchedule> {
     List<MedicalScheduleVO> selectSchedulesByMedicalUser(Long medicalUserId);
 
     List<MedicalScheduleVO> selectSchedulesByDateRange(LocalDate startDate, LocalDate endDate);
+
+    List<MedicalScheduleVO> selectSchedulesByMedicalUserAndDate(Long medicalUserId, LocalDate date);
 }

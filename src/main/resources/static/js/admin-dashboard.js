@@ -212,14 +212,14 @@ function renderBloodPressureChart(data) {
             {
                 name: '收缩压',
                 type: 'line',
-                data: data.bloodPressureHigh || [],
+                data: data.bloodPressureHighs || [],
                 smooth: true,
                 itemStyle: { color: '#3b82f6' }
             },
             {
                 name: '舒张压',
                 type: 'line',
-                data: data.bloodPressureLow || [],
+                data: data.bloodPressureLows || [],
                 smooth: true,
                 itemStyle: { color: '#8b5cf6' }
             }

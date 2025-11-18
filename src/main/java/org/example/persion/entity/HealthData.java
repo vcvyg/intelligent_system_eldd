@@ -3,6 +3,8 @@ package org.example.persion.entity;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import org.example.persion.enums.TimePeriod;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -32,5 +34,5 @@ public class HealthData extends BaseEntity {
 
     private LocalDateTime measureTime; // 测量时间
 
-    private String deviceId; // 设备ID
+    private TimePeriod timePeriod; // 时间周期
 }

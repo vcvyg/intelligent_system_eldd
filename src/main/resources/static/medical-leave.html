@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>请假申请 - 智慧养老系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
-    <link rel="stylesheet" href="css/medical.css">
+    <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-    <div class="medical-container">
+    <div class="admin-container">
         <!-- 侧边栏 -->
         <aside class="sidebar">
             <div class="logo">
@@ -18,13 +19,28 @@
             </div>
             <nav class="nav-menu">
                 <a href="medical-dashboard.html" class="nav-item">
-                    <span class="icon">📊</span><span>工作台</span>
+                    <span class="icon">🩺</span>
+                    <span>医护工作台</span>
+                </a>
+                <a href="medical-patients.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人档案</span>
                 </a>
                 <a href="medical-schedule.html" class="nav-item">
-                    <span class="icon">📅</span><span>我的排班</span>
+                    <span class="icon">📅</span>
+                    <span>我的排班</span>
+                </a>
+                <a href="medical-rounds.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>巡诊记录</span>
+                </a>
+                <a href="medical-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>告警中心</span>
                 </a>
                 <a href="medical-leave.html" class="nav-item active">
-                    <span class="icon">📝</span><span>请假申请</span>
+                    <span class="icon">📝</span>
+                    <span>请假申请</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -44,7 +60,7 @@
             <div class="content-wrapper" style="padding: 24px;">
                 <!-- 新增申请按钮 -->
                 <div style="margin-bottom: 20px;">
-                    <button class="btn-primary" onclick="showAddModal()">➕ 新增请假申请</button>
+                    <button class="w-button" onclick="showAddModal()">➕ 新增请假申请</button>
                 </div>
 
                 <!-- 申请列表 -->
@@ -74,7 +90,7 @@
     </div>
 
     <!-- 新增申请模态框 -->
-    <div id="leaveModal" class="modal">
+    <div id="addLeaveModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>新增请假申请</h2>
@@ -82,16 +98,16 @@
             </div>
             <div class="modal-body">
                 <form id="leaveForm">
-                    <div class="form-group">
-                        <label>请假类型 *</label>
-                        <select id="leaveType" required>
-                            <option value="事假">事假</option>
-                            <option value="病假">病假</option>
-                            <option value="年假">年假</option>
-                            <option value="调休">调休</option>
-                        </select>
-                    </div>
                     <div class="form-row">
+                        <div class="form-group">
+                            <label>请假类型 *</label>
+                            <select id="leaveType" required>
+                                <option value="事假">事假</option>
+                                <option value="病假">病假</option>
+                                <option value="年假">年假</option>
+                                <option value="调休">调休</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label>开始日期 *</label>
                             <input type="date" id="startDate" required onchange="calculateDays()">
@@ -102,164 +118,23 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>请假天数</label>
-                        <input type="number" id="days" step="0.5" readonly style="background: #f3f4f6;">
+                        <label>申请天数</label>
+                        <p><span id="daysCount">0</span> 天</p>
                     </div>
                     <div class="form-group">
-                        <label>请假原因 *</label>
-                        <textarea id="reason" rows="4" required placeholder="请填写请假原因..."></textarea>
+                        <label>请假事由 *</label>
+                        <textarea id="reason" rows="4" required></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button class="btn-secondary" onclick="closeModal()">取消</button>
-                <button class="btn-primary" onclick="submitLeave()">提交申请</button>
+                <button class="btn-primary" onclick="submitLeaveRequest()">提交申请</button>
             </div>
         </div>
     </div>
 
     <script src="js/common.js"></script>
-    <script>
-        // 页面加载
-        document.addEventListener('DOMContentLoaded', function() {
-            const userInfo = checkLogin();
-            if (!userInfo || userInfo.role !== 'MEDICAL') {
-                alert('权限不足');
-                logout();
-                return;
-            }
-            document.getElementById('welcomeText').textContent = `欢迎,${userInfo.username}!`;
-            loadLeaveRequests();
-        });
-
-        // 加载请假列表
-        async function loadLeaveRequests() {
-            const tbody = document.getElementById('leaveTableBody');
-            tbody.innerHTML = '<tr><td colspan="9" class="loading">加载中...</td></tr>';
-
-            try {
-                const result = await get('/medical/leave/my');
-                if (result.code === 200 && result.data) {
-                    if (result.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
-                    } else {
-                        tbody.innerHTML = result.data.map(item => `
-                            <tr>
-                                <td>${item.leave_type}</td>
-                                <td>${item.start_date}</td>
-                                <td>${item.end_date}</td>
-                                <td>${item.days}天</td>
-                                <td>${item.reason}</td>
-                                <td><span class="badge ${getBadgeClass(item.status)}">${item.status}</span></td>
-                                <td>${item.review_remark || '-'}</td>
-                                <td>${formatDateTime(item.create_time)}</td>
-                                <td>
-                                    ${item.status === '待审批' ?
-                                        `<button class="btn-danger" onclick="cancelLeave(${item.id})">撤销</button>` :
-                                        '-'}
-                                </td>
-                            </tr>
-                        `).join('');
-                    }
-                }
-            } catch (error) {
-                console.error('加载失败:', error);
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:red;">加载失败</td></tr>';
-            }
-        }
-
-        // 显示新增模态框
-        function showAddModal() {
-            document.getElementById('leaveForm').reset();
-            document.getElementById('leaveModal').style.display = 'flex';
-        }
-
-        // 关闭模态框
-        function closeModal() {
-            document.getElementById('leaveModal').style.display = 'none';
-        }
-
-        // 计算天数
-        function calculateDays() {
-            const start = document.getElementById('startDate').value;
-            const end = document.getElementById('endDate').value;
-            if (start && end) {
-                const startDate = new Date(start);
-                const endDate = new Date(end);
-                const days = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
-                document.getElementById('days').value = days > 0 ? days : 0;
-            }
-        }
-
-        // 提交申请
-        async function submitLeave() {
-            const leaveType = document.getElementById('leaveType').value;
-            const startDate = document.getElementById('startDate').value;
-            const endDate = document.getElementById('endDate').value;
-            const days = document.getElementById('days').value;
-            const reason = document.getElementById('reason').value;
-
-            if (!leaveType || !startDate || !endDate || !reason) {
-                alert('请填写完整信息');
-                return;
-            }
-
-            try {
-                const result = await post('/medical/leave/submit', {
-                    leaveType, startDate, endDate, days: parseFloat(days), reason
-                });
-
-                if (result.code === 200) {
-                    alert('提交成功');
-                    closeModal();
-                    loadLeaveRequests();
-                } else {
-                    alert(result.message || '提交失败');
-                }
-            } catch (error) {
-                console.error('提交失败:', error);
-                alert('提交失败');
-            }
-        }
-
-        // 撤销申请
-        async function cancelLeave(id) {
-            if (!confirm('确定要撤销这个申请吗?')) return;
-
-            try {
-                const result = await del(`/medical/leave/${id}`);
-                if (result.code === 200) {
-                    alert('撤销成功');
-                    loadLeaveRequests();
-                } else {
-                    alert(result.message || '撤销失败');
-                }
-            } catch (error) {
-                console.error('撤销失败:', error);
-                alert('撤销失败');
-            }
-        }
-
-        // 获取徽章样式
-        function getBadgeClass(status) {
-            if (status === '已同意') return 'badge-green';
-            if (status === '已拒绝') return 'badge-red';
-            return 'badge-yellow';
-        }
-
-        // 格式化日期时间
-        function formatDateTime(dateTime) {
-            if (!dateTime) return '-';
-            return dateTime.substring(0, 16).replace('T', ' ');
-        }
-
-        // 点击模态框外部关闭
-        window.onclick = function(event) {
-            const modal = document.getElementById('leaveModal');
-            if (event.target === modal) {
-                closeModal();
-            }
-        }
-    </script>
+    <script src="js/medical-leave.js"></script>
 </body>
 </html>

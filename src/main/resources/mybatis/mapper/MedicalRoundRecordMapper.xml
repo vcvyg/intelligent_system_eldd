@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.persion.repository.MedicalRoundRecordMapper">
+
+    <resultMap id="MedicalRoundRecordVOMap" type="org.example.persion.vo.MedicalRoundRecordVO">
+        <id property="id" column="id"/>
+        <result property="elderlyId" column="elderly_id"/>
+        <result property="elderlyName" column="elderly_name"/>
+        <result property="heartRate" column="heart_rate"/>
+        <result property="bloodPressureHigh" column="blood_pressure_high"/>
+        <result property="bloodPressureLow" column="blood_pressure_low"/>
+        <result property="temperature" column="temperature"/>
+        <result property="bloodSugar" column="blood_sugar"/>
+        <result property="steps" column="steps"/>
+        <result property="sleepDuration" column="sleep_duration"/>
+        <result property="measureTime" column="measure_time"/>
+    </resultMap>
+
+    <select id="findByMedicalUser" resultMap="MedicalRoundRecordVOMap">
+        SELECT
+            hd.*,
+            ei.name AS elderly_name
+        FROM health_data hd
+        LEFT JOIN elderly_info ei ON hd.elderly_id = ei.id
+        WHERE hd.deleted = 0
+        ORDER BY hd.measure_time DESC
+    </select>
+
+    <select id="findByElderly" resultMap="MedicalRoundRecordVOMap">
+        SELECT
+            hd.*,
+            ei.name AS elderly_name
+        FROM health_data hd
+        LEFT JOIN elderly_info ei ON hd.elderly_id = ei.id
+        WHERE hd.elderly_id = #{elderlyId} AND hd.deleted = 0
+        ORDER BY hd.measure_time DESC
+    </select>
+
+</mapper>
+

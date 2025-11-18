@@ -13,6 +13,7 @@ import java.util.Map;
  */
 @Mapper
 public interface ElderlyMedicalRelationMapper extends BaseMapper<ElderlyMedicalRelation> {
+    long countByMedicalUserId(Long medicalUserId);
 
     /**
      * 查询老人的医护分配列表(包含医护人员信息)

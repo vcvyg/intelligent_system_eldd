@@ -27,6 +27,7 @@ public class MedicalPatientServiceImpl implements MedicalPatientService {
     /**
      * 获取当前医护人员负责的老人列表
      * 注意：当前实现为获取所有老人列表，后续可根据业务扩展为只获取分配给该医护人员的老人
+     * 
      * @param medicalStaffId 当前登录的医护人员ID (当前未使用)
      * @return 老人信息VO列表
      */
@@ -47,13 +48,14 @@ public class MedicalPatientServiceImpl implements MedicalPatientService {
 
     @Override
     public PatientHealthDetailsVO getPatientHealthDetails(Long elderlyId) {
-        // 1. 获取老人基本信息
-        ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(elderlyId);
-        if (elderlyInfo == null) {
+        // 1. 获取老人基本信息（包含房间信息）
+        ElderlyInfoVO elderlyInfoVO = elderlyInfoMapper.selectElderlyWithRoom(elderlyId);
+        if (elderlyInfoVO == null) {
             throw new BusinessException("未找到指定的老人信息");
         }
-        ElderlyInfoVO elderlyInfoVO = new ElderlyInfoVO();
-        BeanUtils.copyProperties(elderlyInfo, elderlyInfoVO);
+
+        // 获取老人姓名用于健康数据
+        ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(elderlyId);
 
         // 2. 获取该老人的健康数据列表 (按测量时间倒序)
         LambdaQueryWrapper<HealthData> healthDataWrapper = new LambdaQueryWrapper<>();

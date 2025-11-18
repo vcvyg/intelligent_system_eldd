@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.persion.repository.ElderlyInfoMapper">
+
+    <!-- 查询老人信息并关联房间信息 -->
+    <select id="selectElderlyWithRoom" resultType="org.example.persion.vo.ElderlyInfoVO">
+        SELECT 
+            e.id,
+            e.user_id,
+            e.name,
+            e.age,
+            e.gender,
+            e.birthday,
+            e.id_card,
+            e.address,
+            e.room_id,
+            r.room_number,
+            r.room_type,
+            e.emergency_contact,
+            e.emergency_phone,
+            e.medical_history,
+            e.allergy_history,
+            e.create_time,
+            e.update_time
+        FROM elderly_info e
+        LEFT JOIN room r ON e.room_id = r.id
+        WHERE e.id = #{elderlyId} AND e.deleted = 0
+    </select>
+
+</mapper>

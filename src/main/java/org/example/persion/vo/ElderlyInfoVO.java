@@ -26,7 +26,11 @@ public class ElderlyInfoVO {
 
     private String address;
 
-    private Long roomId;  // 添加房间ID字段！！！
+    private Long roomId; // 添加房间ID字段！！！
+
+    private String roomNumber; // 房间号
+
+    private String roomType; // 房间类型
 
     private String emergencyContact;
 

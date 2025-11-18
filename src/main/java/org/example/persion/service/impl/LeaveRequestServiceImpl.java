@@ -1,73 +1,63 @@
 package org.example.persion.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import lombok.RequiredArgsConstructor;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.persion.entity.LeaveRequest;
+import org.example.persion.enums.LeaveRequestStatus;
 import org.example.persion.repository.LeaveRequestMapper;
 import org.example.persion.service.LeaveRequestService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 请假/调休申请Service实现
- */
 @Service
-@RequiredArgsConstructor
-public class LeaveRequestServiceImpl implements LeaveRequestService {
-
-    private final LeaveRequestMapper leaveRequestMapper;
+public class LeaveRequestServiceImpl extends ServiceImpl<LeaveRequestMapper, LeaveRequest>
+        implements LeaveRequestService {
 
     @Override
+    @Transactional
     public void submitLeaveRequest(LeaveRequest leaveRequest) {
-        // 设置默认状态为待审批
-        leaveRequest.setStatus("待审批");
-        leaveRequestMapper.insert(leaveRequest);
+        leaveRequest.setStatus(LeaveRequestStatus.PENDING);
+        save(leaveRequest);
+    }
+
+    @Override
+    public List<Map<String, Object>> getMyLeaveRequests(Long userId) {
+        return baseMapper.selectMaps(new QueryWrapper<LeaveRequest>()
+                .eq("medical_user_id", userId)
+                .orderByDesc("create_time"));
+    }
+
+    @Override
+    @Transactional
+    public void cancelLeaveRequest(Long id, Long userId) {
+        remove(new QueryWrapper<LeaveRequest>()
+                .eq("id", id)
+                .eq("medical_user_id", userId));
     }
 
     @Override
     public List<Map<String, Object>> getAllLeaveRequests() {
-        return leaveRequestMapper.selectLeaveRequestsWithUser();
+        return baseMapper.getAllLeaveRequestsWithUser();
     }
 
     @Override
     public List<Map<String, Object>> getLeaveRequestsByStatus(String status) {
-        return leaveRequestMapper.selectLeaveRequestsByStatus(status);
+        return baseMapper.getLeaveRequestsByStatusWithUser(status);
     }
 
     @Override
-    public List<Map<String, Object>> getMyLeaveRequests(Long medicalUserId) {
-        return leaveRequestMapper.selectLeaveRequestsByMedicalUser(medicalUserId);
-    }
-
-    @Override
+    @Transactional
     public void reviewLeaveRequest(Long id, String status, Long reviewerId, String remark) {
-        LambdaUpdateWrapper<LeaveRequest> updateWrapper = new LambdaUpdateWrapper<>();
-        updateWrapper.eq(LeaveRequest::getId, id)
-                .set(LeaveRequest::getStatus, status)
-                .set(LeaveRequest::getReviewerId, reviewerId)
-                .set(LeaveRequest::getReviewTime, LocalDateTime.now())
-                .set(LeaveRequest::getReviewRemark, remark);
-
-        leaveRequestMapper.update(null, updateWrapper);
-    }
-
-    @Override
-    public void cancelLeaveRequest(Long id, Long medicalUserId) {
-        // 只能撤销自己的待审批申请
-        LambdaQueryWrapper<LeaveRequest> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(LeaveRequest::getId, id)
-                .eq(LeaveRequest::getMedicalUserId, medicalUserId)
-                .eq(LeaveRequest::getStatus, "待审批");
-
-        LeaveRequest leaveRequest = leaveRequestMapper.selectOne(queryWrapper);
-        if (leaveRequest == null) {
-            throw new RuntimeException("只能撤销自己的待审批申请");
+        LeaveRequest leaveRequest = getById(id);
+        if (leaveRequest != null) {
+            leaveRequest.setStatus(LeaveRequestStatus.valueOf(status.toUpperCase()));
+            leaveRequest.setApproverId(reviewerId);
+            leaveRequest.setApproverRemark(remark);
+            updateById(leaveRequest);
         }
-
-        leaveRequestMapper.deleteById(id);
     }
 }

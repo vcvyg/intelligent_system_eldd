@@ -37,6 +37,10 @@
                     <span class="icon">⚠️</span>
                     <span>告警中心</span>
                 </a>
+                <a href="medical-leave.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>请假申请</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -54,12 +58,53 @@
             </header>
 
             <!-- 主内容将在这里动态加载 -->
-            <section>
-                <h2>概览</h2>
-                <p>这里将显示您的关键任务和提醒。</p>
-                <!-- 后续将填充具体内容，如今日待办、紧急告警等 -->
+            <section class="stats-section">
+                <div class="stats-grid" id="statsGrid">
+                    <!-- 动态加载 -->
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>加载中...</h3>
+                            <p class="stat-value">-</p>
+                        </div>
+                    </div>
+                </div>
             </section>
 
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 0 30px 30px;">
+                <section class="table-section">
+                    <h2>今日排班</h2>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>班次</th>
+                                <th>状态</th>
+                                <th>房间</th>
+                            </tr>
+                        </thead>
+                        <tbody id="todaySchedulesBody">
+                            <!-- JS动态填充 -->
+                        </tbody>
+                    </table>
+                </section>
+
+                <section class="table-section">
+                    <h2>待处理告警</h2>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>时间</th>
+                                <th>老人</th>
+                                <th>告警内容</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingAlertsBody">
+                            <!-- JS动态填充 -->
+                        </tbody>
+                    </table>
+                </section>
+            </div>
         </main>
     </div>
 

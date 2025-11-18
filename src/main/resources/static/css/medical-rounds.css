@@ -1,0 +1,100 @@
+.elderly-record-card {
+    background: var(--color-bg-lighter);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.elderly-record-header {
+    background: var(--color-bg-light);
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.elderly-record-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--color-text-dark);
+}
+
+.time-periods-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Changed to a 2x2 grid */
+    gap: 1px;
+    background-color: var(--color-border-light);
+    border-top: 1px solid var(--color-border-light);
+}
+
+.daily-summary-section {
+    padding: 1px; /* To make the background-color visible as a border */
+    background-color: var(--color-border-light);
+}
+
+.daily-summary-form {
+    background: var(--color-bg-lighter);
+    padding: 20px;
+}
+
+.daily-summary-form h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: var(--color-success); /* Different color for distinction */
+    border-bottom: 2px solid var(--color-success-light);
+    padding-bottom: 8px;
+}
+
+.period-form {
+    background: var(--color-bg-lighter);
+    padding: 20px;
+}
+
+.period-form h4 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary-light);
+    padding-bottom: 8px;
+}
+
+.period-form .form-group {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.period-form .form-group label {
+    width: 80px;
+    font-size: 14px;
+    color: var(--color-text-gray);
+    flex-shrink: 0;
+}
+
+.period-form .form-group input {
+    flex-grow: 1;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+}
+
+.period-form .action-buttons {
+    margin-top: 15px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.period-form .btn-save, .period-form .btn-edit {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.period-form .form-group input:read-only {
+    background-color: var(--color-bg-light);
+    color: var(--color-text-light);
+    border-color: var(--color-border-light);
+}

@@ -50,5 +50,17 @@
         ORDER BY ms.schedule_date ASC, ms.start_time ASC
     </select>
 
-</mapper>
+    <select id="selectSchedulesByMedicalUserAndDate" resultMap="MedicalScheduleVOMap">
+        SELECT
+            ms.id, ms.medical_user_id, u.real_name, ms.schedule_date, ms.shift_type,
+            ms.start_time, ms.end_time, ms.status, ms.remark, ms.room_id, r.room_number
+        FROM medical_schedule ms
+        LEFT JOIN sys_user u ON ms.medical_user_id = u.id
+        LEFT JOIN room r ON ms.room_id = r.id
+        WHERE ms.deleted = 0
+          AND ms.medical_user_id = #{medicalUserId}
+          AND ms.schedule_date = #{date}
+        ORDER BY ms.start_time ASC
+    </select>
 
+</mapper>

@@ -6,223 +6,37 @@
     <title>我的排班 - 智慧养老系统</title>
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
-    <link rel="stylesheet" href="css/medical.css">
-    <style>
-        /* 排班系统专用样式 */
-        .schedule-container {
-            display: flex;
-            height: calc(100vh - 80px);
-            overflow: hidden;
-        }
-
-        /* 主内容区 */
-        .schedule-main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: #f9fafb;
-            overflow: hidden;
-        }
-
-        /* 顶部工具栏 */
-        .schedule-toolbar {
-            background: #fff;
-            padding: 16px 24px;
-            border-bottom: 1px solid #e5e7eb;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .toolbar-left {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .toolbar-right {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .week-navigator {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .week-info {
-            font-size: 16px;
-            font-weight: 600;
-            color: #111827;
-            min-width: 280px;
-            text-align: center;
-        }
-
-        /* 排班视图区域 */
-        .schedule-view {
-            flex: 1;
-            overflow: auto;
-            padding: 20px;
-        }
-
-        /* 周视图容器 */
-        .week-view {
-            background: #fff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        /* 周视图网格 */
-        .week-schedule-grid {
-            display: grid;
-            grid-template-columns: 100px repeat(7, 1fr);
-            background: #e5e7eb;
-            gap: 1px;
-        }
-
-        /* 表头 */
-        .grid-header {
-            background: #f8fafc;
-            padding: 16px 8px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #374151;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .grid-header.time-col {
-            background: #fff;
-        }
-
-        .grid-header .date {
-            font-size: 15px;
-            margin-bottom: 4px;
-        }
-
-        .grid-header .weekday {
-            font-size: 12px;
-            color: #6b7280;
-            font-weight: 400;
-        }
-
-        .grid-header.today {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .grid-header.today .weekday {
-            color: #3b82f6;
-        }
-
-        /* 时间列 */
-        .time-cell {
-            background: #fff;
-            padding: 12px 8px;
-            font-size: 12px;
-            color: #6b7280;
-            text-align: center;
-            border-right: 2px solid #e5e7eb;
-            font-weight: 500;
-        }
-
-        /* 排班单元格 */
-        .schedule-cell {
-            background: #fff;
-            min-height: 60px;
-            padding: 4px;
-            position: relative;
-        }
-
-        .schedule-cell.empty {
-            background: #f9fafb;
-        }
-
-        /* 排班卡片 */
-        .schedule-card {
-            padding: 8px 10px;
-            border-radius: 6px;
-            font-size: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .schedule-card-time {
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        .schedule-card-status {
-            font-size: 11px;
-            opacity: 0.9;
-        }
-
-        /* 统计信息栏 */
-        .stats-bar {
-            display: flex;
-            gap: 20px;
-            padding: 16px 20px;
-            background: #f8fafc;
-            border-top: 1px solid #e5e7eb;
-            flex-wrap: wrap;
-        }
-
-        .stat-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-        }
-
-        .stat-item .label {
-            color: #6b7280;
-        }
-
-        .stat-item .value {
-            font-weight: 600;
-            color: #111827;
-        }
-
-        /* 响应式 */
-        @media (max-width: 1200px) {
-            .week-schedule-grid {
-                grid-template-columns: 80px repeat(7, 1fr);
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/medical-schedule.css">
 </head>
 <body>
-    <div class="medical-container">
+    <div class="admin-container">
         <!-- 侧边栏导航 -->
         <aside class="sidebar">
             <div class="logo">
                 <h2>智慧养老系统</h2>
-                <p class="role-badge">医护端</p>
+                <p class="role-badge">医护人员</p>
             </div>
             <nav class="nav-menu">
                 <a href="medical-dashboard.html" class="nav-item">
-                    <span class="icon">📊</span>
-                    <span>工作台</span>
+                    <span class="icon">🩺</span>
+                    <span>医护工作台</span>
+                </a>
+                <a href="medical-patients.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人档案</span>
                 </a>
                 <a href="medical-schedule.html" class="nav-item active">
                     <span class="icon">📅</span>
                     <span>我的排班</span>
                 </a>
-                <a href="medical-patients.html" class="nav-item">
-                    <span class="icon">👴</span>
-                    <span>我的患者</span>
+                <a href="medical-rounds.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>巡诊记录</span>
+                </a>
+                <a href="medical-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>告警中心</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -231,63 +45,54 @@
         </aside>
 
         <!-- 主内容区 -->
-        <main class="main-content" style="padding: 0;">
+        <main class="main-content">
             <!-- 顶部栏 -->
-            <header class="top-bar" style="padding: 16px 24px;">
+            <header class="top-bar">
                 <h1>我的排班</h1>
                 <div class="user-info">
-                    <span id="welcomeText">欢迎！</span>
+                    <span id="welcomeText">欢迎，医护人员！</span>
                 </div>
             </header>
 
-            <!-- 排班容器 -->
-            <div class="schedule-container">
-                <!-- 主内容区 -->
-                <div class="schedule-main">
-                    <!-- 工具栏 -->
-                    <div class="schedule-toolbar">
-                        <div class="toolbar-left">
-                            <div class="week-navigator">
-                                <button class="btn-secondary" onclick="previousWeek()">← 上一周</button>
-                                <div class="week-info" id="weekInfo">第14周 (3月31日 - 4月6日)</div>
-                                <button class="btn-secondary" onclick="nextWeek()">下一周 →</button>
-                            </div>
-                            <button class="btn-secondary" onclick="goToCurrentWeek()">本周</button>
+            <!-- 内容区域 -->
+            <section class="schedule-main">
+                <div class="schedule-toolbar">
+                    <div class="toolbar-left">
+                        <div class="week-navigator">
+                            <button class="btn-secondary" onclick="previousWeek()">‹ 上一周</button>
+                            <span id="weekInfo" class="week-info"></span>
+                            <button class="btn-secondary" onclick="nextWeek()">下一周 ›</button>
                         </div>
-
-                        <div class="toolbar-right">
-                            <button class="btn-secondary" onclick="printSchedule()">🖨️ 打印</button>
-                        </div>
+                        <button class="btn-secondary" onclick="goToCurrentWeek()">回到本周</button>
                     </div>
+                    <div class="toolbar-right">
+                        <button class="btn-primary" onclick="printSchedule()">🖨️ 打印排班</button>
+                    </div>
+                </div>
 
-                    <!-- 视图区域 -->
-                    <div class="schedule-view">
-                        <!-- 周视图 -->
-                        <div class="week-view">
-                            <!-- 周视图网格 -->
-                            <div class="week-schedule-grid" id="weekScheduleGrid">
-                                <!-- 将由JavaScript动态生成 -->
-                            </div>
-
-                            <!-- 统计信息栏 -->
-                            <div class="stats-bar">
-                                <div class="stat-item">
-                                    <span class="label">本周排班:</span>
-                                    <span class="value" id="weekTotalSchedules">0</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="label">总工作时长:</span>
-                                    <span class="value" id="weekTotalHours">0小时</span>
-                                </div>
-                                <div class="stat-item">
-                                    <span class="label">平均每天:</span>
-                                    <span class="value" id="weekAvgPerDay">0小时</span>
-                                </div>
-                            </div>
+                <div class="schedule-view">
+                    <div class="week-view">
+                        <div id="weekScheduleGrid" class="week-schedule-grid">
+                            <!-- JS动态生成 -->
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="stats-bar">
+                    <div class="stat-item">
+                        <span class="label">本周排班总数:</span>
+                        <span id="weekTotalSchedules" class="value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">本周总工时:</span>
+                        <span id="weekTotalHours" class="value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="label">平均每日工时:</span>
+                        <span id="weekAvgPerDay" class="value">0</span>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 

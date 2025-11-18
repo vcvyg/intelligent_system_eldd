@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>老人健康档案详情 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <!-- ECharts图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            background-color: var(--color-bg-lighter);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--color-border-light);
+        }
+        .profile-item {
+            background-color: white;
+            padding: 15px;
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-sm);
+        }
+        .profile-item h4 {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            margin-bottom: 8px;
+        }
+        .profile-item p {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--color-text-dark);
+        }
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .chart-card {
+            background: white;
+            border-radius: var(--radius-md);
+            padding: 20px;
+            box-shadow: var(--shadow-base);
+        }
+        .chart-card h3 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .chart-placeholder {
+            width: 100%;
+            height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">医护人员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="medical-dashboard.html" class="nav-item">
+                    <span class="icon">🩺</span>
+                    <span>医护工作台</span>
+                </a>
+                <a href="medical-patients.html" class="nav-item active"> <!-- 保持在老人档案高亮 -->
+                    <span class="icon">👴</span>
+                    <span>老人档案</span>
+                </a>
+                <a href="medical-schedule.html" class="nav-item">
+                    <span class="icon">📅</span>
+                    <span>我的排班</span>
+                </a>
+                <a href="medical-rounds.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>巡诊记录</span>
+                </a>
+                <a href="medical-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>告警中心</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h1><a href="medical-patients.html" class="back-link">老人档案</a> / 健康详情</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，医护人员！</span>
+                </div>
+            </header>
+
+            <!-- 老人基本信息 -->
+            <section id="patientProfileCard">
+                <h2>基本信息</h2>
+                <div id="profileGrid" class="profile-grid">
+                    <!-- JS动态填充 -->
+                    <div class="loading">加载中...</div>
+                </div>
+            </section>
+
+            <!-- 健康数据图表 -->
+            <section id="healthCharts">
+                <h2>健康趋势图</h2>
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>心率 & 血压</h3>
+                        <div id="heartRateBloodPressureChart" class="chart-placeholder"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>体温 & 血糖</h3>
+                        <div id="tempBloodSugarChart" class="chart-placeholder"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 健康数据历史记录 -->
+            <section class="table-section">
+                <h2>健康数据历史记录</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>测量时间</th>
+                            <th>心率(bpm)</th>
+                            <th>血压(收缩/舒张)</th>
+                            <th>体温(°C)</th>
+                            <th>血糖(mmol/L)</th>
+                            <th>睡眠(小时)</th>
+                            <th>步数</th>
+                        </tr>
+                    </thead>
+                    <tbody id="healthRecordsTableBody">
+                        <tr>
+                            <td colspan="7" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/medical-patient-detail.js"></script>
+</body>
+</html>

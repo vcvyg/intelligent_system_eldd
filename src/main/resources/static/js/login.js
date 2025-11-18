@@ -120,9 +120,23 @@ loginForm.addEventListener('submit', async (e) => {
                 localStorage.removeItem('rememberedUsername');
             }
 
-            // 1.5秒后跳转到主页
+            // 1.5秒后根据角色跳转
             setTimeout(() => {
-                window.location.href = 'index.html';
+                switch (result.data.userInfo.role) {
+                    case 'ADMIN':
+                        window.location.href = 'admin-dashboard.html';
+                        break;
+                    case 'MEDICAL':
+                        window.location.href = 'medical-dashboard.html';
+                        break;
+                    // case 'FAMILY':
+                    //     window.location.href = 'family-dashboard.html'; // 未来可以为子女角色添加
+                    //     break;
+                    default:
+                        // 对于其他角色或未定义角色，可以跳转到通用页面
+                        window.location.href = 'index.html';
+                        break;
+                }
             }, 1500);
 
         } else {

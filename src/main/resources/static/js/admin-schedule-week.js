@@ -180,8 +180,8 @@ async function loadWeekSchedules() {
                 // 保存完整对象
                 allSchedules[schedule.id] = schedule;
 
-                const date = schedule.schedule_date;
-                const timeSlot = schedule.start_time.substring(0, 5); // 取HH:mm
+                const date = schedule.scheduleDate;
+                const timeSlot = schedule.startTime ? schedule.startTime.substring(0, 5) : ''; // 取HH:mm
 
                 if (!scheduleData[date]) {
                     scheduleData[date] = {};
@@ -254,11 +254,11 @@ function renderWeekView() {
 
             if (schedules.length > 0) {
                 schedules.forEach(schedule => {
-                    const colorClass = `color-${userColorMap[schedule.medical_user_id] || 1}`;
-                    const name = schedule.real_name || schedule.username || '未知';
+                    const colorClass = `color-${userColorMap[schedule.medicalUserId] || 1}`;
+                    const name = schedule.medicalUserName || '未知';
 
                     // 获取房间号
-                    const room = schedule.room_id ? roomMap.get(schedule.room_id) : null;
+                    const room = schedule.roomId ? roomMap.get(schedule.roomId) : null;
                     const roomNumber = room ? room.roomNumber : '';
 
                     html += `
@@ -324,22 +324,22 @@ async function editSchedule(id) {
 
         document.getElementById('modalTitle').textContent = '编辑排班';
         document.getElementById('scheduleId').value = schedule.id;
-        document.getElementById('medicalUserId').value = schedule.medical_user_id;
-        document.getElementById('scheduleDate').value = schedule.schedule_date;
-        document.getElementById('startTime').value = schedule.start_time;
-        document.getElementById('endTime').value = schedule.end_time;
+        document.getElementById('medicalUserId').value = schedule.medicalUserId;
+        document.getElementById('scheduleDate').value = schedule.scheduleDate;
+        document.getElementById('startTime').value = schedule.startTime;
+        document.getElementById('endTime').value = schedule.endTime;
         document.getElementById('status').value = schedule.status || '正常';
         document.getElementById('remark').value = schedule.remark || '';
 
         // 填充房间下拉列表并选中当前房间
-        populateRoomSelect(schedule.room_id);
+        populateRoomSelect(schedule.roomId);
 
         // 显示日期时间
-        const dateObj = new Date(schedule.schedule_date);
+        const dateObj = new Date(schedule.scheduleDate);
         const weekday = WEEKDAYS[dateObj.getDay()];
-        const timeSlot = schedule.start_time.substring(0, 5);
+        const timeSlot = schedule.startTime.substring(0, 5);
         document.getElementById('scheduleDateTimeDisplay').textContent =
-            `${formatDate(schedule.schedule_date, 'M月d日')} ${weekday} ${timeSlot}`;
+            `${formatDate(schedule.scheduleDate, 'M月d日')} ${weekday} ${timeSlot}`;
 
         // 显示删除按钮
         document.getElementById('deleteBtn').style.display = 'inline-block';
@@ -443,17 +443,19 @@ function updateWeekStats(schedules) {
     document.getElementById('weekTotalSchedules').textContent = schedules.length;
 
     // 医护人员数(去重)
-    const uniqueUsers = new Set(schedules.map(s => s.medical_user_id));
+    const uniqueUsers = new Set(schedules.map(s => s.medicalUserId));
     document.getElementById('weekMedicalStaff').textContent = uniqueUsers.size;
 
     // 计算总工作时长
     let totalHours = 0;
     schedules.forEach(schedule => {
-        const start = schedule.start_time.split(':');
-        const end = schedule.end_time.split(':');
-        const startMinutes = parseInt(start[0]) * 60 + parseInt(start[1]);
-        const endMinutes = parseInt(end[0]) * 60 + parseInt(end[1]);
-        totalHours += (endMinutes - startMinutes) / 60;
+        if (schedule.startTime && schedule.endTime) {
+            const start = schedule.startTime.split(':');
+            const end = schedule.endTime.split(':');
+            const startMinutes = parseInt(start[0]) * 60 + parseInt(start[1]);
+            const endMinutes = parseInt(end[0]) * 60 + parseInt(end[1]);
+            totalHours += (endMinutes - startMinutes) / 60;
+        }
     });
     document.getElementById('weekTotalHours').textContent = totalHours.toFixed(1);
 

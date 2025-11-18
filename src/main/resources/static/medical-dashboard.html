@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医护工作台 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">医护人员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="medical-dashboard.html" class="nav-item active">
+                    <span class="icon">🩺</span>
+                    <span>医护工作台</span>
+                </a>
+                <a href="medical-patients.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人档案</span>
+                </a>
+                <a href="medical-schedule.html" class="nav-item">
+                    <span class="icon">📅</span>
+                    <span>我的排班</span>
+                </a>
+                <a href="medical-rounds.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>巡诊记录</span>
+                </a>
+                <a href="medical-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>告警中心</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>医护工作台</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，医护人员！</span>
+                </div>
+            </header>
+
+            <!-- 主内容将在这里动态加载 -->
+            <section>
+                <h2>概览</h2>
+                <p>这里将显示您的关键任务和提醒。</p>
+                <!-- 后续将填充具体内容，如今日待办、紧急告警等 -->
+            </section>
+
+        </main>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/medical-dashboard.js"></script>
+</body>
+</html>

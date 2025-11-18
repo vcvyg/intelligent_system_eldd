@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.persion.repository.MedicalScheduleMapper">
+
+    <resultMap id="MedicalScheduleVOMap" type="org.example.persion.vo.MedicalScheduleVO">
+        <id property="id" column="id"/>
+        <result property="medicalUserId" column="medical_user_id"/>
+        <result property="medicalUserName" column="real_name"/>
+        <result property="scheduleDate" column="schedule_date"/>
+        <result property="shiftType" column="shift_type"/>
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="status" column="status"/>
+        <result property="remark" column="remark"/>
+        <result property="roomId" column="room_id"/>
+        <result property="roomNumber" column="room_number"/>
+    </resultMap>
+
+    <select id="selectAllSchedulesWithDetails" resultMap="MedicalScheduleVOMap">
+        SELECT
+            ms.id, ms.medical_user_id, u.real_name, ms.schedule_date, ms.shift_type,
+            ms.start_time, ms.end_time, ms.status, ms.remark, ms.room_id, r.room_number
+        FROM medical_schedule ms
+        LEFT JOIN sys_user u ON ms.medical_user_id = u.id
+        LEFT JOIN room r ON ms.room_id = r.id
+        WHERE ms.deleted = 0
+        ORDER BY ms.schedule_date DESC, ms.start_time ASC
+    </select>
+
+    <select id="selectSchedulesByMedicalUser" resultMap="MedicalScheduleVOMap">
+        SELECT
+            ms.id, ms.medical_user_id, u.real_name, ms.schedule_date, ms.shift_type,
+            ms.start_time, ms.end_time, ms.status, ms.remark, ms.room_id, r.room_number
+        FROM medical_schedule ms
+        LEFT JOIN sys_user u ON ms.medical_user_id = u.id
+        LEFT JOIN room r ON ms.room_id = r.id
+        WHERE ms.deleted = 0 AND ms.medical_user_id = #{medicalUserId}
+        ORDER BY ms.schedule_date DESC, ms.start_time ASC
+    </select>
+
+    <select id="selectSchedulesByDateRange" resultMap="MedicalScheduleVOMap">
+        SELECT
+            ms.id, ms.medical_user_id, u.real_name, ms.schedule_date, ms.shift_type,
+            ms.start_time, ms.end_time, ms.status, ms.remark, ms.room_id, r.room_number
+        FROM medical_schedule ms
+        LEFT JOIN sys_user u ON ms.medical_user_id = u.id
+        LEFT JOIN room r ON ms.room_id = r.id
+        WHERE ms.deleted = 0
+          AND ms.schedule_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY ms.schedule_date ASC, ms.start_time ASC
+    </select>
+
+</mapper>
+

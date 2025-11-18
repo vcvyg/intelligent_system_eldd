@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 import org.example.persion.entity.MedicalSchedule;
+import org.example.persion.vo.MedicalScheduleVO;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -46,4 +47,10 @@ public interface MedicalScheduleMapper extends BaseMapper<MedicalSchedule> {
             "WHERE ms.deleted = 0 " +
             "ORDER BY ms.schedule_date DESC, ms.start_time")
     List<Map<String, Object>> selectAllSchedulesWithUserInfo();
+
+    List<MedicalScheduleVO> selectAllSchedulesWithDetails();
+
+    List<MedicalScheduleVO> selectSchedulesByMedicalUser(Long medicalUserId);
+
+    List<MedicalScheduleVO> selectSchedulesByDateRange(LocalDate startDate, LocalDate endDate);
 }

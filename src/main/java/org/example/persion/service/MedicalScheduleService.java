@@ -1,48 +1,36 @@
 package org.example.persion.service;
 
 import org.example.persion.entity.MedicalSchedule;
+import org.example.persion.vo.MedicalScheduleVO;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 /**
- * 医护排班Service
+ * 医护端-排班服务接口
  */
 public interface MedicalScheduleService {
 
     /**
-     * 获取某个医护人员的排班列表
+     * 获取指定医护人员在给定日期范围内的排班信息
+     * @param userId 医护人员ID
+     * @param startDate 开始日期
+     * @param endDate 结束日期
+     * @return 排班VO列表
      */
-    List<Map<String, Object>> getSchedulesByMedicalUser(Long medicalUserId);
+    List<MedicalScheduleVO> getMySchedule(Long userId, LocalDate startDate, LocalDate endDate);
 
-    /**
-     * 获取指定日期范围的排班列表
-     */
-    List<Map<String, Object>> getSchedulesByDateRange(LocalDate startDate, LocalDate endDate);
+    List<MedicalScheduleVO> getAllSchedules();
 
-    /**
-     * 获取所有排班列表
-     */
-    List<Map<String, Object>> getAllSchedules();
+    List<MedicalScheduleVO> getSchedulesByMedicalUser(Long medicalUserId);
 
-    /**
-     * 添加排班
-     */
-    boolean addSchedule(MedicalSchedule schedule);
+    List<MedicalScheduleVO> getSchedulesByDateRange(LocalDate startDate, LocalDate endDate);
 
-    /**
-     * 更新排班
-     */
-    boolean updateSchedule(MedicalSchedule schedule);
+    void addSchedule(MedicalSchedule schedule);
 
-    /**
-     * 删除排班
-     */
-    boolean deleteSchedule(Long scheduleId);
+    void batchAddSchedules(List<MedicalSchedule> schedules);
 
-    /**
-     * 批量添加排班
-     */
-    boolean batchAddSchedules(List<MedicalSchedule> schedules);
+    void updateSchedule(MedicalSchedule schedule);
+
+    void deleteSchedule(Long scheduleId);
 }

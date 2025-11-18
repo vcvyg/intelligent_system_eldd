@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
+
 <body>
     <div class="admin-container">
         <!-- 侧边栏 -->
@@ -90,7 +92,9 @@
                             </tr>
                         </thead>
                         <tbody id="leaveTableBody">
-                            <tr><td colspan="9" class="loading">加载中...</td></tr>
+                            <tr>
+                                <td colspan="9" class="loading">加载中...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -107,7 +111,8 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="reviewId">
-                <div id="reviewInfo" style="padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 16px;">
+                <div id="reviewInfo"
+                    style="padding: 16px; background: #f9fafb; border-radius: 8px; margin-bottom: 16px;">
                     <!-- 申请信息将在这里显示 -->
                 </div>
                 <div class="form-group">
@@ -128,7 +133,7 @@
         let currentStatus = '';
 
         // 页面加载
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const userInfo = checkLogin();
             if (!userInfo || userInfo.role !== 'ADMIN') {
                 alert('权限不足');
@@ -152,23 +157,42 @@
                     if (result.data.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
                     } else {
-                        tbody.innerHTML = result.data.map(item => `
+                        tbody.innerHTML = result.data.map(item => {
+                            // 请假类型映射
+                            const leaveTypeMap = {
+                                'SICK_LEAVE': '病假',
+                                'PERSONAL_LEAVE': '事假',
+                                'ANNUAL_LEAVE': '年假',
+                                'ADJUSTMENT_LEAVE': '调休'
+                            };
+                            const leaveTypeText = leaveTypeMap[item.leave_type] || item.leave_type;
+
+                            // 状态映射
+                            const statusMap = {
+                                'PENDING': '待审批',
+                                'APPROVED': '已同意',
+                                'REJECTED': '已拒绝'
+                            };
+                            const statusText = statusMap[item.status] || item.status;
+
+                            return `
                             <tr>
                                 <td>${item.real_name || item.username}</td>
-                                <td>${item.leave_type}</td>
+                                <td>${leaveTypeText}</td>
                                 <td>${item.start_date}</td>
                                 <td>${item.end_date}</td>
                                 <td>${item.days}天</td>
                                 <td style="max-width: 200px;">${item.reason}</td>
-                                <td><span class="badge ${getBadgeClass(item.status)}">${item.status}</span></td>
+                                <td><span class="badge ${getBadgeClass(item.status)}">${statusText}</span></td>
                                 <td>${formatDateTime(item.create_time)}</td>
                                 <td>
-                                    ${item.status === '待审批' ?
-                                        `<button class="btn-primary" onclick='showReviewModal(${JSON.stringify(item)})'>审批</button>` :
-                                        item.review_remark || '-'}
+                                    ${item.status === 'PENDING' ?
+                                    `<button class="btn-primary" onclick='showReviewModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>审批</button>` :
+                                    item.review_remark || '-'}
                                 </td>
                             </tr>
-                        `).join('');
+                            `;
+                        }).join('');
                     }
                 }
             } catch (error) {
@@ -190,11 +214,20 @@
 
         // 显示审批模态框
         function showReviewModal(item) {
+            // 请假类型映射
+            const leaveTypeMap = {
+                'SICK_LEAVE': '病假',
+                'PERSONAL_LEAVE': '事假',
+                'ANNUAL_LEAVE': '年假',
+                'ADJUSTMENT_LEAVE': '调休'
+            };
+            const leaveTypeText = leaveTypeMap[item.leave_type] || item.leave_type;
+
             document.getElementById('reviewId').value = item.id;
             document.getElementById('reviewRemark').value = '';
             document.getElementById('reviewInfo').innerHTML = `
                 <p><strong>申请人:</strong> ${item.real_name || item.username}</p>
-                <p><strong>请假类型:</strong> ${item.leave_type}</p>
+                <p><strong>请假类型:</strong> ${leaveTypeText}</p>
                 <p><strong>请假时间:</strong> ${item.start_date} 至 ${item.end_date} (共${item.days}天)</p>
                 <p><strong>申请原因:</strong> ${item.reason}</p>
             `;
@@ -211,8 +244,15 @@
             const id = document.getElementById('reviewId').value;
             const remark = document.getElementById('reviewRemark').value;
 
+            // 将中文状态转换为英文枚举
+            const statusMap = {
+                '已同意': 'APPROVED',
+                '已拒绝': 'REJECTED'
+            };
+            const statusEnum = statusMap[status] || status;
+
             try {
-                const result = await put(`/admin/leave/review/${id}?status=${status}&remark=${encodeURIComponent(remark)}`, {});
+                const result = await put(`/admin/leave/review/${id}?status=${statusEnum}&remark=${encodeURIComponent(remark)}`, {});
 
                 if (result.code === 200) {
                     alert(`${status}成功`);
@@ -229,8 +269,8 @@
 
         // 获取徽章样式
         function getBadgeClass(status) {
-            if (status === '已同意') return 'badge-green';
-            if (status === '已拒绝') return 'badge-red';
+            if (status === '已同意' || status === 'APPROVED') return 'badge-green';
+            if (status === '已拒绝' || status === 'REJECTED') return 'badge-red';
             return 'badge-yellow';
         }
 
@@ -241,7 +281,7 @@
         }
 
         // 点击模态框外部关闭
-        window.onclick = function(event) {
+        window.onclick = function (event) {
             const modal = document.getElementById('reviewModal');
             if (event.target === modal) {
                 closeModal();
@@ -249,4 +289,5 @@
         }
     </script>
 </body>
+
 </html>

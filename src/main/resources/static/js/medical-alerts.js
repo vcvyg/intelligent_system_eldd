@@ -106,12 +106,13 @@ function renderAlert(alert, prepend = false) {
  * @param {number} userId - 当前登录用户的ID
  */
 function connectWebSocket(userId) {
-    const socket = new SockJS('/ws-chat');
+    const token = localStorage.getItem('authToken');
+    // 通过 URL 参数传递 token（SockJS 兼容方案）
+    const socket = new SockJS('/ws-chat?token=' + encodeURIComponent(token));
     stompClient = Stomp.over(socket);
 
-    const token = localStorage.getItem('authToken');
-    console.log('Token being sent:', token);
-    stompClient.connect({ Authorization: `Bearer ${token}` }, function (frame) {
+    console.log('Token being sent via URL parameter');
+    stompClient.connect({}, function (frame) {
         console.log('WebSocket已连接: ' + frame);
         // 订阅通用告警通道，医护端接收所有告警
         stompClient.subscribe('/topic/alerts', function (message) {

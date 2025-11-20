@@ -41,21 +41,33 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .addInterceptors(new HandshakeInterceptor() {
                     @Override
                     public boolean beforeHandshake(@NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response, @NonNull WebSocketHandler wsHandler, @NonNull Map<String, Object> attributes) {
-                        String authHeader = request.getHeaders().getFirst("Authorization");
-                        System.out.println("Authorization Header: " + authHeader);
-
-                        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                            String token = authHeader.substring(7);
-                            System.out.println("Extracted Token: " + token);
-
-                            if (validateToken(token)) {
-                                System.out.println("Token validation successful.");
-                                return true;
-                            } else {
-                                System.out.println("Token validation failed.");
+                        // 优先从 URL 参数获取 token（SockJS 兼容方案）
+                        String token = null;
+                        String query = request.getURI().getQuery();
+                        if (query != null && query.contains("token=")) {
+                            for (String param : query.split("&")) {
+                                if (param.startsWith("token=")) {
+                                    token = param.substring(6);
+                                    break;
+                                }
                             }
+                        }
+
+                        // 如果 URL 参数中没有，则从 Header 获取
+                        if (token == null) {
+                            String authHeader = request.getHeaders().getFirst("Authorization");
+                            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                                token = authHeader.substring(7);
+                            }
+                        }
+
+                        System.out.println("Extracted Token: " + token);
+
+                        if (token != null && validateToken(token)) {
+                            System.out.println("Token validation successful.");
+                            return true;
                         } else {
-                            System.out.println("Authorization header is missing or invalid.");
+                            System.out.println("Token validation failed or missing.");
                         }
 
                         response.setStatusCode(HttpStatus.UNAUTHORIZED);

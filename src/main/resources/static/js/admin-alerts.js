@@ -141,9 +141,25 @@ async function loadStatistics() {
             document.getElementById('pendingAlerts').textContent = stats.pending || 0;
             document.getElementById('processingAlerts').textContent = stats.processing || 0;
             document.getElementById('handledAlerts').textContent = stats.handled || 0;
+
+            // 更新侧边栏铃铛徽章
+            updateAlertBadge(stats.pending || 0);
         }
     } catch (error) {
         console.error('加载统计数据失败:', error);
+    }
+}
+
+// 更新预警徽章数量
+function updateAlertBadge(count) {
+    const badge = document.getElementById('pendingAlertBadge');
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = 'inline-block';
+        } else {
+            badge.style.display = 'none';
+        }
     }
 }
 
@@ -188,7 +204,7 @@ async function submitHandle() {
             showSuccess('预警处理成功');
             closeHandleModal();
             loadAlerts();
-            loadStatistics();
+            loadStatistics(); // 更新统计数据和徽章
         } else {
             showError(result.message);
         }
@@ -217,7 +233,7 @@ async function ignoreAlert(id) {
         if (result.code === 200) {
             showSuccess('预警已忽略');
             loadAlerts();
-            loadStatistics();
+            loadStatistics(); // 更新统计数据和徽章
         } else {
             showError(result.message);
         }
@@ -246,7 +262,7 @@ async function deleteAlert(id) {
         if (result.code === 200) {
             showSuccess('预警删除成功');
             loadAlerts();
-            loadStatistics();
+            loadStatistics(); // 更新统计数据和徽章
         } else {
             showError(result.message);
         }

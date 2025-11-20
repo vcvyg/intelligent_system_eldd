@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
 </head>
+
 <body>
     <div class="admin-container">
         <!-- 侧边栏导航 -->
@@ -37,7 +39,11 @@
                     <span class="icon">⚠️</span>
                     <span>告警中心</span>
                 </a>
-                <a href="medical-leave.html" class="nav-item active">
+                <a href="medical-chat.html" class="nav-item">
+                    <span class="icon">💬</span>
+                    <span>医护-子女聊天</span>
+                </a>
+                <a href="medical-leave.html" class="nav-item">
                     <span class="icon">📝</span>
                     <span>请假申请</span>
                 </a>
@@ -59,15 +65,23 @@
             <!-- 内容区域 -->
             <section>
                 <h2>告警列表</h2>
-                <p>此功能正在开发中...</p>
+                <div class="filter-bar">
+                    <!-- 筛选功能未来可添加 -->
+                </div>
+                <div id="alert-list-container" class="alert-list">
+                    <!-- 告警卡片将通过JS动态插入这里 -->
+                </div>
             </section>
 
         </main>
     </div>
 
+    <script src="js/sockjs.min.js"></script>
+    <script src="js/stomp.umd.min.js"></script>
     <script src="js/common.js"></script>
+    <script src="js/medical-alerts.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const userInfo = checkLogin();
             if (!userInfo || userInfo.role !== 'MEDICAL') {
                 alert('权限不足');
@@ -75,8 +89,12 @@
                 return;
             }
             document.getElementById('welcomeText').textContent = `欢迎, ${userInfo.username}!`;
+
+            // 初始化告警页面
+            loadAlerts();
+            connectWebSocket(userInfo.userId);
         });
     </script>
 </body>
-</html>
 
+</html>

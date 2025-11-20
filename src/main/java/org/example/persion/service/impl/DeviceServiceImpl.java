@@ -1,32 +1,54 @@
 package org.example.persion.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.persion.common.exception.BusinessException;
+import org.example.persion.dto.AlertCreateDTO;
 import org.example.persion.dto.DeviceCreateDTO;
+import org.example.persion.dto.DeviceStatusReportDTO;
 import org.example.persion.dto.DeviceUpdateDTO;
 import org.example.persion.entity.DeviceInfo;
+import org.example.persion.entity.ElderlyFamilyRelation;
+import org.example.persion.entity.ElderlyInfo;
+import org.example.persion.entity.User;
 import org.example.persion.repository.DeviceInfoMapper;
+import org.example.persion.repository.ElderlyFamilyRelationMapper;
+import org.example.persion.repository.ElderlyInfoMapper;
+import org.example.persion.repository.UserMapper;
+import org.example.persion.service.AlertService;
 import org.example.persion.service.DeviceService;
+import org.example.persion.vo.AlertRecordVO;
 import org.example.persion.vo.DeviceInfoVO;
 import org.springframework.beans.BeanUtils;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 设备管理服务实现类
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DeviceServiceImpl implements DeviceService {
 
     private final DeviceInfoMapper deviceInfoMapper;
+    private final ElderlyInfoMapper elderlyInfoMapper;
+    private final AlertService alertService;
+    private final UserMapper userMapper;
+    private final ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
+    private final SimpMessagingTemplate messagingTemplate;
+
 
     @Override
     public Page<DeviceInfoVO> getDeviceList(int current, int size, String keyword, String deviceType, String status) {
@@ -207,5 +229,83 @@ public class DeviceServiceImpl implements DeviceService {
             BeanUtils.copyProperties(device, vo);
             return vo;
         }).toList();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void handleDeviceStatusReport(DeviceStatusReportDTO report) {
+        // 1. 根据上报的设备ID(业务ID)查询设备信息
+        DeviceInfo deviceInfo = deviceInfoMapper.selectOne(new QueryWrapper<DeviceInfo>().eq("device_code", report.getDeviceId()));
+
+        if (deviceInfo == null) {
+            log.warn("收到未知设备的状态报告, 设备ID: {}", report.getDeviceId());
+            return;
+        }
+
+        // 2. 检查设备是否绑定了老人
+        if (deviceInfo.getElderlyId() == null) {
+            log.warn("收到未绑定老人的设备状态报告, 设备ID: {}", report.getDeviceId());
+            return;
+        }
+
+        // 3. 查询老人信息
+        ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(deviceInfo.getElderlyId());
+        if (elderlyInfo == null) {
+            log.error("设备 {} 绑定的老人ID {} 不存在", deviceInfo.getDeviceCode(), deviceInfo.getElderlyId());
+            return;
+        }
+
+        // 4. 根据事件类型处理
+        switch (report.getEventType()) {
+            case "FALL_DETECTED":
+                createAlertAndNotify(elderlyInfo, "设备告警", "检测到可能发生摔倒", report.getEventValue(), "紧急");
+                break;
+            case "SOS":
+                createAlertAndNotify(elderlyInfo, "紧急求救", "发起了SOS紧急求救", report.getEventValue(), "紧急");
+                break;
+            // 可以扩展其他事件类型
+            // case "HEART_RATE_EMERGENCY":
+            //     createAlertAndNotify(elderlyInfo, "设备告警", "心率异常", report.getEventValue(), "紧急");
+            //     break;
+            default:
+                log.warn("收到未知的设备事件类型: {}", report.getEventType());
+        }
+    }
+
+    /**
+     * 创建告警、存入数据库并实时推送给相关人员
+     */
+    private void createAlertAndNotify(ElderlyInfo elderlyInfo, String type, String content, String value, String level) {
+        // 1. 创建并保存告警记录
+        AlertCreateDTO dto = new AlertCreateDTO();
+        dto.setElderlyId(elderlyInfo.getId());
+        dto.setAlertType(type);
+        dto.setAlertLevel(level);
+        dto.setAlertContent(String.format("老人 [%s] %s", elderlyInfo.getName(), content));
+        dto.setAlertValue(value);
+        dto.setAlertTime(LocalDateTime.now());
+        Long alertId = alertService.createAlert(dto);
+
+        // 2. 获取完整的告警信息用于推送
+        AlertRecordVO alertVO = alertService.getAlertById(alertId);
+        if (alertVO == null) {
+            return;
+        }
+
+        // 3. 确定需要通知的用户ID列表
+        Set<Long> userIdsToNotify = new HashSet<>();
+
+        // a. 添加所有管理员
+        List<User> admins = userMapper.selectList(new QueryWrapper<User>().eq("role", "ADMIN"));
+        admins.forEach(admin -> userIdsToNotify.add(admin.getId()));
+
+        // b. 添加该老人的所有家属
+        List<ElderlyFamilyRelation> familyRelations = elderlyFamilyRelationMapper.selectList(new QueryWrapper<ElderlyFamilyRelation>().eq("elderly_id", elderlyInfo.getId()));
+        familyRelations.forEach(relation -> userIdsToNotify.add(relation.getFamilyUserId()));
+
+        // 4. 通过WebSocket推送告警
+        userIdsToNotify.forEach(userId -> {
+            messagingTemplate.convertAndSend("/topic/alerts/user/" + userId, alertVO);
+        });
     }
 }

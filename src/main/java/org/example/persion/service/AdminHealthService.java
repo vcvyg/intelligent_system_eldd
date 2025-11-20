@@ -24,4 +24,10 @@ public interface AdminHealthService {
      * @return 单日数据VO
      */
     HealthTrendVO getDailyHealthData(LocalDate date, Long elderlyId);
+
+    /**
+     * 检查健康数据并生成告警
+     * @param elderlyId 老人ID
+     */
+    void checkAndGenerateHealthAlerts(Long elderlyId);
 }

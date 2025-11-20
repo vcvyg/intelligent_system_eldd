@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>医护-子女聊天 - 智慧养老系统</title>
+  <link rel="stylesheet" href="css/pension-variables.css">
+  <link rel="stylesheet" href="css/penou-base.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .chat-container {
+      display: flex;
+      height: 70vh;
+      min-height: 420px;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 16px rgba(106, 142, 173, 0.08);
+      overflow: hidden;
+      margin: 32px auto 0 auto;
+      max-width: 900px;
+    }
+
+    .chat-users {
+      width: 210px;
+      background: #f7f8fa;
+      border-right: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      min-width: 160px;
+    }
+
+    .chat-users h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #6a8ead;
+      padding: 18px 20px 10px 20px;
+      margin: 0;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f7f8fa;
+    }
+
+    .user-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0 10px 0;
+      background: #f7f8fa;
+    }
+
+    .user-item {
+      padding: 14px 20px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+      font-size: 15px;
+      color: #333;
+    }
+
+    .user-item.active,
+    .user-item:hover {
+      background: #e9eafe;
+      color: #6a8ead;
+    }
+
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #f9fafb;
+    }
+
+    .chat-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 17px;
+      color: #333;
+      background: #f9fafb;
+      font-weight: 600;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background: #f9fafb;
+      min-height: 200px;
+    }
+
+    .chat-input {
+      display: flex;
+      align-items: center;
+      padding: 18px 24px;
+      border-top: 1px solid #e5e7eb;
+      background: #fff;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      resize: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      min-height: 38px;
+      outline: none;
+      margin-right: 12px;
+      background: #f9fafb;
+    }
+
+    @media (max-width: 1000px) {
+      .chat-container {
+        max-width: 100vw;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .chat-container {
+        flex-direction: column;
+        min-width: 0;
+      }
+
+      .chat-users {
+        width: 100%;
+        min-width: 0;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .chat-main {
+        min-width: 0;
+      }
+    }
+
+    /* 只保留最基础的icon按钮样式，彻底移除背景、边框、阴影、色块 */
+    .chat-icon-btn {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      outline: none !important;
+      padding: 0 !important;
+      margin: 0 6px 0 0 !important;
+      width: 32px !important;
+      height: 32px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border-radius: 50% !important;
+      transition: none !important;
+    }
+
+    .chat-icon-btn:active,
+    .chat-icon-btn:focus,
+    .chat-icon-btn:hover {
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+
+    .chat-icon-btn .icon {
+      width: 22px !important;
+      height: 22px !important;
+      display: block !important;
+      fill: #888 !important;
+      stroke: none !important;
+      background: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    padding: 18px 20px 10px 20px;
+    margin: 0;
+    font-size: 17px;
+    color: #667eea;
+    border-bottom: 1px solid #e5e7eb;
+    }
+
+    .user-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 0 10px 0;
+    }
+
+    .user-item {
+      padding: 14px 20px;
+      cursor: pointer;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s;
+    }
+
+    .user-item.active,
+    .user-item:hover {
+      background: #e9eafe;
+    }
+
+    .chat-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid #e5e7eb;
+      font-size: 17px;
+      color: #333;
+      background: #f9fafb;
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background: #f9fafb;
+    }
+
+    .message {
+      margin-bottom: 18px;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .message.me {
+      flex-direction: row-reverse;
+    }
+
+    .message .bubble {
+      max-width: 60%;
+      padding: 12px 18px;
+      border-radius: 18px;
+      background: #667eea;
+      color: #fff;
+      font-size: 15px;
+      margin: 0 10px;
+      word-break: break-all;
+    }
+
+    .message.me .bubble {
+      background: #764ba2;
+    }
+
+    .message .meta {
+      font-size: 12px;
+      color: #888;
+      margin: 0 6px;
+    }
+
+    .chat-input {
+      display: flex;
+      padding: 18px 24px;
+      border-top: 1px solid #e5e7eb;
+      background: #fff;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      resize: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 15px;
+      min-height: 38px;
+      outline: none;
+      margin-right: 12px;
+    }
+
+    .chat-input button {
+      background: #6d8ba6;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0 18px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 38px;
+    }
+
+    .chat-input button:hover {
+      background: #58728c;
+    }
+
+    /* 微信风格图标按钮样式 */
+    .chat-icon-btn {
+      background: transparent;
+      border: none;
+      padding: 0 4px;
+      margin-right: 2px;
+      cursor: pointer;
+      outline: none;
+      height: 32px;
+      width: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      box-shadow: none;
+      transition: none;
+    }
+
+    .chat-icon-btn:hover {
+      background: transparent;
+    }
+
+    .chat-icon-btn .icon {
+      width: 22px;
+      height: 22px;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="admin-container">
+    <!-- 侧边栏导航（与其他页面一致） -->
+    <aside class="sidebar">
+      <div class="logo">
+        <h2>智慧养老系统</h2>
+        <p class="role-badge">医护人员</p>
+      </div>
+      <nav class="nav-menu">
+        <a href="medical-dashboard.html" class="nav-item">
+          <span class="icon">🩺</span>
+          <span>医护工作台</span>
+        </a>
+        <a href="medical-patients.html" class="nav-item">
+          <span class="icon">👴</span>
+          <span>老人档案</span>
+        </a>
+        <a href="medical-schedule.html" class="nav-item">
+          <span class="icon">📅</span>
+          <span>我的排班</span>
+        </a>
+        <a href="medical-rounds.html" class="nav-item">
+          <span class="icon">📝</span>
+          <span>巡诊记录</span>
+        </a>
+        <a href="medical-alerts.html" class="nav-item">
+          <span class="icon">⚠️</span>
+          <span>告警中心</span>
+        </a>
+        <a href="medical-chat.html" class="nav-item active">
+          <span class="icon">💬</span>
+          <span>医护-子女聊天</span>
+          <a href="medical-leave.html" class="nav-item">
+            <span class="icon">📋</span>
+            <span>请假申请</span>
+          </a>
+
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <header class="top-bar">
+        <h1>医护-子女聊天</h1>
+        <div class="user-info">
+          <span id="welcomeText">欢迎，医护人员！</span>
+        </div>
+      </header>
+      <div class="content-wrapper">
+        <div class="chat-container">
+          <div class="chat-users">
+            <h3>子女列表</h3>
+            <div class="user-list" id="userList">
+              <!-- 动态加载子女列表 -->
+            </div>
+          </div>
+          <div class="chat-main">
+            <div class="chat-header" id="chatHeader">请选择一位子女开始聊天</div>
+            <div class="chat-messages" id="chatMessages">
+              <!-- 聊天消息 -->
+            </div>
+            <div class="chat-input">
+              <input type="file" id="imageInput" accept="image/*" style="display:none"
+                onchange="onImageSelected(event)">
+              <input type="file" id="audioInput" accept="audio/*" style="display:none"
+                onchange="onAudioSelected(event)">
+              <button type="button" class="chat-icon-btn" onclick="document.getElementById('imageInput').click()"
+                title="发送图片">
+                <svg class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                  focusable="false">
+                  <path
+                    d="M832 128H192c-35.2 0-64 28.8-64 64v640c0 35.2 28.8 64 64 64h640c35.2 0 64-28.8 64-64V192c0-35.2-28.8-64-64-64z m0 64v384l-128-128-192 192-128-128-128 128V192h640z m0 640H192v-64l192-192 128 128 192-192 128 128v128c0 17.6-14.4 32-32 32z" />
+                </svg>
+              </button>
+              <button type="button" class="chat-icon-btn" onclick="startRecordAudio()" id="recordBtn" title="录制语音">
+                <svg class="icon" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"
+                  focusable="false">
+                  <path
+                    d="M512 704c70.7 0 128-57.3 128-128V320c0-70.7-57.3-128-128-128s-128 57.3-128 128v256c0 70.7 57.3 128 128 128z m256-128c0 141.4-114.6 256-256 256s-256-114.6-256-256h64c0 105.9 86.1 192 192 192s192-86.1 192-192h64z" />
+                </svg>
+              </button>
+              <textarea id="chatInput" placeholder="输入消息..." disabled></textarea>
+              <button onclick="sendMessage()" disabled id="sendBtn" title="发送">
+                <svg t="1710830000002" class="icon" viewBox="0 0 1024 1024" width="20" height="20"
+                  style="vertical-align:middle;margin-right:4px;">
+                  <path
+                    d="M928 112L96 464c-17.6 7.2-17.6 32 0 39.2l176.8 72.8 72.8 176.8c7.2 17.6 32 17.6 39.2 0l352-832c7.2-17.6-10.4-35.2-28-28zM416 832l-64-160-160-64 704-288-288 704z"
+                    fill="#fff" />
+                </svg>
+                <span style="font-size:15px;">发送</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script src="js/common.js"></script>
+  <script src="js/medical-chat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+</body>
+
+</html>

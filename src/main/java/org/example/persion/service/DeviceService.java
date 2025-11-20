@@ -71,4 +71,10 @@ public interface DeviceService {
      * 获取未绑定的设备列表
      */
     List<DeviceInfoVO> getUnboundDevices();
+
+    /**
+     * 处理设备状态上报 (例如: 摔倒, SOS)
+     * @param report 上报的数据
+     */
+    void handleDeviceStatusReport(org.example.persion.dto.DeviceStatusReportDTO report);
 }

@@ -34,10 +34,10 @@ public class JwtUtil {
         claims.put("role", role);
 
         return Jwts.builder()
-                .claims(claims)
-                .subject(username)
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .setClaims(claims) // 替换 claims 方法为 setClaims
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSignKey())
                 .compact();
     }
@@ -79,11 +79,11 @@ public class JwtUtil {
      * 从Token中解析Claims
      */
     private Claims getClaimsFromToken(String token) {
-        return Jwts.parser()
-                .verifyWith(getSignKey())
+        return Jwts.parserBuilder()
+                .setSigningKey(getSignKey()) // 替换 verifyWith 方法为 setSigningKey
                 .build()
-                .parseSignedClaims(token)
-                .getPayload();
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     /**

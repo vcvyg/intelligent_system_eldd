@@ -44,6 +44,12 @@ public interface AlertService {
     void handleAlert(AlertHandleDTO dto);
 
     /**
+     * 开始处理预警(状态变为处理中)
+     * @param alertId 预警ID
+     */
+    void processAlert(Long alertId);
+
+    /**
      * 忽略预警
      */
     void ignoreAlert(Long alertId);

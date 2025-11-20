@@ -125,4 +125,33 @@ public class AdminHealthServiceImpl implements AdminHealthService {
 
         return vo;
     }
+
+    @Override
+    public void checkAndGenerateHealthAlerts(Long elderlyId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+
+        // 查询当天的健康数据
+        List<HealthData> healthDataList = healthDataMapper.findByDateTimeRange(startOfDay, now, elderlyId);
+
+        for (HealthData data : healthDataList) {
+            if (data.getHeartRate() != null && (data.getHeartRate().doubleValue() < 60 || data.getHeartRate().doubleValue() > 100)) {
+                generateAlert(elderlyId, "心率异常", "心率值为" + data.getHeartRate());
+            }
+            if (data.getBloodPressureHigh() != null && data.getBloodPressureHigh().doubleValue() > 140) {
+                generateAlert(elderlyId, "高血压", "收缩压值为" + data.getBloodPressureHigh());
+            }
+            if (data.getBloodPressureLow() != null && data.getBloodPressureLow().doubleValue() < 60) {
+                generateAlert(elderlyId, "低血压", "��张压值为" + data.getBloodPressureLow());
+            }
+            if (data.getBloodSugar() != null && data.getBloodSugar().doubleValue() > 7.8) {
+                generateAlert(elderlyId, "血糖异常", "血糖值为" + data.getBloodSugar());
+            }
+        }
+    }
+
+    private void generateAlert(Long elderlyId, String alertType, String alertContent) {
+        // 生成告警逻辑，例如存储到数据库或调用其他服务
+        System.out.println("生成告警: " + alertType + " - " + alertContent + " (老人ID: " + elderlyId + ")");
+    }
 }

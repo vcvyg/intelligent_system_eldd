@@ -8,11 +8,15 @@ import org.example.persion.dto.AlertCreateDTO;
 import org.example.persion.dto.AlertHandleDTO;
 import org.example.persion.entity.AlertRecord;
 import org.example.persion.entity.ElderlyInfo;
+import org.example.persion.entity.Room;
+import org.example.persion.entity.User;
 import org.example.persion.repository.AlertRecordMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
+import org.example.persion.repository.RoomMapper;
 import org.example.persion.service.AlertService;
 import org.example.persion.vo.AlertRecordVO;
 import org.springframework.beans.BeanUtils;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +26,7 @@ import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 预警管理服务实现类
@@ -32,6 +37,7 @@ public class AlertServiceImpl implements AlertService {
 
     private final AlertRecordMapper alertRecordMapper;
     private final ElderlyInfoMapper elderlyInfoMapper;
+    private final RoomMapper roomMapper;
 
     @Override
     public Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status) {
@@ -59,22 +65,26 @@ public class AlertServiceImpl implements AlertService {
 
         // 转换为VO
         Page<AlertRecordVO> voPage = new Page<>();
-        voPage.setCurrent(alertPage.getCurrent());
-        voPage.setSize(alertPage.getSize());
-        voPage.setTotal(alertPage.getTotal());
+        BeanUtils.copyProperties(alertPage, voPage, "records");
 
         List<AlertRecordVO> voList = alertPage.getRecords().stream().map(alert -> {
             AlertRecordVO vo = new AlertRecordVO();
             BeanUtils.copyProperties(alert, vo);
-            // 查询并设置老人姓名
+            // 查询并设置老人姓名和房间号
             if (alert.getElderlyId() != null) {
                 ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(alert.getElderlyId());
                 if (elderlyInfo != null) {
                     vo.setElderlyName(elderlyInfo.getName());
+                    if (elderlyInfo.getRoomId() != null) {
+                        Room room = roomMapper.selectById(elderlyInfo.getRoomId());
+                        if (room != null) {
+                            vo.setRoomName(room.getRoomNumber());
+                        }
+                    }
                 }
             }
             return vo;
-        }).toList();
+        }).collect(Collectors.toList());
 
         voPage.setRecords(voList);
         return voPage;
@@ -89,6 +99,19 @@ public class AlertServiceImpl implements AlertService {
 
         AlertRecordVO vo = new AlertRecordVO();
         BeanUtils.copyProperties(alert, vo);
+        // 补充老人和房间信息
+        if (alert.getElderlyId() != null) {
+            ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(alert.getElderlyId());
+            if (elderlyInfo != null) {
+                vo.setElderlyName(elderlyInfo.getName());
+                if (elderlyInfo.getRoomId() != null) {
+                    Room room = roomMapper.selectById(elderlyInfo.getRoomId());
+                    if (room != null) {
+                        vo.setRoomName(room.getRoomNumber());
+                    }
+                }
+            }
+        }
         return vo;
     }
 
@@ -157,6 +180,31 @@ public class AlertServiceImpl implements AlertService {
 
         alert.setStatus("已忽略");
         alert.setHandleTime(LocalDateTime.now());
+        alertRecordMapper.updateById(alert);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void processAlert(Long alertId) {
+        AlertRecord alert = alertRecordMapper.selectById(alertId);
+        if (alert == null) {
+            throw new BusinessException("预警记录不存在");
+        }
+        if (!"未处理".equals(alert.getStatus())) {
+            throw new BusinessException("该告警已在处理中或已处理完成");
+        }
+
+        // 获取当前操作员ID
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof User) {
+            User currentUser = (User) principal;
+            alert.setAssignedMedicalId(currentUser.getId());
+        } else {
+            // 如果获取不到用户信息,可以抛出异常或记录日志
+            throw new BusinessException("无法获取当前用户信息");
+        }
+
+        alert.setStatus("处理中");
         alertRecordMapper.updateById(alert);
     }
 

@@ -36,4 +36,14 @@ public class ElderlyInfo extends BaseEntity {
     private String allergyHistory; // 过敏史
 
     private Long roomId; // 房间ID
+
+    // 健康数据阈值
+    private Integer heartRateHigh; // 心率过高阈值
+    private Integer heartRateLow; // 心率过低阈值
+    private Integer systolicPressureHigh; // 收缩压过高阈值
+    private Integer systolicPressureLow; // 收缩压过低阈值
+    private Integer diastolicPressureHigh; // 舒张压过高阈值
+    private Integer diastolicPressureLow; // 舒张压过低阈值
+    private Double temperatureHigh; // 体温过高阈值
+    private Double temperatureLow; // 体温过低阈值
 }

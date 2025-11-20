@@ -16,6 +16,8 @@ public class AlertRecordVO {
 
     private String elderlyName;  // 老人姓名
 
+    private String roomName; // 房间名称
+
     private String alertType;
 
     private String alertLevel;

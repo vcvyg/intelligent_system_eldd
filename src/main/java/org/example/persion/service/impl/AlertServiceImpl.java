@@ -228,8 +228,8 @@ public class AlertServiceImpl implements AlertService {
             throw new BusinessException("预警记录不存在");
         }
 
-        alert.setDeleted(1);
-        alertRecordMapper.updateById(alert);
+        // 使用MyBatis Plus的deleteById方法，会自动处理逻辑删除
+        alertRecordMapper.deleteById(id);
     }
 
     @Override

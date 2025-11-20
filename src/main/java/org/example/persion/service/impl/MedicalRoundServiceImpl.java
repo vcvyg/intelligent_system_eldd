@@ -99,49 +99,71 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
 
         // 检查心率
         if (healthData.getHeartRate() != null) {
-            if (elderlyInfo.getHeartRateHigh() != null && healthData.getHeartRate().intValue() > elderlyInfo.getHeartRateHigh()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "心率过高",
-                    String.format("%.0f bpm", healthData.getHeartRate()), "警告");
+            int heartRate = healthData.getHeartRate().intValue();
+            if (elderlyInfo.getHeartRateHigh() != null && heartRate > elderlyInfo.getHeartRateHigh()) {
+                String level = heartRate > elderlyInfo.getHeartRateHigh() + 20 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "心率异常",
+                    String.format("心率偏高，%d bpm", heartRate),
+                    String.format("%d", heartRate), level);
             }
-            if (elderlyInfo.getHeartRateLow() != null && healthData.getHeartRate().intValue() < elderlyInfo.getHeartRateLow()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "心率过低",
-                    String.format("%.0f bpm", healthData.getHeartRate()), "警告");
-            }
-        }
-
-        // 检查收缩压
-        if (healthData.getBloodPressureHigh() != null) {
-            if (elderlyInfo.getSystolicPressureHigh() != null && healthData.getBloodPressureHigh().intValue() > elderlyInfo.getSystolicPressureHigh()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过高",
-                    String.format("%.0f mmHg", healthData.getBloodPressureHigh()), "警告");
-            }
-            if (elderlyInfo.getSystolicPressureLow() != null && healthData.getBloodPressureHigh().intValue() < elderlyInfo.getSystolicPressureLow()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过低",
-                    String.format("%.0f mmHg", healthData.getBloodPressureHigh()), "警告");
+            if (elderlyInfo.getHeartRateLow() != null && heartRate < elderlyInfo.getHeartRateLow()) {
+                String level = heartRate < elderlyInfo.getHeartRateLow() - 10 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "心率异常",
+                    String.format("心率偏低，%d bpm", heartRate),
+                    String.format("%d", heartRate), level);
             }
         }
 
-        // 检查舒张压
-        if (healthData.getBloodPressureLow() != null) {
-            if (elderlyInfo.getDiastolicPressureHigh() != null && healthData.getBloodPressureLow().intValue() > elderlyInfo.getDiastolicPressureHigh()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过高",
-                    String.format("%.0f mmHg", healthData.getBloodPressureLow()), "警告");
+        // 检查血压（收缩压和舒张压一起检查）
+        if (healthData.getBloodPressureHigh() != null && healthData.getBloodPressureLow() != null) {
+            int systolic = healthData.getBloodPressureHigh().intValue();
+            int diastolic = healthData.getBloodPressureLow().intValue();
+            String bpValue = String.format("%d/%d", systolic, diastolic);
+
+            // 检查收缩压过高
+            if (elderlyInfo.getSystolicPressureHigh() != null && systolic > elderlyInfo.getSystolicPressureHigh()) {
+                String level = systolic > elderlyInfo.getSystolicPressureHigh() + 20 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "血压异常",
+                    String.format("血压偏高，收缩压%dmmHg", systolic),
+                    bpValue, level);
             }
-            if (elderlyInfo.getDiastolicPressureLow() != null && healthData.getBloodPressureLow().intValue() < elderlyInfo.getDiastolicPressureLow()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过低",
-                    String.format("%.0f mmHg", healthData.getBloodPressureLow()), "警告");
+            // 检查收缩压过低
+            else if (elderlyInfo.getSystolicPressureLow() != null && systolic < elderlyInfo.getSystolicPressureLow()) {
+                String level = systolic < elderlyInfo.getSystolicPressureLow() - 10 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "血压异常",
+                    String.format("血压偏低，收缩压%dmmHg", systolic),
+                    bpValue, level);
+            }
+            // 检查舒张压过高
+            else if (elderlyInfo.getDiastolicPressureHigh() != null && diastolic > elderlyInfo.getDiastolicPressureHigh()) {
+                String level = diastolic > elderlyInfo.getDiastolicPressureHigh() + 10 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "血压异常",
+                    String.format("血压偏高，舒张压%dmmHg", diastolic),
+                    bpValue, level);
+            }
+            // 检查舒张压过低
+            else if (elderlyInfo.getDiastolicPressureLow() != null && diastolic < elderlyInfo.getDiastolicPressureLow()) {
+                String level = diastolic < elderlyInfo.getDiastolicPressureLow() - 10 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "血压异常",
+                    String.format("血压偏低，舒张压%dmmHg", diastolic),
+                    bpValue, level);
             }
         }
 
         // 检查体温
         if (healthData.getTemperature() != null) {
-            if (elderlyInfo.getTemperatureHigh() != null && healthData.getTemperature().doubleValue() > elderlyInfo.getTemperatureHigh()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "体温过高",
-                    String.format("%.1f °C", healthData.getTemperature()), "警告");
+            double temp = healthData.getTemperature().doubleValue();
+            if (elderlyInfo.getTemperatureHigh() != null && temp > elderlyInfo.getTemperatureHigh()) {
+                String level = temp > 38.5 ? "紧急" : (temp > 37.8 ? "高" : "中");
+                createAlertAndNotify(elderlyInfo, "体温异常",
+                    String.format("体温偏高，%.1f°C", temp),
+                    String.format("%.1f", temp), level);
             }
-            if (elderlyInfo.getTemperatureLow() != null && healthData.getTemperature().doubleValue() < elderlyInfo.getTemperatureLow()) {
-                createAlertAndNotify(elderlyInfo, "健康告警", "体温过低",
-                    String.format("%.1f °C", healthData.getTemperature()), "警告");
+            if (elderlyInfo.getTemperatureLow() != null && temp < elderlyInfo.getTemperatureLow()) {
+                String level = temp < 35.0 ? "高" : "中";
+                createAlertAndNotify(elderlyInfo, "体温异常",
+                    String.format("体温偏低，%.1f°C", temp),
+                    String.format("%.1f", temp), level);
             }
         }
     }
@@ -161,7 +183,7 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
         dto.setElderlyId(elderlyInfo.getId());
         dto.setAlertType(type);
         dto.setAlertLevel(level);
-        dto.setAlertContent(String.format("老人 [%s] %s，检测值为 %s", elderlyInfo.getName(), content, value));
+        dto.setAlertContent(content); // 直接使用传入的内容，不添加前缀
         dto.setAlertValue(value); // 设置告警数值
         Long alertId = alertService.createAlert(dto);
 
@@ -178,7 +200,7 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
         QueryWrapper<ElderlyFamilyRelation> relationQuery = new QueryWrapper<>();
         relationQuery.eq("elderly_id", elderlyInfo.getId());
         List<ElderlyFamilyRelation> familyRelations = elderlyFamilyRelationMapper.selectList(relationQuery);
-        
+
         Set<Long> familyUserIds = familyRelations.stream()
                                                  .map(ElderlyFamilyRelation::getFamilyUserId)
                                                  .collect(Collectors.toSet());

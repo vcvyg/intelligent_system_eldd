@@ -7,14 +7,10 @@ import org.example.persion.dto.AlertCreateDTO;
 import org.example.persion.entity.ElderlyFamilyRelation;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.HealthData;
-import org.example.persion.entity.HealthThreshold;
-import org.example.persion.entity.User;
 import org.example.persion.enums.TimePeriod;
 import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.HealthDataMapper;
-import org.example.persion.repository.HealthThresholdMapper;
-import org.example.persion.repository.UserMapper;
 import org.example.persion.service.AlertService;
 import org.example.persion.service.MedicalRoundService;
 import org.example.persion.vo.AlertRecordVO;
@@ -25,11 +21,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,10 +33,8 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final HealthDataMapper healthDataMapper;
     private final AlertService alertService;
-    private final UserMapper userMapper;
     private final ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
     private final SimpMessagingTemplate messagingTemplate;
-    private final HealthThresholdMapper healthThresholdMapper; // 注入HealthThresholdMapper
 
     @Override
     public List<DailyHealthSummaryVO> getDailySummary(LocalDate date, Long elderlyId, String keyword) {
@@ -92,7 +84,7 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
     }
 
     /**
-     * 检查健康数据是否异常，并在需要时创建告警 (重构后)
+     * 检查健康数据是否异常，并在需要时创建告警
      * @param healthData 最新的健康数据记录
      */
     private void checkHealthDataAndCreateAlert(HealthData healthData) {
@@ -102,63 +94,55 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
 
         ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(healthData.getElderlyId());
         if (elderlyInfo == null) {
-            return; // 找不到老人信息，无法判断阈值
-        }
-
-        // 使用重构的通用方法检查各项指标
-        checkMetric(healthData.getHeartRate(), "heart_rate", elderlyInfo,
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "心率过高", String.format("%.0f bpm", value), "警告"),
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "心率过低", String.format("%.0f bpm", value), "警告")
-        );
-
-        checkMetric(healthData.getBloodPressureHigh(), "systolic_pressure", elderlyInfo,
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过高", String.format("%.0f mmHg", value), "警告"),
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过低", String.format("%.0f mmHg", value), "警告")
-        );
-
-        checkMetric(healthData.getBloodPressureLow(), "diastolic_pressure", elderlyInfo,
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过高", String.format("%.0f mmHg", value), "警告"),
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过低", String.format("%.0f mmHg", value), "警告")
-        );
-
-        checkMetric(healthData.getTemperature(), "temperature", elderlyInfo,
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "体温过高", String.format("%.1f °C", value), "警告"),
-                (value) -> createAlertAndNotify(elderlyInfo, "健康告警", "体温过低", String.format("%.1f °C", value), "警告")
-        );
-    }
-
-    /**
-     * 通用指标检查方法
-     * @param value           当前健康数据值
-     * @param metricType      指标类型 (对应 health_threshold.metric_type)
-     * @param elderlyInfo     老人信息
-     * @param highAction      过高时执行的动作
-     * @param lowAction       过低时执行的动作
-     */
-    private void checkMetric(BigDecimal value, String metricType, ElderlyInfo elderlyInfo,
-                             Consumer<BigDecimal> highAction, Consumer<BigDecimal> lowAction) {
-        if (value == null) {
             return;
         }
 
-        // 从 health_threshold 表查询阈值
-        QueryWrapper<HealthThreshold> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("elderly_id", elderlyInfo.getId());
-        queryWrapper.eq("metric_type", metricType);
-        HealthThreshold threshold = healthThresholdMapper.selectOne(queryWrapper);
-
-        if (threshold == null) {
-            return; // 未配置阈值，不进行判断
+        // 检查心率
+        if (healthData.getHeartRate() != null) {
+            if (elderlyInfo.getHeartRateHigh() != null && healthData.getHeartRate().intValue() > elderlyInfo.getHeartRateHigh()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "心率过高",
+                    String.format("%.0f bpm", healthData.getHeartRate()), "警告");
+            }
+            if (elderlyInfo.getHeartRateLow() != null && healthData.getHeartRate().intValue() < elderlyInfo.getHeartRateLow()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "心率过低",
+                    String.format("%.0f bpm", healthData.getHeartRate()), "警告");
+            }
         }
 
-        // 检查是否超过最大值
-        if (threshold.getMaxValue() != null && value.compareTo(threshold.getMaxValue()) > 0) {
-            highAction.accept(value);
+        // 检查收缩压
+        if (healthData.getBloodPressureHigh() != null) {
+            if (elderlyInfo.getSystolicPressureHigh() != null && healthData.getBloodPressureHigh().intValue() > elderlyInfo.getSystolicPressureHigh()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过高",
+                    String.format("%.0f mmHg", healthData.getBloodPressureHigh()), "警告");
+            }
+            if (elderlyInfo.getSystolicPressureLow() != null && healthData.getBloodPressureHigh().intValue() < elderlyInfo.getSystolicPressureLow()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "收缩压过低",
+                    String.format("%.0f mmHg", healthData.getBloodPressureHigh()), "警告");
+            }
         }
 
-        // 检查是否低于最小值
-        if (threshold.getMinValue() != null && value.compareTo(threshold.getMinValue()) < 0) {
-            lowAction.accept(value);
+        // 检查舒张压
+        if (healthData.getBloodPressureLow() != null) {
+            if (elderlyInfo.getDiastolicPressureHigh() != null && healthData.getBloodPressureLow().intValue() > elderlyInfo.getDiastolicPressureHigh()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过高",
+                    String.format("%.0f mmHg", healthData.getBloodPressureLow()), "警告");
+            }
+            if (elderlyInfo.getDiastolicPressureLow() != null && healthData.getBloodPressureLow().intValue() < elderlyInfo.getDiastolicPressureLow()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "舒张压过低",
+                    String.format("%.0f mmHg", healthData.getBloodPressureLow()), "警告");
+            }
+        }
+
+        // 检查体温
+        if (healthData.getTemperature() != null) {
+            if (elderlyInfo.getTemperatureHigh() != null && healthData.getTemperature().doubleValue() > elderlyInfo.getTemperatureHigh()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "体温过高",
+                    String.format("%.1f °C", healthData.getTemperature()), "警告");
+            }
+            if (elderlyInfo.getTemperatureLow() != null && healthData.getTemperature().doubleValue() < elderlyInfo.getTemperatureLow()) {
+                createAlertAndNotify(elderlyInfo, "健康告警", "体温过低",
+                    String.format("%.1f °C", healthData.getTemperature()), "警告");
+            }
         }
     }
 

@@ -134,6 +134,11 @@
     opacity: 0.9;
 }
 
+.schedule-card-room {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
 .stats-bar {
     display: flex;
     gap: 20px;
@@ -158,3 +163,56 @@
     color: #111827;
 }
 
+/* 打印样式 - 只打印排班表格 */
+@media print {
+    /* 隐藏侧边栏、顶部栏、工具栏和统计栏 */
+    .sidebar,
+    .top-bar,
+    .schedule-toolbar,
+    .stats-bar {
+        display: none !important;
+    }
+
+    /* 主内容区域全屏 */
+    .admin-container {
+        display: block !important;
+    }
+
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .schedule-main {
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    .schedule-view {
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .week-view {
+        box-shadow: none !important;
+        border: 1px solid #000 !important;
+    }
+
+    /* 打印标题 */
+    .schedule-view::before {
+        content: "排班表";
+        display: block;
+        text-align: center;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 16px;
+    }
+
+    /* 表格样式优化 */
+    .schedule-card {
+        background: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

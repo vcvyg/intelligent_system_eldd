@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += `<div class="schedule-cell">
                                 <div class="schedule-card">
                                     <div class="schedule-card-time">${schedule.startTime.substring(0,5)}-${schedule.endTime.substring(0,5)}</div>
-                                    <div class="schedule-card-status">${schedule.status}</div>
+                                    <div class="schedule-card-room">${schedule.roomNumber || '-'}</div>
                                 </div>
                              </div>`;
                 } else {

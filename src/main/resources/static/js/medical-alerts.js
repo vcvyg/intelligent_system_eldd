@@ -41,13 +41,11 @@ function renderAlert(alert, prepend = false) {
     alertCard.className = 'alert-card';
     alertCard.id = `alert-card-${alert.id}`; // 为卡片添加唯一ID
 
-    // 根据告警级别和状态添加样式
-    if (alert.alertLevel === '紧急') {
-        alertCard.classList.add('critical');
-    } else {
-        alertCard.classList.add('warning');
-    }
+    // 根据告警级别添加不同样式和颜色
+    const levelClass = getLevelClass(alert.alertLevel);
+    alertCard.classList.add(levelClass);
 
+    // 根据状态添加样式
     if (alert.status === '处理中') {
         alertCard.classList.add('processing');
     } else if (alert.status === '已处理' || alert.status === '已忽略') {
@@ -56,11 +54,14 @@ function renderAlert(alert, prepend = false) {
 
     const formattedTime = new Date(alert.alertTime).toLocaleString();
 
-    // --- 动态生成按钮 ---
+    // 动态生成按钮
     let actionButtons = '';
     switch (alert.status) {
-        case '未处理':
-            actionButtons = `<button class="btn-handle" onclick="startProcessingAlert(${alert.id})">立即处理</button>`;
+        case '待处理':
+            actionButtons = `
+                <button class="btn-handle" onclick="startProcessingAlert(${alert.id})">立即处理</button>
+                <button class="btn-ignore" onclick="ignoreAlert(${alert.id})">忽略</button>
+            `;
             break;
         case '处理中':
             actionButtons = `<button class="btn-complete" onclick="finishProcessingAlert(${alert.id})">完成处理</button>`;
@@ -70,10 +71,9 @@ function renderAlert(alert, prepend = false) {
             break;
     }
 
-
     alertCard.innerHTML = `
         <div class="alert-header">
-            <span class="alert-level">${alert.alertLevel}</span>
+            <span class="alert-level level-${levelClass}">${alert.alertLevel}</span>
             <span class="alert-type">${alert.alertType}</span>
             <span class="alert-time">${formattedTime}</span>
         </div>
@@ -99,6 +99,21 @@ function renderAlert(alert, prepend = false) {
     } else {
         container.appendChild(alertCard);
     }
+}
+
+/**
+ * 获取告警等级对应的CSS类名
+ * @param {string} level - 告警等级
+ * @returns {string} CSS类名
+ */
+function getLevelClass(level) {
+    const levelMap = {
+        '低': 'level-low',
+        '中': 'level-medium',
+        '高': 'level-high',
+        '紧急': 'level-critical'
+    };
+    return levelMap[level] || 'level-low';
 }
 
 /**
@@ -162,7 +177,7 @@ async function startProcessingAlert(alertId) {
 
 /**
  * 完成处理告警
- * @param {number} alertId 
+ * @param {number} alertId
  */
 async function finishProcessingAlert(alertId) {
     const result = prompt("请输入处理结果：");
@@ -187,5 +202,28 @@ async function finishProcessingAlert(alertId) {
         loadAlerts();
     } catch (error) {
         console.error('完成处理告警失败:', error);
+        alert('处理失败，请稍后重试');
+    }
+}
+
+/**
+ * 忽略告警
+ * @param {number} alertId
+ */
+async function ignoreAlert(alertId) {
+    if (!confirm('确定要忽略这条告警吗？')) {
+        return;
+    }
+
+    try {
+        await request(`/medical/alerts/${alertId}/ignore`, {
+            method: 'PUT'
+        });
+        alert('告警已忽略');
+        // 刷新整个列表以更新状态
+        loadAlerts();
+    } catch (error) {
+        console.error('忽略告警失败:', error);
+        alert('操作失败，请稍后重试');
     }
 }

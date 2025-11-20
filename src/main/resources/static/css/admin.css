@@ -426,28 +426,74 @@
 .data-table .action-btns {
     display: flex;
     gap: 8px;
+    align-items: center;
+    justify-content: flex-start;
 }
 
 .data-table .action-btns button {
-    padding: 6px 12px;
-    border: none;
+    padding: 6px 14px;
+    border: 1px solid #ddd;
     border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 12px;
-    color: var(--color-white);
+    background: #fff;
+    color: #333;
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
-/* 统一配色修改 */
-.data-table .btn-edit,
+.data-table .action-btns button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* 主要操作按钮 - 蓝色 */
+.data-table .btn-handle {
+    background: #4a90e2;
+    color: white;
+    border-color: #4a90e2;
+}
+
+.data-table .btn-handle:hover {
+    background: #357abd;
+    border-color: #357abd;
+}
+
+/* 查看按钮 - 浅蓝 */
 .data-table .btn-view {
-    background: var(--color-primary);
+    background: #5dade2;
+    color: white;
+    border-color: #5dade2;
 }
 
-.data-table .btn-delete { background: var(--color-danger); }
+.data-table .btn-view:hover {
+    background: #3498db;
+    border-color: #3498db;
+}
 
-.data-table .btn-handle { background: var(--color-success); }
+/* 忽略按钮 - 灰色 */
+.data-table .btn-ignore {
+    background: #95a5a6;
+    color: white;
+    border-color: #95a5a6;
+}
 
-.data-table .btn-ignore { background: var(--color-info); }
+.data-table .btn-ignore:hover {
+    background: #7f8c8d;
+    border-color: #7f8c8d;
+}
+
+/* 删除按钮 - 红色轮廓 */
+.data-table .btn-delete {
+    background: transparent;
+    color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.data-table .btn-delete:hover {
+    background: #e74c3c;
+    color: white;
+}
 
 /* 分页 */
 .pagination {

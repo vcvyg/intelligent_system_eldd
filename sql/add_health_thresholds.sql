@@ -21,3 +21,4 @@ EXEC sp_addextendedproperty 'MS_Description', '60', 'SCHEMA', 'dbo', 'TABLE', 'e
 EXEC sp_addextendedproperty 'MS_Description', '37.3', 'SCHEMA', 'dbo', 'TABLE', 'elderly_info', 'COLUMN', 'temperature_high';
 EXEC sp_addextendedproperty 'MS_Description', '36.0', 'SCHEMA', 'dbo', 'TABLE', 'elderly_info', 'COLUMN', 'temperature_low';
 GO
+

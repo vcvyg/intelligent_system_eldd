@@ -44,6 +44,9 @@ public class AlertServiceImpl implements AlertService {
         Page<AlertRecord> page = new Page<>(current, size);
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
 
+        // 只查询未删除的记录
+        wrapper.eq(AlertRecord::getDeleted, 0);
+
         // 预警类型筛选
         if (alertType != null && !alertType.isEmpty()) {
             wrapper.eq(AlertRecord::getAlertType, alertType);
@@ -190,7 +193,8 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
-        if (!"未处理".equals(alert.getStatus())) {
+        // 修改状态判断，支持"待处理"和"未处理"两种状态
+        if (!"待处理".equals(alert.getStatus()) && !"未处理".equals(alert.getStatus())) {
             throw new BusinessException("该告警已在处理中或已处理完成");
         }
 
@@ -222,11 +226,14 @@ public class AlertServiceImpl implements AlertService {
 
     @Override
     public Map<String, Object> getAlertStatistics() {
-        List<AlertRecord> alerts = alertRecordMapper.selectList(null);
+        // 只统计未删除的告警
+        LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AlertRecord::getDeleted, 0);
+        List<AlertRecord> alerts = alertRecordMapper.selectList(wrapper);
 
         Map<String, Object> statistics = new HashMap<>();
         statistics.put("total", alerts.size());
-        statistics.put("pending", alerts.stream().filter(a -> "待处理".equals(a.getStatus())).count());
+        statistics.put("pending", alerts.stream().filter(a -> "待处理".equals(a.getStatus()) || "未处理".equals(a.getStatus())).count());
         statistics.put("processing", alerts.stream().filter(a -> "处理中".equals(a.getStatus())).count());
         statistics.put("handled", alerts.stream().filter(a -> "已处理".equals(a.getStatus())).count());
 
@@ -259,6 +266,7 @@ public class AlertServiceImpl implements AlertService {
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
 
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AlertRecord::getDeleted, 0); // 只查询未删除的记录
         wrapper.between(AlertRecord::getAlertTime, startOfDay, endOfDay);
         wrapper.orderByDesc(AlertRecord::getAlertTime);
 

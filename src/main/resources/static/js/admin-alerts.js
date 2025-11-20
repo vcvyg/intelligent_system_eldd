@@ -107,13 +107,13 @@ function getStatusClass(status) {
 function getActionButtons(alert) {
     if (alert.status === '待处理') {
         return `
-            <button class="btn-handle" onclick="handleAlert(${alert.id})">处理</button>
+            <button class="btn-handle" onclick="startProcessingAlert(${alert.id})">立即处理</button>
             <button class="btn-ignore" onclick="ignoreAlert(${alert.id})">忽略</button>
             <button class="btn-delete" onclick="deleteAlert(${alert.id})">删除</button>
         `;
     } else if (alert.status === '处理中') {
         return `
-            <button class="btn-handle" onclick="handleAlert(${alert.id})">完成处理</button>
+            <button class="btn-handle" onclick="handleAlert(${alert.id})">处理完成</button>
             <button class="btn-delete" onclick="deleteAlert(${alert.id})">删除</button>
         `;
     } else {
@@ -173,6 +173,31 @@ function handleAlert(id) {
     document.getElementById('handleAlertId').value = id;
     document.getElementById('handleResult').value = '';
     document.getElementById('handleModal').style.display = 'block';
+}
+
+// 立即处理预警（将待处理改为处理中）
+async function startProcessingAlert(id) {
+    try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${API_BASE_URL}/admin/alerts/${id}/process`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        const result = await response.json();
+        if (result.code === 200) {
+            showSuccess('告警状态已更新为处理中');
+            loadAlerts();
+            loadStatistics();
+        } else {
+            showError(result.message);
+        }
+    } catch (error) {
+        console.error('更新告警状态失败:', error);
+        showError('更新告警状态失败');
+    }
 }
 
 // 提交处理结果

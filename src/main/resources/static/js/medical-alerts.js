@@ -64,10 +64,14 @@ function renderAlert(alert, prepend = false) {
             `;
             break;
         case '处理中':
-            actionButtons = `<button class="btn-complete" onclick="finishProcessingAlert(${alert.id})">完成处理</button>`;
+            actionButtons = `<button class="btn-complete" onclick="finishProcessingAlert(${alert.id})">处理完成</button>`;
+            break;
+        case '已处理':
+        case '已忽略':
+            // 已处理、已忽略状态不显示操作按钮
             break;
         default:
-            // 已处理、已忽略等状态不显示操作按钮
+            // 其他状态也不显示操作按钮
             break;
     }
 

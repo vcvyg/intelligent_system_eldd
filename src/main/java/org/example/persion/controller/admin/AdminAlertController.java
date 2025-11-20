@@ -89,6 +89,15 @@ public class AdminAlertController {
     }
 
     /**
+     * 开始处理告警（将待处理改为处理中）
+     */
+    @PutMapping("/{id}/process")
+    public Result<Void> processAlert(@PathVariable Long id) {
+        alertService.processAlert(id);
+        return Result.success(null, "告警状态已更新为处理中");
+    }
+
+    /**
      * 忽略预警
      */
     @PutMapping("/{alertId}/ignore")

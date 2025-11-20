@@ -7,7 +7,7 @@ UPDATE elderly_info SET
     heart_rate_low = 60,
     systolic_pressure_high = 140,
     systolic_pressure_low = 90,
-    diastolic_pressure_high = 90,
+    diastolic_pressure_high = 80,
     diastolic_pressure_low = 60,
     temperature_high = 37.3,
     temperature_low = 36.0

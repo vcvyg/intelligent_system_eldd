@@ -55,4 +55,13 @@ public class MedicalAlertController {
         alertService.handleAlert(dto);
         return Result.success(null, "告警处理成功");
     }
+
+    /**
+     * 忽略告警
+     */
+    @PutMapping("/{id}/ignore")
+    public Result<Void> ignoreAlert(@PathVariable Long id) {
+        alertService.ignoreAlert(id);
+        return Result.success(null, "告警已忽略");
+    }
 }

@@ -38,7 +38,7 @@ WHERE alert_type = '心率异常'
 UPDATE alert_record
 SET alert_content = '血压偏高，收缩压' + alert_value + 'mmHg'
 WHERE alert_type = '血压异常'
-  AND alert_content LIKE '%收���压%过高%';
+  AND alert_content LIKE '%收缩压%过高%';
 
 UPDATE alert_record
 SET alert_content = '血压偏低，收缩压' + alert_value + 'mmHg'

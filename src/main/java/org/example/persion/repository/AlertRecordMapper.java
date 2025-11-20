@@ -46,7 +46,7 @@ public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
             "LEFT JOIN elderly_info e ON a.elderly_id = e.id " +
             "LEFT JOIN device_info d ON a.device_id = d.id " +
             "LEFT JOIN sys_user u ON a.assigned_medical_id = u.id " +
-            "WHERE a.assigned_medical_id = #{medicalUserId} AND a.status = 'PENDING' AND a.deleted = 0 " +
+            "WHERE a.assigned_medical_id = #{medicalUserId} AND a.status = '待处理' AND a.deleted = 0 " +
             "ORDER BY a.alert_time DESC")
     List<AlertRecordVO> findPendingAlertsByMedicalUser(Long medicalUserId);
 }

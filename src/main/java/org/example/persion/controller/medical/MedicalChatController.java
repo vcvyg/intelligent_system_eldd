@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.example.persion.repository.UserMapper;
+import org.example.persion.repository.ElderlyFamilyRelationMapper;
+import org.example.persion.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -23,28 +26,40 @@ import java.util.*;
 public class MedicalChatController {
     // Redis存储消息
     private static final String CHAT_KEY_PREFIX = "medical:chat:messages:"; // medical:chat:messages:{userId}
-    private static final Map<Long, String> userMap = new HashMap<>(); // key: 子女userId, value: 子女姓名
-    static {
-        // 假数据：子女列表
-        userMap.put(101L, "张三");
-        userMap.put(102L, "李四");
-        userMap.put(103L, "王五");
-    }
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
 
     // 获取子女列表
     @GetMapping("/users")
     public Result<List<UserVO>> getUsers() {
         List<UserVO> list = new ArrayList<>();
-        for (Map.Entry<Long, String> entry : userMap.entrySet()) {
+
+        // 从数据库查询所有FAMILY角色的用户
+        List<User> familyUsers = userMapper.selectFamilyUsers();
+
+        for (User user : familyUsers) {
             UserVO vo = new UserVO();
-            vo.setId(entry.getKey());
-            vo.setName(entry.getValue());
-            vo.setElderlyName("陶子"); // 假设所有子女都关联陶子
+            vo.setId(user.getId());
+            vo.setName(user.getRealName() != null ? user.getRealName() : user.getUsername());
+
+            // 查询该子女关联的老人信息
+            List<Map<String, Object>> elderlyList = elderlyFamilyRelationMapper.selectElderlyListByFamilyUser(user.getId());
+            if (elderlyList != null && !elderlyList.isEmpty()) {
+                // 获取第一个关联的老人姓名
+                Object elderlyName = elderlyList.get(0).get("name");
+                vo.setElderlyName(elderlyName != null ? elderlyName.toString() : null);
+            }
+
             list.add(vo);
         }
+
         return Result.success(list);
     }
 

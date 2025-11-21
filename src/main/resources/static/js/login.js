@@ -1,5 +1,6 @@
 // API基础URL
-const API_BASE_URL = 'http://localhost:8080/api';
+// 动态获取主机名,使其在局域网内可访问
+const API_BASE_URL = `http://${window.location.hostname}:8080/api`;
 
 // 初始化Swiper轮播
 document.addEventListener('DOMContentLoaded', () => {
@@ -129,9 +130,9 @@ loginForm.addEventListener('submit', async (e) => {
                     case 'MEDICAL':
                         window.location.href = 'medical-dashboard.html';
                         break;
-                    // case 'FAMILY':
-                    //     window.location.href = 'family-dashboard.html'; // 未来可以为子女角色添加
-                    //     break;
+                    case 'FAMILY':
+                         window.location.href = 'family-dashboard.html'; // 未来可以为子女角色添加
+                         break;
                     default:
                         // 对于其他角色或未定义角色，可以跳转到通用页面
                         window.location.href = 'index.html';

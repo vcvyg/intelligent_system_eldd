@@ -397,7 +397,7 @@
     background: var(--color-bg-lighter);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
+    overflow-x: auto; /* 确保表格超出时可以水平滚动 */
 }
 
 .data-table {
@@ -671,6 +671,34 @@
 
     .form-row {
         grid-template-columns: 1fr;
+    }
+
+    /* 移动端表格优化 */
+    .data-table th,
+    .data-table td {
+        padding: 10px 8px; /* 减小内边距 */
+        font-size: 13px;   /* 减小字体大小 */
+    }
+
+    /* 隐藏ID列和异常数值列 */
+    .data-table th:nth-child(1),
+    .data-table td:nth-child(1),
+    .data-table th:nth-child(6),
+    .data-table td:nth-child(6) {
+        display: none;
+    }
+
+    /* 允许预警内容换行 */
+    .data-table td:nth-child(5) {
+        white-space: normal;
+        word-break: break-all;
+        min-width: 100px; /* 给一个最小宽度 */
+    }
+
+    /* 调整操作按钮 */
+    .data-table .action-btns {
+        gap: 5px;
+        flex-wrap: wrap; /* 允许按钮换行 */
     }
 }
 

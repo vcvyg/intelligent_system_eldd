@@ -1,7 +1,8 @@
 // 公共函数库
 
 // API基础URL
-const API_BASE_URL = 'http://localhost:8080/api';
+// 动态获取主机名,使其在局域网内可访问
+const API_BASE_URL = `http://${window.location.hostname}:8080/api`;
 
 // 获取token
 function getToken() {

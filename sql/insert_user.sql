@@ -13,12 +13,12 @@ INSERT INTO sys_user (
     deleted
 )
 VALUES (
-           '3745',                              -- 用户名 (username)
-           '$2a$10$rlKhMMomyaZDQego4LyEOOVbZZSk6McpAnyqvdYo13kjyV5Clxm8W',                 -- 【重要】粘贴你用 Java 代码生成的密码 (password)
-           '刘陈张',                             -- 真实姓名 (real_name)
-           '18812345678',                            -- 手机号 (phone)
-           'testadmin@example.com',                  -- 邮箱 (email)
-           'MEDICAL',                                  -- 角色 (role), 可选值: ADMIN, FAMILY, MEDICAL, ELDERLY
+           'family1',                              -- 用户名 (username)
+           '$2a$10$PgGw60eJBTsO45TFwV.6CeJmO3eHhMYEejGXE6/lCYmodP8h2w8BG',                 -- 【重要】粘贴你用 Java 代码生成的密码 (password)
+           '陈佳',                             -- 真实姓名 (real_name)
+           '18812324578',                            -- 手机号 (phone)
+           'testfamily@example.com',                  -- 邮箱 (email)
+           'FAMILY',                                  -- 角色 (role), 可选值: ADMIN, FAMILY, MEDICAL, ELDERLY
            1,                                        -- 状态 (status), 1-启用, 0-禁用
            GETDATE(),                                -- 创建时间 (create_time)
            GETDATE(),                                -- 更新时间 (update_time)

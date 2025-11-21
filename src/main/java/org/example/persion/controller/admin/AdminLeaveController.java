@@ -3,12 +3,13 @@ package org.example.persion.controller.admin;
 import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
 import org.example.persion.service.LeaveRequestService;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.example.persion.common.exception.BusinessException;
+import org.example.persion.security.SecurityUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 管理端 - 请假/调休审批Controller
@@ -48,8 +49,10 @@ public class AdminLeaveController {
             @RequestParam(required = false) String remark) {
 
         // 获取当前审批人ID
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long reviewerId = Long.parseLong(authentication.getName());
+        Long reviewerId = SecurityUtil.getUserId();
+        if (reviewerId == null) {
+            throw new BusinessException("无法获取审批人信息");
+        }
 
         leaveRequestService.reviewLeaveRequest(id, status, reviewerId, remark);
         return Result.success();

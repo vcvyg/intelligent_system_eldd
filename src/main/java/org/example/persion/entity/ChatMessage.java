@@ -1,0 +1,23 @@
+package org.example.persion.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("chat_message")
+public class ChatMessage extends BaseEntity {
+
+    private Long groupId; // 关联的老人ID
+
+    private Long senderId; // 发送者用户ID
+
+    private String senderName; // 发送者姓名（冗余，方便查询）
+
+    private String senderRole; // 发送者角色（冗余，方便查询）
+
+    private String messageType; // 消息类型: text, image, audio
+
+    private String content; // 消息内容或文件URL
+}

@@ -2,10 +2,10 @@ package org.example.persion.controller.medical;
 
 import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
+import org.example.persion.common.exception.BusinessException;
 import org.example.persion.entity.LeaveRequest;
+import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.LeaveRequestService;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,9 +26,10 @@ public class MedicalLeaveController {
      */
     @PostMapping("/submit")
     public Result<Void> submitLeaveRequest(@RequestBody LeaveRequest leaveRequest) {
-        // 获取当前登录用户ID
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = SecurityUtil.getUserId();
+        if (userId == null) {
+            throw new BusinessException("无法获取当前用户信息");
+        }
 
         leaveRequest.setMedicalUserId(userId);
         leaveRequestService.submitLeaveRequest(leaveRequest);
@@ -40,8 +41,10 @@ public class MedicalLeaveController {
      */
     @GetMapping("/my")
     public Result<List<Map<String, Object>>> getMyLeaveRequests() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = SecurityUtil.getUserId();
+        if (userId == null) {
+            throw new BusinessException("无法获取当前用户信息");
+        }
 
         List<Map<String, Object>> list = leaveRequestService.getMyLeaveRequests(userId);
         return Result.success(list);
@@ -52,8 +55,10 @@ public class MedicalLeaveController {
      */
     @DeleteMapping("/{id}")
     public Result<Void> cancelLeaveRequest(@PathVariable Long id) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        Long userId = Long.parseLong(authentication.getName());
+        Long userId = SecurityUtil.getUserId();
+        if (userId == null) {
+            throw new BusinessException("无法获取当前用户信息");
+        }
 
         leaveRequestService.cancelLeaveRequest(id, userId);
         return Result.success();

@@ -6,6 +6,7 @@ import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.ElderlyMedicalRelation;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.ElderlyMedicalRelationMapper;
+import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.MedicalRelationService;
 import org.springframework.stereotype.Service;
 
@@ -25,16 +26,19 @@ public class MedicalRelationServiceImpl implements MedicalRelationService {
 
     @Override
     public List<Map<String, Object>> getElderlyListByMedicalUser() {
-        // TODO: 从JWT token中获取当前医护人员ID
-        // 暂时使用固定ID进行演示,实际项目中需要从SecurityContext获取
-        Long currentMedicalUserId = 1L;
+        Long currentMedicalUserId = SecurityUtil.getUserId();
+        if (currentMedicalUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
         return medicalRelationMapper.selectElderlyListByMedicalUser(currentMedicalUserId);
     }
 
     @Override
     public boolean bindElderly(Long elderlyId, Integer isPrimaryDoctor) {
-        // TODO: 从JWT token中获取当前医护人员ID
-        Long currentMedicalUserId = 1L;
+        Long currentMedicalUserId = SecurityUtil.getUserId();
+        if (currentMedicalUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
 
         // 检查是否已存在关联
         LambdaQueryWrapper<ElderlyMedicalRelation> wrapper = new LambdaQueryWrapper<>();
@@ -66,8 +70,10 @@ public class MedicalRelationServiceImpl implements MedicalRelationService {
 
     @Override
     public boolean unbindElderly(Long elderlyId) {
-        // TODO: 从JWT token中获取当前医护人员ID
-        Long currentMedicalUserId = 1L;
+        Long currentMedicalUserId = SecurityUtil.getUserId();
+        if (currentMedicalUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
 
         LambdaQueryWrapper<ElderlyMedicalRelation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ElderlyMedicalRelation::getElderlyId, elderlyId)

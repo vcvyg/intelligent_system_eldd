@@ -38,8 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                     userId, // principal存储userId
                     null,
-                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
-            );
+                    Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role)));
 
             // 设置到SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);

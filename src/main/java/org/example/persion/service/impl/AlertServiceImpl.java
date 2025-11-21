@@ -198,22 +198,11 @@ public class AlertServiceImpl implements AlertService {
             throw new BusinessException("该告警已在处理中或已处理完成");
         }
 
-        // 获取当前操作员ID（可选，如果是管理员可能不需要设置）
-        try {
-            Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            if (principal instanceof User) {
-                User currentUser = (User) principal;
-                alert.setAssignedMedicalId(currentUser.getId());
-            } else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
-                // 如果是UserDetails类型，尝试从username获取用户信息
-                org.springframework.security.core.userdetails.UserDetails userDetails =
-                    (org.springframework.security.core.userdetails.UserDetails) principal;
-                // 管理员操作时可以不设置assignedMedicalId，只更新状态
-                System.out.println("管理员操作，用户名: " + userDetails.getUsername());
-            }
-        } catch (Exception e) {
-            // 获取用户信息失败不影响状态更新
-            System.out.println("获取用户信息失败，继续更新状态: " + e.getMessage());
+        // 获取当前操作员ID
+        Long operatorId = org.example.persion.security.SecurityUtil.getUserId();
+        if (operatorId != null) {
+            // 假设操作员是医护人员，并分配任务
+            alert.setAssignedMedicalId(operatorId);
         }
 
         alert.setStatus("处理中");

@@ -1,138 +1,176 @@
 package org.example.persion.controller.medical;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
-
 import org.example.persion.common.Result;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RequestBody;
-
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.example.persion.repository.UserMapper;
-import org.example.persion.repository.ElderlyFamilyRelationMapper;
+import org.example.persion.entity.ChatMessage;
+import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.User;
+import org.example.persion.repository.ChatMessageMapper;
+import org.example.persion.repository.ElderlyInfoMapper;
+import org.example.persion.repository.ElderlyFamilyRelationMapper;
+import org.example.persion.repository.ElderlyMedicalRelationMapper;
+import org.example.persion.security.SecurityUtil;
+import org.example.persion.vo.MessageVO;
+import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.util.*;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/medical/chat")
 @RequiredArgsConstructor
 public class MedicalChatController {
-    // Redis存储消息
-    private static final String CHAT_KEY_PREFIX = "medical:chat:messages:"; // medical:chat:messages:{userId}
 
-    @Autowired
-    private RedisTemplate<String, Object> redisTemplate;
+    private final ElderlyInfoMapper elderlyInfoMapper;
+    private final ChatMessageMapper chatMessageMapper;
+    private final ElderlyFamilyRelationMapper familyRelationMapper;
+    private final ElderlyMedicalRelationMapper medicalRelationMapper;
 
-    @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
-    private ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
-
-    // 获取子女列表
-    @GetMapping("/users")
-    public Result<List<UserVO>> getUsers() {
-        List<UserVO> list = new ArrayList<>();
-
-        // 从数据库查询所有FAMILY角色的用户
-        List<User> familyUsers = userMapper.selectFamilyUsers();
-
-        for (User user : familyUsers) {
-            UserVO vo = new UserVO();
-            vo.setId(user.getId());
-            vo.setName(user.getRealName() != null ? user.getRealName() : user.getUsername());
-
-            // 查询该子女关联的老人信息
-            List<Map<String, Object>> elderlyList = elderlyFamilyRelationMapper.selectElderlyListByFamilyUser(user.getId());
-            if (elderlyList != null && !elderlyList.isEmpty()) {
-                // 获取第一个关联的老人姓名
-                Object elderlyName = elderlyList.get(0).get("name");
-                vo.setElderlyName(elderlyName != null ? elderlyName.toString() : null);
-            }
-
-            list.add(vo);
+    /**
+     * 获取当前医护人员负责的老人群组列表
+     */
+    @GetMapping("/groups")
+    public Result<List<GroupVO>> getChatGroups() {
+        Long medicalUserId = SecurityUtil.getUserId();
+        if (medicalUserId == null) {
+            return Result.error("无法获取当前用户信息");
         }
-
-        return Result.success(list);
+        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectElderlyListByMedicalUserId(medicalUserId);
+        List<GroupVO> groupVOs = elderlyList.stream()
+                .map(elderly -> {
+                    // 创建更具体的组名
+                    String groupName = elderly.getName() + "的沟通群";
+                    GroupVO groupVO = new GroupVO(elderly.getId(), groupName);
+                    
+                    // 获取群组成员
+                    List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(elderly.getId());
+                    List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(elderly.getId());
+                    
+                    List<GroupMemberVO> members = Stream.concat(familyMembers.stream(), medicalMembers.stream())
+                            .distinct()
+                            .map(user -> new GroupMemberVO(
+                                    user.getId(),
+                                    user.getUsername(),
+                                    user.getRealName(),
+                                    user.getRole()
+                            ))
+                            .collect(Collectors.toList());
+                    
+                    groupVO.setMembers(members);
+                    return groupVO;
+                })
+                .collect(Collectors.toList());
+        return Result.success(groupVOs);
     }
 
-    // 获取与某子女的消息
-    @GetMapping("/messages")
-    public Result<List<MessageVO>> getMessages(@RequestParam Long userId) {
-        String redisKey = CHAT_KEY_PREFIX + userId;
-        List<Object> rawList = redisTemplate.opsForList().range(redisKey, 0, -1);
-        List<MessageVO> vos = new ArrayList<>();
-        if (rawList != null) {
-            for (Object obj : rawList) {
-                if (obj instanceof ChatMessage) {
-                    ChatMessage m = (ChatMessage) obj;
-                    MessageVO vo = new MessageVO();
-                    vo.setContent(m.getContent());
-                    vo.setTime(m.getTime());
-                    vo.setMe(m.isMe());
-                    vo.setType(m.getType());
-                    vo.setFileName(m.getFileName());
-                    vos.add(vo);
-                }
+    /**
+     * 获取指定群组的详细信息
+     */
+    @GetMapping("/group/{groupId}/info")
+    public Result<GroupDetailVO> getGroupInfo(@PathVariable Long groupId) {
+        try {
+            // 获取老人信息
+            ElderlyInfo elderly = elderlyInfoMapper.selectById(groupId);
+            if (elderly == null) {
+                return Result.error("群组不存在");
             }
+            
+            // 获取群组成员
+            List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
+            List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
+            
+            List<GroupMemberVO> members = Stream.concat(familyMembers.stream(), medicalMembers.stream())
+                    .distinct()
+                    .map(user -> new GroupMemberVO(
+                            user.getId(),
+                            user.getUsername(),
+                            user.getRealName(),
+                            user.getRole()
+                    ))
+                    .collect(Collectors.toList());
+            
+            GroupDetailVO groupDetail = new GroupDetailVO();
+            groupDetail.setGroupId(groupId);
+            groupDetail.setGroupName(elderly.getName() + "的沟通群");
+            groupDetail.setElderlyName(elderly.getName());
+            groupDetail.setMembers(members);
+            
+            return Result.success(groupDetail);
+        } catch (Exception e) {
+            return Result.error("获取群组信息失败");
         }
-        return Result.success(vos);
     }
 
-    // 发送消息
-    @PostMapping("/send")
-    public Result<Void> send(@RequestBody SendDTO dto) {
-        // 这里假设医护端发送的消息 me=true
-        ChatMessage msg = new ChatMessage();
-        msg.setContent(dto.getContent());
-        msg.setTime(LocalDateTime.now().toString());
-        msg.setMe(true);
-        msg.setType(dto.getType() == null ? "text" : dto.getType());
-        msg.setFileName(dto.getFileName());
-        String redisKey = CHAT_KEY_PREFIX + dto.getToUserId();
-        redisTemplate.opsForList().rightPush(redisKey, msg);
-        // 可选：限制每个会话最多保存100条消息
-        redisTemplate.opsForList().trim(redisKey, -100, -1);
-        return Result.success();
+    /**
+     * 获取指定群组的聊天记录（分页）
+     */
+    @GetMapping("/group/{groupId}/messages")
+    public Result<Page<MessageVO>> getGroupMessages(
+            @PathVariable Long groupId,
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "20") Integer size) {
+
+        Page<ChatMessage> page = new Page<>(current, size);
+        LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ChatMessage::getGroupId, groupId);
+        wrapper.orderByAsc(ChatMessage::getCreateTime);
+
+        Page<ChatMessage> chatMessagePage = chatMessageMapper.selectPage(page, wrapper);
+
+        Page<MessageVO> voPage = new Page<>(chatMessagePage.getCurrent(), chatMessagePage.getSize(), chatMessagePage.getTotal());
+        List<MessageVO> vos = chatMessagePage.getRecords().stream().map(msg -> {
+            MessageVO vo = new MessageVO();
+            vo.setGroupId(msg.getGroupId());
+            vo.setSenderId(msg.getSenderId());
+            vo.setSenderName(msg.getSenderName());
+            vo.setSenderRole(msg.getSenderRole());
+            vo.setContent(msg.getContent());
+            vo.setMessageType(msg.getMessageType());
+            vo.setTime(msg.getCreateTime().toString());
+            vo.setMe(SecurityUtil.getUserId() != null && SecurityUtil.getUserId().equals(msg.getSenderId()));
+            return vo;
+        }).collect(Collectors.toList());
+
+        voPage.setRecords(vos);
+        return Result.success(voPage);
     }
 
     @Data
-    public static class UserVO {
-        private Long id;
-        private String name;
+    public static class GroupVO {
+        private Long groupId;
+        private String groupName;
+        private List<GroupMemberVO> members;
+
+        public GroupVO(Long groupId, String groupName) {
+            this.groupId = groupId;
+            this.groupName = groupName;
+        }
+    }
+    
+    @Data
+    public static class GroupMemberVO {
+        private Long userId;
+        private String username;
+        private String realName;
+        private String role;
+        
+        public GroupMemberVO(Long userId, String username, String realName, String role) {
+            this.userId = userId;
+            this.username = username;
+            this.realName = realName;
+            this.role = role;
+        }
+    }
+    
+    @Data
+    public static class GroupDetailVO {
+        private Long groupId;
+        private String groupName;
         private String elderlyName;
-    }
-
-    @Data
-    public static class MessageVO {
-        private String content;
-        private String time;
-        private boolean me;
-        private String type; // text/image/audio
-        private String fileName;
-    }
-
-    @Data
-    public static class SendDTO {
-        private Long toUserId;
-        private String content;
-        private String type; // text/image/audio
-        private String fileName;
-    }
-
-    @Data
-    public static class ChatMessage {
-        private String content;
-        private String time;
-        private boolean me;
-        private String type; // text/image/audio
-        private String fileName;
+        private List<GroupMemberVO> members;
     }
 }

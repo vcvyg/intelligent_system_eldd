@@ -26,18 +26,14 @@ public class MedicalPatientServiceImpl implements MedicalPatientService {
 
     /**
      * 获取当前医护人员负责的老人列表
-     * 注意：当前实现为获取所有老人列表，后续可根据业务扩展为只获取分配给该医护人员的老人
      * 
-     * @param medicalStaffId 当前登录的医护人员ID (当前未使用)
+     * @param medicalStaffId 当前登录的医护人员ID
      * @return 老人信息VO列表
      */
     @Override
     public List<ElderlyInfoVO> getMyPatients(Long medicalStaffId) {
-        // TODO: 实现医护人员与老人的关联关系后，此处应修改为查询分配给该医护的老人
-        LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(ElderlyInfo::getCreateTime);
-
-        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(wrapper);
+        // 使用ElderlyInfoMapper中的方法获取该医护人员负责的老人
+        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectElderlyListByMedicalUserId(medicalStaffId);
 
         return elderlyList.stream().map(elderly -> {
             ElderlyInfoVO vo = new ElderlyInfoVO();

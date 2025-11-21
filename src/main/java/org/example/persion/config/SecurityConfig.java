@@ -49,6 +49,8 @@ public class SecurityConfig {
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
                         // 公开接口(登录、注册等)
                         .requestMatchers("/api/auth/**").permitAll()
+                        // WebSocket端点
+                        .requestMatchers("/ws-chat/**").permitAll()
                         // 测试接口临时开放
                         .requestMatchers("/api/*/test").permitAll()
                         // 其他接口需要认证

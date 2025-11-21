@@ -2,8 +2,10 @@ package org.example.persion.repository;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.example.persion.entity.ElderlyFamilyRelation;
+import org.example.persion.entity.User;
 
 import java.util.List;
 import java.util.Map;
@@ -32,4 +34,12 @@ public interface ElderlyFamilyRelationMapper extends BaseMapper<ElderlyFamilyRel
             "LEFT JOIN elderly_info e ON efr.elderly_id = e.id " +
             "WHERE efr.family_user_id = #{familyUserId} AND efr.deleted = 0")
     List<Map<String, Object>> selectElderlyListByFamilyUser(Long familyUserId);
+
+    /**
+     * 根据老人ID查询关联的家属用户列表
+     */
+    @Select("SELECT u.* FROM sys_user u " +
+            "JOIN elderly_family_relation efr ON u.id = efr.family_user_id " +
+            "WHERE efr.elderly_id = #{elderlyId} AND efr.deleted = 0 AND u.deleted = 0")
+    List<User> selectUsersByElderlyId(@Param("elderlyId") Long elderlyId);
 }

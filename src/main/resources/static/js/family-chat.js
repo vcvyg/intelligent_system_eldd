@@ -1,4 +1,4 @@
-// 医护端群聊脚本
+// 子女端群聊脚本
 
 let currentGroupId = null;
 let currentGroupName = '';
@@ -7,7 +7,7 @@ let currentUser = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     currentUser = checkLogin();
-    if (!currentUser || currentUser.role !== 'MEDICAL') {
+    if (!currentUser || currentUser.role !== 'FAMILY') {
         alert('权限不足或登录已过期');
         logout();
         return;
@@ -26,47 +26,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function connectWebSocket() {
-    const token = localStorage.getItem('token');
-    const socket = new SockJS(`/ws-chat?token=${encodeURIComponent(token)}`);
+    const socket = new SockJS('/ws-chat');
     stompClient = Stomp.over(socket);
-    stompClient.connect({}, function (frame) {
-        console.log('WebSocket connected:', frame);
-        
-        // Subscribe to personal message queue
+    const token = localStorage.getItem('token');
+    stompClient.connect({ 'Authorization': `Bearer ${token}` }, function (frame) {
         stompClient.subscribe('/user/queue/group-messages', function (message) {
             const msg = JSON.parse(message.body);
             handleNewMessage(msg);
         });
-        
-        // Subscribe to current group topic for immediate message display
-        if (currentGroupId) {
-            subscribeToGroupTopic(currentGroupId);
-        }
-    }, function(error) {
-        console.error('WebSocket connection error:', error);
     });
-}
-
-let currentGroupSubscription = null;
-
-function subscribeToGroupTopic(groupId) {
-    // Unsubscribe from previous group if any
-    if (currentGroupSubscription) {
-        currentGroupSubscription.unsubscribe();
-    }
-    
-    // Subscribe to the new group topic
-    if (stompClient && stompClient.connected) {
-        currentGroupSubscription = stompClient.subscribe('/topic/group/' + groupId, function (message) {
-            const msg = JSON.parse(message.body);
-            console.log('Received group message:', msg);
-            if (msg.groupId === currentGroupId && !msg.me) {
-                // 只显示其他人发送的消息，自己发送的消息已经在sendMessage中显示了
-                appendMessage(msg);
-            }
-        });
-        console.log('Subscribed to group topic:', '/topic/group/' + groupId);
-    }
 }
 
 function handleNewMessage(msg) {
@@ -80,17 +48,7 @@ function handleNewMessage(msg) {
 
 function appendMessage(msg) {
     const box = document.getElementById('chatMessages');
-    
-    // 为消息添加唯一标识，避免重复显示
-    const messageId = `msg-${msg.senderId}-${msg.content.substring(0, 20)}-${new Date(msg.time).getTime()}`;
-    
-    // 检查是否已经存在相同的消息
-    if (document.getElementById(messageId)) {
-        return; // 消息已存在，不重复添加
-    }
-    
     const div = document.createElement('div');
-    div.id = messageId;
     div.className = 'message' + (msg.me ? ' me' : '');
     const senderName = msg.me ? '' : `<div class="sender-name">${escapeHtml(msg.senderName)} (${escapeHtml(msg.senderRole)})</div>`;
     div.innerHTML = `${senderName}<div class="bubble">${escapeHtml(msg.content)}</div><div class="meta">${formatTime(msg.time)}</div>`;
@@ -116,27 +74,21 @@ function showNewMsgTip(msg) {
 
 async function loadGroupList() {
     try {
-        const res = await get('/medical/chat/groups');
+        const res = await get('/family/chat/groups'); // Family-specific endpoint
         const groups = res.data || [];
         const userList = document.getElementById('userList');
-        userList.innerHTML = groups.length === 0 ? '<div style="padding:20px;color:#999;">暂无负责的老人</div>' : '';
+        userList.innerHTML = groups.length === 0 ? '<div style="padding:20px;color:#999;">暂无关联的家人</div>' : '';
         
         groups.forEach(group => {
             const div = document.createElement('div');
             div.className = 'user-item';
-            const memberCount = group.members ? group.members.length : 0;
-            div.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${group.groupName}</span>
-                    <span style="font-size: 11px; color: #999; margin-left: 8px;">${memberCount}人</span>
-                </div>
-            `;
+            div.innerHTML = `<span>${group.groupName}</span>`;
             div.onclick = () => selectGroup(group.groupId, group.groupName);
             div.dataset.groupId = group.groupId;
             userList.appendChild(div);
         });
 
-        await loadUnreadCounts(); // Load unread counts after groups are rendered
+        await loadUnreadCounts();
     } catch (e) {
         document.getElementById('userList').innerHTML = '<div style="padding:20px;color:red;">加载失败</div>';
     }
@@ -150,8 +102,8 @@ async function loadUnreadCounts() {
             if (unreadMap.hasOwnProperty(groupId)) {
                 const count = unreadMap[groupId];
                 if (count > 0) {
-                    updateUnreadBadge(groupId, count, true); // Set count directly
-                } 
+                    updateUnreadBadge(groupId, count, true);
+                }
             }
         }
     } catch (error) {
@@ -167,21 +119,6 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
     if (!badge) {
         badge = document.createElement('span');
         badge.className = 'unread-badge';
-        badge.style.cssText = `
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: #ff4757;
-            color: white;
-            border-radius: 10px;
-            padding: 2px 6px;
-            font-size: 11px;
-            min-width: 16px;
-            text-align: center;
-            display: none;
-            z-index: 1;
-        `;
-        groupItem.style.position = 'relative';
         groupItem.appendChild(badge);
     }
 
@@ -201,40 +138,10 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
     }
 }
 
-
 async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
-    
-    // 获取群组详细信息
-    try {
-        const groupInfoRes = await get(`/medical/chat/group/${groupId}/info`);
-        const groupInfo = groupInfoRes.data;
-        
-        // 更新聊天标题，显示群组名称和成员信息
-        const memberCount = groupInfo.members ? groupInfo.members.length : 0;
-        const memberNames = groupInfo.members ? 
-            groupInfo.members.map(m => m.realName || m.username).join('、') : '';
-        
-        document.getElementById('chatHeader').innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div style="flex: 1;">
-                    <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">${groupInfo.groupName}</div>
-                    <div style="font-size: 12px; color: #666;">共${memberCount}人在群聊中</div>
-                </div>
-                <div style="text-align: right; max-width: 250px;">
-                    <div style="font-size: 11px; color: #999; margin-bottom: 2px;">群成员</div>
-                    <div style="font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memberNames}">
-                        ${memberNames}
-                    </div>
-                </div>
-            </div>
-        `;
-    } catch (error) {
-        console.error("Failed to load group info:", error);
-        document.getElementById('chatHeader').textContent = `${groupName}`;
-    }
-    
+    document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
     document.getElementById('chatInput').disabled = false;
     document.getElementById('sendBtn').disabled = false;
 
@@ -245,10 +152,6 @@ async function selectGroup(groupId, groupName) {
         }
     });
 
-    // Subscribe to the group topic for real-time messages
-    subscribeToGroupTopic(groupId);
-
-    // Mark as read
     try {
         await post(`/chat/groups/${groupId}/read`);
         const badge = document.querySelector(`.user-item[data-group-id='${groupId}'] .unread-badge`);
@@ -283,22 +186,10 @@ function sendMessage() {
         return;
     }
     try {
-        // 立即在界面上显示自己发送的消息
-        const tempMessage = {
-            groupId: currentGroupId,
-            senderId: currentUser.id,
-            senderName: currentUser.realName || currentUser.username,
-            senderRole: currentUser.role,
-            content: content,
-            time: new Date().toISOString(),
-            me: true
-        };
-        appendMessage(tempMessage);
-        
-        // 发送消息到服务器
         stompClient.send(`/app/chat/group/${currentGroupId}`, {}, content);
         input.value = '';
-    } catch (e) {
+    }
+    catch (e) {
         console.error('Send message error:', e);
     }
 }
@@ -308,8 +199,7 @@ function escapeHtml(str) {
     return str.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
 
-function formatTime(t, returnDate = false) {
-    if (!t) return returnDate ? new Date() : '';
-    const formatted = t.replace('T', ' ').substring(5, 16);
-    return returnDate ? new Date(t) : formatted;
+function formatTime(t) {
+    if (!t) return '';
+    return t.replace('T', ' ').substring(5, 16);
 }

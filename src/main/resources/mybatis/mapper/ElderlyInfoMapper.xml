@@ -29,4 +29,32 @@
         WHERE e.id = #{elderlyId} AND e.deleted = 0
     </select>
 
+    <select id="selectElderlyListByMedicalUserId" resultType="org.example.persion.entity.ElderlyInfo">
+        SELECT
+            ei.*
+        FROM
+            elderly_info ei
+        JOIN
+            elderly_medical_relation emr ON ei.id = emr.elderly_id
+        WHERE
+            emr.medical_user_id = #{medicalUserId}
+            AND ei.deleted = 0
+        ORDER BY
+            ei.name ASC
+    </select>
+
+    <select id="selectElderlyListByFamilyUserId" resultType="org.example.persion.entity.ElderlyInfo">
+        SELECT
+            ei.*
+        FROM
+            elderly_info ei
+        JOIN
+            elderly_family_relation efr ON ei.id = efr.elderly_id
+        WHERE
+            efr.family_user_id = #{familyUserId}
+            AND ei.deleted = 0
+        ORDER BY
+            ei.name ASC
+    </select>
+
 </mapper>

@@ -13,8 +13,6 @@ import java.time.LocalDate;
 @TableName("elderly_info")
 public class ElderlyInfo extends BaseEntity {
 
-    private Long userId; // 关联用户表
-
     private String name;
 
     private Integer age;

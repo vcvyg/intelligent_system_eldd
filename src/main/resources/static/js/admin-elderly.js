@@ -207,7 +207,6 @@ async function editElderly(id) {
 
             document.getElementById('modalTitle').textContent = '编辑老人信息';
             document.getElementById('elderlyId').value = elderly.id;
-            document.getElementById('userId').value = elderly.userId || '';
             document.getElementById('name').value = elderly.name || '';
             document.getElementById('age').value = elderly.age || '';
             document.getElementById('gender').value = elderly.gender || '';
@@ -245,7 +244,6 @@ async function saveElderly() {
     const roomIdValue = document.getElementById('roomId').value;
 
     const formData = {
-        userId: parseInt(document.getElementById('userId').value),
         name: document.getElementById('name').value.trim(),
         age: parseInt(document.getElementById('age').value),
         gender: document.getElementById('gender').value,

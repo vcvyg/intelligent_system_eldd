@@ -62,22 +62,9 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
     @Override
     @Transactional
     public ElderlyInfo createElderly(AdminElderlyCreateDTO dto) {
-        // 检查关联用户是否存在
-        User user = userMapper.selectById(dto.getUserId());
-        if (user == null) {
-            throw new BusinessException("关联用户不存在");
-        }
-
-        // 检查该用户是否已有老人信息
-        LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ElderlyInfo::getUserId, dto.getUserId());
-        if (elderlyInfoMapper.selectCount(wrapper) > 0) {
-            throw new BusinessException("该用户已有老人信息");
-        }
-
         // 检查身份证号是否已存在
         if (StringUtils.hasText(dto.getIdCard())) {
-            wrapper = new LambdaQueryWrapper<>();
+            LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(ElderlyInfo::getIdCard, dto.getIdCard());
             if (elderlyInfoMapper.selectCount(wrapper) > 0) {
                 throw new BusinessException("身份证号已存在");
@@ -100,6 +87,16 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
 
         ElderlyInfo elderlyInfo = new ElderlyInfo();
         BeanUtils.copyProperties(dto, elderlyInfo);
+
+        // 设置默认健康阈值
+        elderlyInfo.setHeartRateHigh(100);
+        elderlyInfo.setHeartRateLow(60);
+        elderlyInfo.setSystolicPressureHigh(140);
+        elderlyInfo.setSystolicPressureLow(90);
+        elderlyInfo.setDiastolicPressureHigh(80);
+        elderlyInfo.setDiastolicPressureLow(60);
+        elderlyInfo.setTemperatureHigh(37.3);
+        elderlyInfo.setTemperatureLow(36.0);
 
         elderlyInfoMapper.insert(elderlyInfo);
         return elderlyInfo;
@@ -152,8 +149,8 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
             }
         }
 
-        // 使用 BeanUtils 复制属性，但排除 id、userId、createTime、updateTime
-        BeanUtils.copyProperties(dto, elderlyInfo, "id", "userId", "createTime", "updateTime");
+        // 使用 BeanUtils 复制属性，但排除 id、createTime、updateTime
+        BeanUtils.copyProperties(dto, elderlyInfo, "id", "createTime", "updateTime");
 
         // 特殊处理 roomId，允许设置为 null（未分配房间）
         elderlyInfo.setRoomId(dto.getRoomId());

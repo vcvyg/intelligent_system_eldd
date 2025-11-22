@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Event Listeners
     sendBtn.addEventListener('click', sendTextMessage);
-    chatInput.addEventListener('keydown', function(e) {
+    chatInput.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             sendTextMessage();
@@ -49,7 +49,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     fileBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', uploadFile);
-    voiceBtn.addEventListener('click', toggleRecording);
+    voiceBtn.addEventListener('click', function () {
+        console.log('Voice button clicked, isRecording:', isRecording);
+        toggleRecording();
+    });
 
     // Context Menu Listeners
     chatMessages.addEventListener('contextmenu', showContextMenu);
@@ -61,14 +64,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function connectWebSocket() {
-    const socket = new SockJS('/ws-chat');
-    stompClient = Stomp.over(socket);
     const token = localStorage.getItem('token');
-    stompClient.connect({ 'Authorization': `Bearer ${token}` }, function (frame) {
+    // 通过URL参数传递token，与其他聊天页面保持一致
+    const socket = new SockJS(`/ws-chat?token=${encodeURIComponent(token)}`);
+    stompClient = Stomp.over(socket);
+    stompClient.connect({}, function (frame) {
+        console.log('WebSocket connected:', frame);
         stompClient.subscribe('/user/queue/group-messages', function (message) {
             const msg = JSON.parse(message.body);
             handleNewMessage(msg);
         });
+    }, function (error) {
+        console.error('WebSocket connection failed:', error);
+        // 重连逻辑
+        setTimeout(connectWebSocket, 5000);
     });
 }
 
@@ -82,6 +91,14 @@ function handleNewMessage(msg) {
     }
 
     if (msg.groupId === currentGroupId) {
+        // 如果是自己发送的消息，先移除临时消息再显示正式消息
+        if (msg.me) {
+            // 移除可能存在的临时消息
+            const tempMessages = document.querySelectorAll('[data-message-id^="temp_"]');
+            if (tempMessages.length > 0) {
+                tempMessages[tempMessages.length - 1].remove(); // 移除最后一个临时消息
+            }
+        }
         appendMessage(msg);
     } else {
         showNewMsgTip(msg);
@@ -93,28 +110,63 @@ function appendMessage(msg) {
     const box = chatMessages;
     const div = document.createElement('div');
     div.className = 'message' + (msg.me ? ' me' : '');
-    div.dataset.messageId = msg.id; // Store message ID for deletion
+    // 确保消息ID存在
+    if (msg.id) {
+        div.dataset.messageId = msg.id; // Store message ID for deletion
+    }
 
     const senderName = msg.me ? '' : `<div class="sender-name">${escapeHtml(msg.senderName)} (${escapeHtml(msg.senderRole)})</div>`;
     let messageBubble = '';
 
     switch (msg.messageType) {
         case 'VOICE':
-            messageBubble = `<div class="bubble">
-                                <audio controls src="${msg.audioUrl}"></audio>
-                             </div>`;
+            // 兼容不同的数据格式
+            let duration = msg.duration || 0;
+            let audioUrl = msg.audioUrl || '';
+            
+            // 如果content是JSON字符串，尝试解析
+            if (!audioUrl && msg.content && msg.content.startsWith('{')) {
+                try {
+                    const contentData = JSON.parse(msg.content);
+                    audioUrl = contentData.audioUrl || '';
+                    duration = contentData.duration || duration;
+                } catch (e) {
+                    console.warn('解析语音消息content失败:', e);
+                }
+            }
+            
+            if (audioUrl) {
+                messageBubble = `<div class="bubble voice-bubble">
+                                    <i class="fas fa-play-circle"></i>
+                                    <audio controls src="${audioUrl}">
+                                        您的浏览器不支持音频播放
+                                    </audio>
+                                    ${duration ? `<span class="duration">${duration}"</span>` : ''}
+                                 </div>`;
+            } else {
+                messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+            }
             break;
         case 'FILE':
-            messageBubble = `<div class="bubble">
-                                <a href="${msg.fileUrl}" target="_blank" download>
-                                    <i class="fas fa-file"></i> ${escapeHtml(msg.fileName || '附件')}
-                                </a>
-                             </div>`;
+            if (msg.fileUrl) {
+                messageBubble = `<div class="bubble file-bubble">
+                                    <i class="fas fa-file-alt"></i>
+                                    <a href="/download?path=${encodeURIComponent(msg.fileUrl)}" target="_blank" download="${escapeHtml(msg.fileName || '附件')}">
+                                        ${escapeHtml(msg.fileName || '附件')}
+                                    </a>
+                                 </div>`;
+            } else {
+                messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+            }
             break;
         case 'IMAGE':
-            messageBubble = `<div class="bubble">
-                                <img src="${msg.imageUrl}" alt="图片" style="max-width: 200px; border-radius: 8px; cursor: pointer;" onclick="showImageModal('${msg.imageUrl}')">
-                             </div>`;
+            if (msg.imageUrl) {
+                messageBubble = `<div class="image-bubble">
+                                    <img src="${msg.imageUrl}" alt="图片" onclick="showImageModal('${msg.imageUrl}')">
+                                 </div>`;
+            } else {
+                messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+            }
             break;
         default: // TEXT
             messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
@@ -208,7 +260,7 @@ async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
     document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
-    
+
     // Enable inputs
     chatInput.disabled = false;
     sendBtn.disabled = false;
@@ -223,7 +275,7 @@ async function selectGroup(groupId, groupName) {
     });
 
     try {
-        await post(`/api/chat/groups/${groupId}/read`);
+        await post(`/chat/groups/${groupId}/read`);
         updateUnreadBadge(groupId, 0, true);
     } catch (error) {
         console.error("Failed to mark as read:", error);
@@ -235,21 +287,34 @@ async function selectGroup(groupId, groupName) {
 async function loadGroupMessages() {
     if (!currentGroupId) return;
     try {
-        // This endpoint should return messages with their IDs
-        const res = await get(`/medical/chat/group/${currentGroupId}/messages`);
+        // 使用正确的API路径
+        const res = await get(`/family/chat/group/${currentGroupId}/messages`);
         const messagePage = res.data || { records: [] };
         chatMessages.innerHTML = '';
         messagePage.records.forEach(appendMessage);
     } catch (e) {
+        console.error('Load messages error:', e);
         chatMessages.innerHTML = '<div style="color:red;">消息加载失败</div>';
     }
 }
 
 function sendMessage(messageObject) {
-     if (!currentGroupId || !stompClient || !stompClient.connected) {
+    if (!currentGroupId || !stompClient || !stompClient.connected) {
         return;
     }
     try {
+        // 立即在本地显示消息（乐观更新）
+        const localMessage = {
+            ...messageObject,
+            me: true,
+            senderName: currentUser.username,
+            senderRole: currentUser.role,
+            time: new Date().toISOString(),
+            id: 'temp_' + Date.now() // 临时ID
+        };
+        appendMessage(localMessage);
+        
+        // 发送到服务器
         stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
     } catch (e) {
         console.error('Send message error:', e);
@@ -269,16 +334,27 @@ async function uploadFile() {
     const file = fileInput.files[0];
     if (!file) return;
 
+    // 检查文件大小 (限制为10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+
     const formData = new FormData();
     formData.append('file', file);
 
+    console.log('上传文件:', file.name, '类型:', file.type, '大小:', file.size);
+
     try {
         const result = await post('/upload/file', formData, true); // true for FormData
+        console.log('File upload result:', result);
+
+        // 强制所有上传的文件都识别为FILE类型，确保正确显示
         sendMessage({
             messageType: 'FILE',
-            content: `[文件] ${result.data.fileName}`,
-            fileName: result.data.fileName,
-            fileUrl: result.data.url
+            content: `[文件] ${result.data.fileName || result.data.originalFilename}`,
+            fileName: result.data.fileName || result.data.originalFilename,
+            fileUrl: result.data.fileUrl || result.data.url || result.data.imageUrl || result.data.audioUrl
         });
     } catch (error) {
         console.error('File upload failed:', error);
@@ -288,9 +364,12 @@ async function uploadFile() {
 }
 
 function toggleRecording() {
+    console.log('toggleRecording called, isRecording:', isRecording);
     if (isRecording) {
+        console.log('Stopping recording...');
         stopRecording();
     } else {
+        console.log('Starting recording...');
         startRecording();
     }
 }
@@ -334,10 +413,11 @@ async function uploadVoiceMessage(blob) {
 
     try {
         const result = await post('/upload/audio', formData, true);
+        console.log('Voice upload result:', result);
         sendMessage({
             messageType: 'VOICE',
             content: '[语音消息]',
-            audioUrl: result.data.url,
+            audioUrl: result.data.audioUrl || result.data.url,
             duration: result.data.duration
         });
     } catch (error) {
@@ -372,7 +452,7 @@ async function deleteMessage() {
     if (!messageId) return;
 
     try {
-        await del(`/api/chat/message/${messageId}`);
+        await del(`/chat/message/${messageId}`);
         // Optimistic removal
         currentMessageElement.remove();
         currentMessageElement = null;
@@ -388,10 +468,11 @@ async function deleteMessage() {
 
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    return str.replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]));
 }
 
 function formatTime(t) {
     if (!t) return '';
     return t.replace('T', ' ').substring(5, 16);
 }
+

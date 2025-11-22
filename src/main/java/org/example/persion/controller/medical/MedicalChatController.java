@@ -114,30 +114,94 @@ public class MedicalChatController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "20") Integer size) {
 
-        Page<ChatMessage> page = new Page<>(current, size);
-        LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ChatMessage::getGroupId, groupId);
-        wrapper.orderByAsc(ChatMessage::getCreateTime);
+        try {
+            System.out.println("MedicalChatController - 获取群组消息请求: groupId=" + groupId + ", current=" + current + ", size=" + size);
+            
+            // 检查当前用户
+            Long currentUserId = SecurityUtil.getUserId();
+            System.out.println("MedicalChatController - 当前用户ID: " + currentUserId);
+            
+            if (currentUserId == null) {
+                System.err.println("MedicalChatController - 用户未登录或认证失败");
+                return Result.error("用户未登录");
+            }
 
-        Page<ChatMessage> chatMessagePage = chatMessageMapper.selectPage(page, wrapper);
+            Page<ChatMessage> page = new Page<>(current, size);
+            LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(ChatMessage::getGroupId, groupId);
+            wrapper.eq(ChatMessage::getDeleted, 0); // 只查询未删除的消息
+            wrapper.orderByAsc(ChatMessage::getCreateTime);
 
-        Page<MessageVO> voPage = new Page<>(chatMessagePage.getCurrent(), chatMessagePage.getSize(), chatMessagePage.getTotal());
-        List<MessageVO> vos = chatMessagePage.getRecords().stream().map(msg -> {
-            MessageVO vo = new MessageVO();
-            vo.setGroupId(msg.getGroupId());
-            vo.setSenderId(msg.getSenderId());
-            vo.setSenderName(msg.getSenderName());
-            vo.setSenderRole(msg.getSenderRole());
-            vo.setContent(msg.getContent());
-            vo.setMessageType(msg.getMessageType());
-            vo.setTime(msg.getCreateTime().toString());
-            vo.setMe(SecurityUtil.getUserId() != null && SecurityUtil.getUserId().equals(msg.getSenderId()));
-            return vo;
-        }).collect(Collectors.toList());
+            System.out.println("MedicalChatController - 执行数据库查询...");
+            Page<ChatMessage> chatMessagePage = chatMessageMapper.selectPage(page, wrapper);
+            System.out.println("MedicalChatController - 查询结果: 总数=" + chatMessagePage.getTotal() + ", 当前页记录数=" + chatMessagePage.getRecords().size());
 
-        voPage.setRecords(vos);
-        return Result.success(voPage);
+            Page<MessageVO> voPage = new Page<>(chatMessagePage.getCurrent(), chatMessagePage.getSize(), chatMessagePage.getTotal());
+            List<MessageVO> vos = chatMessagePage.getRecords().stream().map(msg -> {
+                MessageVO vo = new MessageVO();
+                vo.setId(msg.getId()); // 设置消息ID - 这是关键修复！
+                vo.setGroupId(msg.getGroupId());
+                vo.setSenderId(msg.getSenderId());
+                vo.setSenderName(msg.getSenderName());
+                vo.setSenderRole(msg.getSenderRole());
+                vo.setContent(msg.getContent());
+                vo.setMessageType(msg.getMessageType());
+                
+                // 设置多媒体字段
+                vo.setAudioUrl(msg.getAudioUrl());
+                vo.setImageUrl(msg.getImageUrl());
+                vo.setDuration(msg.getDuration());
+                
+                // 正确格式化时间
+                if (msg.getCreateTime() != null) {
+                    vo.setTime(msg.getCreateTime().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                } else {
+                    vo.setTime(java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+                }
+                vo.setMe(SecurityUtil.getUserId() != null && SecurityUtil.getUserId().equals(msg.getSenderId()));
+                return vo;
+            }).collect(Collectors.toList());
+
+            voPage.setRecords(vos);
+            System.out.println("MedicalChatController - 返回成功响应，消息数量: " + vos.size());
+            return Result.success(voPage);
+            
+        } catch (Exception e) {
+            System.err.println("MedicalChatController - 获取群组消息失败: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取消息失败: " + e.getMessage());
+        }
     }
+    
+    /**
+     * 将路径转换为Web访问路径
+     */
+    private String convertToRelativePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return path;
+        }
+        
+        // 如果已经是Web路径，直接返回
+        if (path.startsWith("/uploads/")) {
+            return path;
+        }
+        
+        try {
+            // 如果是绝对路径，转换为相对路径
+            if (path.contains("uploads")) {
+                int uploadsIndex = path.indexOf("uploads");
+                String relativePath = "/" + path.substring(uploadsIndex).replace("\\", "/");
+                System.out.println("MedicalChatController - 转换路径: " + path + " -> " + relativePath);
+                return relativePath;
+            }
+        } catch (Exception e) {
+            System.err.println("MedicalChatController - 路径转换失败: " + e.getMessage());
+        }
+        
+        return path;
+    }
+
+
 
     @Data
     public static class GroupVO {

@@ -42,17 +42,31 @@ public class SecurityConfig {
                 // 禁用CSRF(使用JWT不需要CSRF保护)
                 .csrf(AbstractHttpConfigurer::disable)
 
-                // 配置请求授权
+                // 配置请求授权 - 文件访问完全开放
                 .authorizeHttpRequests(auth -> auth
-                        // 根路径和静态资源(HTML、CSS、JS等) - 所有HTML页面都允许访问，由前端JS控制登录跳转
+                        // 根路径和静态资源(HTML、CSS、JS等)
                         .requestMatchers("/", "/*.html", "/admin-*.html").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
+                        
+                        // 文件访问 - 完全开放，无需任何认证
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/api/files/**").permitAll()
+                        .requestMatchers("/api/upload/**").permitAll()
+                        .requestMatchers("/upload-**").permitAll()
+                        .requestMatchers("/download").permitAll()
+                        .requestMatchers("/download/**").permitAll()
+                        .requestMatchers("/file-access/**").permitAll()
+                        
                         // 公开接口(登录、注册等)
                         .requestMatchers("/api/auth/**").permitAll()
+                        
                         // WebSocket端点
                         .requestMatchers("/ws-chat/**").permitAll()
+                        
                         // 测试接口临时开放
                         .requestMatchers("/api/*/test").permitAll()
+                        .requestMatchers("/test-**").permitAll()
+                        
                         // 其他接口需要认证
                         .anyRequest().authenticated()
                 )
@@ -69,7 +83,12 @@ public class SecurityConfig {
                 )
 
                 // 添加JWT过滤器
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                
+                // 配置X-Frame-Options，允许同源嵌套
+                .headers(headers -> headers
+                        .frameOptions().sameOrigin()
+                );
 
         return http.build();
     }

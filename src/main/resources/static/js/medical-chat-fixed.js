@@ -1,4 +1,4 @@
-// 医护端群聊脚本
+// 医护端群聊脚本 - 修复版
 
 let currentGroupId = null;
 let currentGroupName = '';
@@ -61,19 +61,10 @@ function subscribeToGroupTopic(groupId) {
             const msg = JSON.parse(message.body);
             console.log('Received group message:', msg);
             
-            // 调试文件消息
-            if (msg.messageType === 'FILE') {
-                console.log('FILE message details:', {
-                    fileName: msg.fileName,
-                    fileUrl: msg.fileUrl,
-                    content: msg.content
-                });
-            }
-            
             if (msg.groupId === currentGroupId) {
-                // 对于语音、图片、文件消息，总是显示（因为前端没有立即显示）
+                // 对于语音、图片、文件消息，总是显示
                 // 对于文本消息，只显示其他人发送的（避免重复）
-                if (msg.messageType === 'audio' || msg.messageType === 'image' || msg.messageType === 'FILE' || !msg.me) {
+                if (msg.messageType === 'VOICE' || msg.messageType === 'IMAGE' || msg.messageType === 'FILE' || !msg.me) {
                     appendMessage(msg);
                 }
             }
@@ -93,7 +84,7 @@ function handleNewMessage(msg) {
     } else {
         if (msg.messageType !== 'delete') {
             showNewMsgTip(msg);
-            updateUnreadBadge(msg.groupId, 1); // Increment count by 1
+            updateUnreadBadge(msg.groupId, 1);
         }
     }
 }
@@ -102,60 +93,70 @@ function handleNewMessage(msg) {
 function handleDeleteNotification(msg) {
     console.log('收到删除消息通知:', msg);
     
-    // 查找并移除对应的消息元素
-    if (msg.messageIdentifier) {
-        const [senderId, time] = msg.messageIdentifier.split('-');
-        
-        // 查找所有消息元素
-        const messageElements = document.querySelectorAll('.message');
-        messageElements.forEach(element => {
-            try {
-                const messageData = JSON.parse(element.dataset.messageData || '{}');
-                if (messageData.senderId == senderId && messageData.time === time) {
-                    // 找到匹配的消息，添加删除动画
-                    element.style.transition = 'opacity 0.3s ease';
-                    element.style.opacity = '0';
-                    setTimeout(() => {
-                        if (element.parentNode) {
-                            element.remove();
-                        }
-                    }, 300);
+    // 使用消息ID删除
+    const messageId = msg.id || msg.messageId;
+    if (messageId) {
+        const messageElement = document.querySelector(`[data-message-id="${messageId}"]`);
+        if (messageElement) {
+            messageElement.style.transition = 'opacity 0.3s ease';
+            messageElement.style.opacity = '0';
+            setTimeout(() => {
+                if (messageElement.parentNode) {
+                    messageElement.remove();
                 }
-            } catch (e) {
-                console.error('解析消息数据失败:', e);
-            }
-        });
+            }, 300);
+            console.log('已删除消息元素:', messageId);
+        } else {
+            console.log('未找到要删除的消息元素:', messageId);
+        }
     }
 }
 
 function appendMessage(msg) {
-    console.log('Appending message:', msg); // 调试信息
+    console.log('Appending message:', msg);
     
     const box = document.getElementById('chatMessages');
     
-    // 为消息添加唯一标识，避免重复显示
-    const messageId = `msg-${msg.senderId}-${msg.content.substring(0, 20)}-${new Date(msg.time).getTime()}`;
+    // 简单直接的逻辑：使用消息的真实ID
+    const messageId = msg.id || `msg-${msg.senderId}-${new Date(msg.time).getTime()}`;
     
     // 检查是否已经存在相同的消息
-    if (document.getElementById(messageId)) {
-        return; // 消息已存在，不重复添加
+    if (document.querySelector(`[data-message-id="${messageId}"]`)) {
+        console.log('消息已存在，跳过:', messageId);
+        return;
     }
     
     const div = document.createElement('div');
-    div.id = messageId;
     div.className = 'message' + (msg.me ? ' me' : '');
-    
-    // 存储消息数据到DOM元素，方便右键删除时使用
+    div.setAttribute('data-message-id', messageId);
+    // 只有数字ID才能删除
+    div.setAttribute('data-has-real-id', (msg.id && !isNaN(msg.id)).toString());
     div.dataset.messageData = JSON.stringify(msg);
     
     let messageContent = '';
     const senderName = msg.me ? '' : `<div class="sender-name" style="font-size: 12px; color: #666; margin-bottom: 4px;">${escapeHtml(msg.senderName)} (${escapeHtml(msg.senderRole)})</div>`;
     
-    if (msg.messageType === 'audio' || msg.messageType === 'VOICE') {
-        // 语音消息 - 兼容两种类型
-        const duration = msg.duration || 0;
-        const audioUrl = msg.audioUrl || '';
-        console.log('Audio message - URL:', audioUrl, 'Duration:', duration, 'Time:', msg.time); // 调试信息
+    // 兼容不同的消息类型格式
+    const messageType = msg.messageType.toLowerCase();
+    
+    if (messageType === 'voice' || messageType === 'audio') {
+        // 语音消息 - 兼容VOICE和audio两种类型
+        let duration = msg.duration || 0;
+        let audioUrl = msg.audioUrl || '';
+        
+        // 如果content是JSON字符串，尝试解析
+        if (!audioUrl && msg.content && msg.content.startsWith('{')) {
+            try {
+                const contentData = JSON.parse(msg.content);
+                audioUrl = contentData.audioUrl || '';
+                duration = contentData.duration || duration;
+            } catch (e) {
+                console.warn('解析语音消息content失败:', e);
+            }
+        }
+        
+        console.log('语音消息 - URL:', audioUrl, 'Duration:', duration);
+        
         messageContent = `
             <div class="bubble voice-bubble">
                 <i class="fas fa-play-circle"></i>
@@ -165,20 +166,63 @@ function appendMessage(msg) {
                 ${duration ? `<span class="duration">${duration}"</span>` : ''}
             </div>
         `;
-    } else if (msg.messageType === 'image' || msg.messageType === 'IMAGE') {
-        // 图片消息 - 兼容两种类型
+    } else if (messageType === 'image') {
+        // 图片消息
+        let imageUrl = msg.imageUrl || '';
+        
+        // 如果content是JSON字符串，尝试解析
+        if (!imageUrl && msg.content && msg.content.startsWith('{')) {
+            try {
+                const contentData = JSON.parse(msg.content);
+                imageUrl = contentData.imageUrl || '';
+            } catch (e) {
+                console.warn('解析图片消息content失败:', e);
+            }
+        }
+        
         messageContent = `
             <div class="image-bubble">
-                <img src="${msg.imageUrl || ''}" alt="图片" onclick="showImageModal('${msg.imageUrl || ''}')">
+                <img src="${imageUrl}" alt="图片" onclick="showImageModal('${imageUrl}')">
             </div>
         `;
-    } else if (msg.messageType === 'FILE') {
-        // 文件消息
+    } else if (messageType === 'file') {
+        // 文件消息 - 兼容历史消息和JSON格式
+        let displayName = msg.fileName || '附件';
+        let fileUrl = msg.fileUrl || '';
+        
+        // 如果content是JSON字符串，尝试解析
+        if (msg.content && msg.content.startsWith('{')) {
+            try {
+                const contentData = JSON.parse(msg.content);
+                displayName = contentData.fileName || displayName;
+                fileUrl = contentData.fileUrl || fileUrl;
+            } catch (e) {
+                console.warn('解析文件消息content失败:', e);
+            }
+        }
+        
+        // 如果没有文件名，尝试从URL中提取
+        if (!displayName || displayName === '附件') {
+            if (fileUrl) {
+                const urlParts = fileUrl.split('/');
+                const filename = urlParts[urlParts.length - 1];
+                if (filename && filename.includes('.')) {
+                    displayName = decodeURIComponent(filename);
+                } else if (fileUrl.includes('.pdf')) {
+                    displayName = '文档.pdf';
+                } else if (fileUrl.includes('.jpg') || fileUrl.includes('.png')) {
+                    displayName = '图片文件';
+                } else {
+                    displayName = '文件';
+                }
+            }
+        }
+        
         messageContent = `
             <div class="bubble file-bubble">
                 <i class="fas fa-file-alt"></i>
-                <a href="/download?path=${encodeURIComponent(msg.fileUrl)}" target="_blank" download="${escapeHtml(msg.fileName || '附件')}">
-                    ${escapeHtml(msg.fileName || '附件')}
+                <a href="/download?path=${encodeURIComponent(fileUrl)}" target="_blank" download="${escapeHtml(displayName)}">
+                    ${escapeHtml(displayName)}
                 </a>
             </div>
         `;
@@ -200,6 +244,7 @@ function appendMessage(msg) {
     box.scrollTop = box.scrollHeight;
 }
 
+// 其他函数保持不变...
 function showNewMsgTip(msg) {
     const box = document.createElement('div');
     box.textContent = `收到来自 [${msg.senderName}] 的新消息: ${msg.content}`;
@@ -238,7 +283,7 @@ async function loadGroupList() {
             userList.appendChild(div);
         });
 
-        await loadUnreadCounts(); // Load unread counts after groups are rendered
+        await loadUnreadCounts();
     } catch (e) {
         document.getElementById('userList').innerHTML = '<div style="padding:20px;color:red;">加载失败</div>';
     }
@@ -252,7 +297,7 @@ async function loadUnreadCounts() {
             if (unreadMap.hasOwnProperty(groupId)) {
                 const count = unreadMap[groupId];
                 if (count > 0) {
-                    updateUnreadBadge(groupId, count, true); // Set count directly
+                    updateUnreadBadge(groupId, count, true);
                 } 
             }
         }
@@ -303,17 +348,14 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
     }
 }
 
-
 async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
     
-    // 获取群组详细信息
     try {
         const groupInfoRes = await get(`/medical/chat/group/${groupId}/info`);
         const groupInfo = groupInfoRes.data;
         
-        // 更新聊天标题，显示群组名称和成员信息
         const memberCount = groupInfo.members ? groupInfo.members.length : 0;
         const memberNames = groupInfo.members ? 
             groupInfo.members.map(m => m.realName || m.username).join('、') : '';
@@ -347,10 +389,8 @@ async function selectGroup(groupId, groupName) {
         }
     });
 
-    // Subscribe to the group topic for real-time messages
     subscribeToGroupTopic(groupId);
 
-    // Mark as read
     try {
         await post(`/chat/groups/${groupId}/read`);
         const badge = document.querySelector(`.user-item[data-group-id='${groupId}'] .unread-badge`);
@@ -368,13 +408,33 @@ async function selectGroup(groupId, groupName) {
 async function loadGroupMessages() {
     if (!currentGroupId) return;
     try {
-        const res = await get(`/medical/chat/group/${currentGroupId}/messages`);
+        console.log('loadGroupMessages - 开始加载群组消息, groupId:', currentGroupId);
+        console.log('loadGroupMessages - 当前用户:', currentUser);
+        console.log('loadGroupMessages - Token:', localStorage.getItem('token'));
+        
+        const apiUrl = `/medical/chat/group/${currentGroupId}/messages`;
+        console.log('loadGroupMessages - 调用API:', apiUrl);
+        
+        const res = await get(apiUrl);
+        console.log('loadGroupMessages - API响应:', res);
+        
         const messagePage = res.data || { records: [] };
+        console.log('loadGroupMessages - 消息数据:', messagePage);
+        
         const box = document.getElementById('chatMessages');
         box.innerHTML = '';
-        messagePage.records.forEach(appendMessage);
+        
+        if (messagePage.records && messagePage.records.length > 0) {
+            console.log('loadGroupMessages - 渲染消息数量:', messagePage.records.length);
+            messagePage.records.forEach(appendMessage);
+        } else {
+            console.log('loadGroupMessages - 没有消息记录');
+            box.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">暂无消息</div>';
+        }
     } catch (e) {
-        document.getElementById('chatMessages').innerHTML = '<div style="color:red;">消息加载失败</div>';
+        console.error('loadGroupMessages - 加载消息失败:', e);
+        console.error('loadGroupMessages - 错误详情:', e.message, e.stack);
+        document.getElementById('chatMessages').innerHTML = `<div style="color:red;">消息加载失败: ${e.message}</div>`;
     }
 }
 
@@ -385,19 +445,7 @@ function sendMessage() {
         return;
     }
     try {
-        // 立即在界面上显示自己发送的消息
-        const tempMessage = {
-            groupId: currentGroupId,
-            senderId: currentUser.id,
-            senderName: currentUser.realName || currentUser.username,
-            senderRole: currentUser.role,
-            content: content,
-            time: new Date().toISOString(),
-            me: true
-        };
-        appendMessage(tempMessage);
-        
-        // 发送消息到服务器 - 使用统一的消息格式
+        // 发送消息到服务器，等待WebSocket返回后显示
         const messageObject = {
             messageType: 'TEXT',
             content: content
@@ -409,56 +457,6 @@ function sendMessage() {
     }
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-}
-
-function formatTime(t, returnDate = false) {
-    if (!t) return returnDate ? new Date() : '';
-    
-    try {
-        let date;
-        
-        // 处理不同格式的时间字符串
-        if (typeof t === 'string') {
-            // 如果是ISO格式但没有时区信息，直接当作本地时间处理
-            if (t.includes('T') && !t.includes('Z') && !t.includes('+')) {
-                // 格式如: 2024-01-15T14:30:00
-                // 直接替换T为空格，当作本地时间解析
-                const localTimeStr = t.replace('T', ' ');
-                date = new Date(localTimeStr);
-                console.log('ISO时间处理:', t, '->', localTimeStr, '-> Date:', date);
-            } else {
-                date = new Date(t);
-            }
-        } else {
-            date = new Date(t);
-        }
-        
-        if (isNaN(date.getTime())) {
-            console.warn('Invalid date format:', t);
-            return returnDate ? new Date() : '';
-        }
-        
-        if (returnDate) {
-            return date;
-        }
-        
-        // 格式化为 MM-dd HH:mm
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
-        
-        const formatted = `${month}-${day} ${hours}:${minutes}`;
-        console.log('时间格式化结果:', t, '->', formatted, '(小时:', hours, ')');
-        return formatted;
-    } catch (error) {
-        console.error('Error formatting time:', error, 'Input:', t);
-        return returnDate ? new Date() : '';
-    }
-}
 // 语音录制相关变量
 let mediaRecorder = null;
 let audioChunks = [];
@@ -470,7 +468,6 @@ async function startRecordAudio() {
     
     if (!isRecording) {
         try {
-            // 请求麦克风权限
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
@@ -482,16 +479,12 @@ async function startRecordAudio() {
             mediaRecorder.onstop = async () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
                 await sendAudioMessage(audioBlob);
-                
-                // 停止所有音频轨道
                 stream.getTracks().forEach(track => track.stop());
             };
             
-            // 开始录制
             mediaRecorder.start();
             isRecording = true;
             
-            // 更新按钮状态 - 使用CSS类
             recordBtn.classList.add('recording');
             recordBtn.title = '停止录制';
             recordBtn.innerHTML = `
@@ -505,13 +498,11 @@ async function startRecordAudio() {
             alert('无法访问麦克风，请检查浏览器权限设置');
         }
     } else {
-        // 停止录制
         if (mediaRecorder && mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
         }
         isRecording = false;
         
-        // 恢复按钮状态
         recordBtn.classList.remove('recording');
         recordBtn.title = '录制语音';
         recordBtn.innerHTML = `
@@ -522,30 +513,16 @@ async function startRecordAudio() {
     }
 }
 
-// 发送语音消息
+// 发送语音消息 - 修复版
 async function sendAudioMessage(audioBlob) {
     if (!currentGroupId) return;
 
-    // 1. 立即创建一个临时的“正在发送”消息
-    const tempId = `temp-${Date.now()}`;
-    const tempMessage = {
-        id: tempId,
-        groupId: currentGroupId,
-        senderId: currentUser.id,
-        senderName: currentUser.realName || currentUser.username,
-        senderRole: currentUser.role,
-        content: '[语音发送中...]',
-        messageType: 'audio',
-        time: new Date().toISOString(),
-        me: true,
-        duration: 0, // 临时时长
-        audioUrl: ''
-    };
-    appendMessage(tempMessage);
-    const tempMessageElement = document.getElementById(tempId);
-
     try {
-        // 2. 上传音频文件
+        // 显示发送中状态
+        const recordBtn = document.getElementById('recordBtn');
+        recordBtn.style.opacity = '0.5';
+        recordBtn.disabled = true;
+
         const formData = new FormData();
         formData.append('audio', audioBlob, 'voice_message.wav');
         formData.append('groupId', currentGroupId);
@@ -564,38 +541,15 @@ async function sendAudioMessage(audioBlob) {
                 throw new Error('上传响应中缺少audioUrl');
             }
 
-            // 3. 上传成功后，通过WebSocket发送消息
+            // 通过WebSocket发送语音消息
             const audioMessage = {
-                messageType: 'VOICE', // 使用统一的消息类型
+                messageType: 'VOICE',
                 audioUrl: result.data.audioUrl,
                 duration: result.data.duration || 0
             };
+            
+            console.log('发送语音消息:', audioMessage);
             stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(audioMessage));
-
-            // 4. 更新临时消息为最终状态
-            if (tempMessageElement) {
-                const finalMessageData = {
-                    ...tempMessage,
-                    messageType: 'audio',
-                    audioUrl: result.data.audioUrl,
-                    duration: result.data.duration || 0,
-                    content: `[语音消息]`
-                };
-                
-                // 更新DOM元素的数据和内容
-                tempMessageElement.dataset.messageData = JSON.stringify(finalMessageData);
-                const bubble = tempMessageElement.querySelector('.bubble');
-                if (bubble) {
-                    bubble.className = 'bubble audio-message';
-                    bubble.innerHTML = `
-                        <div class="audio-controls">
-                            <button class="play-btn" onclick="playAudio('${finalMessageData.audioUrl}', this)" data-playing="false">▶️</button>
-                            <span class="audio-duration">${finalMessageData.duration}秒</span>
-                            <div class="audio-wave">🎵 语音消息</div>
-                        </div>
-                    `;
-                }
-            }
 
         } else {
             const errorText = await response.text();
@@ -605,153 +559,15 @@ async function sendAudioMessage(audioBlob) {
     } catch (error) {
         console.error('发送语音消息失败:', error);
         alert('语音消息发送失败: ' + error.message);
-        // 如果失败，移除临时消息
-        if (tempMessageElement) {
-            tempMessageElement.remove();
-        }
+    } finally {
+        // 恢复录音按钮状态
+        const recordBtn = document.getElementById('recordBtn');
+        recordBtn.style.opacity = '1';
+        recordBtn.disabled = false;
     }
 }
 
-// 图片选择处理
-function onImageSelected(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!file.type.startsWith('image/')) {
-        alert('请选择图片文件');
-        return;
-    }
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB限制
-        alert('图片文件不能超过5MB');
-        return;
-    }
-    
-    sendImageMessage(file);
-}
-
-// 发送图片消息
-async function sendImageMessage(imageFile) {
-    if (!currentGroupId) return;
-    
-    try {
-        const formData = new FormData();
-        formData.append('image', imageFile);
-        formData.append('groupId', currentGroupId);
-        
-        // 显示上传中的消息
-        const tempMessage = {
-            groupId: currentGroupId,
-            senderId: currentUser.id,
-            senderName: currentUser.realName || currentUser.username,
-            senderRole: currentUser.role,
-            content: '[图片上传中...]',
-            messageType: 'image',
-            time: new Date().toISOString(),
-            me: true
-        };
-        appendMessage(tempMessage);
-        
-        const response = await fetch('/upload-image', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: formData
-        });
-        
-        if (response.ok) {
-            const result = await response.json();
-            const imageMessage = {
-                messageType: 'IMAGE', // 使用统一的消息类型
-                imageUrl: result.data.imageUrl
-            };
-            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(imageMessage));
-        } else {
-            console.error('图片上传失败');
-            alert('图片发送失败');
-        }
-        
-    } catch (error) {
-        console.error('发送图片消息失败:', error);
-        alert('图片发送失败');
-    }
-}
-
-// 音频文件选择处理
-function onAudioSelected(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!file.type.startsWith('audio/')) {
-        alert('请选择音频文件');
-        return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB限制
-        alert('音频文件不能超过10MB');
-        return;
-    }
-    
-    sendAudioMessage(file);
-}
-
-// 文件选择处理
-function onFileSelected(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (file.size > 10 * 1024 * 1024) { // 10MB限制
-        alert('文件大小不能超过10MB');
-        return;
-    }
-    
-    sendFileMessage(file);
-}
-
-// 发送文件消息
-async function sendFileMessage(file) {
-    if (!currentGroupId) return;
-    
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        // 显示上传中的消息
-        const tempMessage = {
-            groupId: currentGroupId,
-            senderId: currentUser.id,
-            senderName: currentUser.realName || currentUser.username,
-            senderRole: currentUser.role,
-            content: '[文件上传中...]',
-            messageType: 'FILE',
-            time: new Date().toISOString(),
-            me: true
-        };
-        appendMessage(tempMessage);
-        
-        const response = await post('/upload/file', formData, true);
-        
-        if (response && response.data) {
-            const fileMessage = {
-                messageType: 'FILE',
-                fileName: response.data.fileName || response.data.originalFilename,
-                fileUrl: response.data.fileUrl || response.data.url || response.data.imageUrl || response.data.audioUrl
-            };
-            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(fileMessage));
-        } else {
-            throw new Error('文件上传响应格式错误');
-        }
-        
-    } catch (error) {
-        console.error('发送文件消息失败:', error);
-        alert('文件发送失败: ' + error.message);
-    }
-}
-
-
-
-// 播放音频
+// 播放音频 - 修复版
 function playAudio(audioUrl, button) {
     if (!audioUrl) {
         console.error('音频URL为空');
@@ -759,16 +575,14 @@ function playAudio(audioUrl, button) {
         return;
     }
     
-    // 检查按钮状态
     const isPlaying = button.getAttribute('data-playing') === 'true';
     
     if (isPlaying) {
-        // 如果正在播放，停止播放
         if (window.currentAudio) {
             window.currentAudio.pause();
             window.currentAudio.currentTime = 0;
         }
-        button.textContent = '▶️';
+        button.innerHTML = '<i class="fas fa-play"></i>';
         button.setAttribute('data-playing', 'false');
         return;
     }
@@ -776,99 +590,151 @@ function playAudio(audioUrl, button) {
     // 停止其他正在播放的音频
     if (window.currentAudio) {
         window.currentAudio.pause();
-        // 重置其他播放按钮
         document.querySelectorAll('.play-btn[data-playing="true"]').forEach(btn => {
-            btn.textContent = '▶️';
+            btn.innerHTML = '<i class="fas fa-play"></i>';
             btn.setAttribute('data-playing', 'false');
         });
     }
     
-    // 创建新的音频对象
     const audio = new Audio(audioUrl);
     window.currentAudio = audio;
     
-    // 更新按钮状态
-    button.textContent = '⏸️';
+    button.innerHTML = '<i class="fas fa-pause"></i>';
     button.setAttribute('data-playing', 'true');
     
-    // 音频播放结束时重置按钮
     audio.onended = () => {
-        button.textContent = '▶️';
+        button.innerHTML = '<i class="fas fa-play"></i>';
         button.setAttribute('data-playing', 'false');
         window.currentAudio = null;
     };
     
-    // 音频播放错误时处理
     audio.onerror = (error) => {
         console.error('音频播放失败:', error);
-        console.error('音频URL:', audioUrl);
-        button.textContent = '▶️';
+        button.innerHTML = '<i class="fas fa-play"></i>';
         button.setAttribute('data-playing', 'false');
         window.currentAudio = null;
-        
-        // 尝试重新加载音频
-        setTimeout(() => {
-            console.log('尝试重新加载音频...');
-            const retryAudio = new Audio(audioUrl);
-            retryAudio.play().catch(retryError => {
-                console.error('重试播放失败:', retryError);
-                alert('音频播放失败，请检查文件是否存在');
-            });
-        }, 1000);
+        alert('音频播放失败，请检查文件是否存在');
     };
     
-    // 开始播放
     audio.play().catch(error => {
         console.error('音频播放失败:', error);
-        button.textContent = '▶️';
+        button.innerHTML = '<i class="fas fa-play"></i>';
         button.setAttribute('data-playing', 'false');
         window.currentAudio = null;
         alert('音频播放失败: ' + error.message);
     });
 }
 
-// 显示图片模态框
-function showImageModal(imageUrl) {
-    if (!imageUrl) return;
+// 删除消息 - 修复版
+async function deleteMessage(message, messageElement) {
+    if (!confirm('确定要删除这条消息吗？')) {
+        return;
+    }
     
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.8);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10000;
-        cursor: pointer;
-    `;
-    
-    const img = document.createElement('img');
-    img.src = imageUrl;
-    img.style.cssText = `
-        max-width: 90%;
-        max-height: 90%;
-        border-radius: 8px;
-    `;
-    
-    modal.appendChild(img);
-    modal.onclick = () => modal.remove();
-    document.body.appendChild(modal);
+    try {
+        // 获取消息ID - 必须是数字类型的数据库ID
+        let messageId = message.id;
+        
+        // 如果message.id不存在或不是数字，尝试从data-message-id获取
+        if (!messageId || isNaN(messageId)) {
+            const dataMessageId = messageElement.getAttribute('data-message-id');
+            // 检查data-message-id是否是数字
+            if (dataMessageId && !isNaN(dataMessageId)) {
+                messageId = dataMessageId;
+            }
+        }
+        
+        // 验证messageId是否为有效的数字
+        if (!messageId || isNaN(messageId)) {
+            console.log('无效的消息ID:', messageId, '消息对象:', message);
+            alert('无法删除：这是临时消息或消息ID无效');
+            return;
+        }
+        
+        messageId = parseInt(messageId);
+        console.log('准备删除消息:', messageId, message);
+        
+        // 立即从界面移除
+        if (messageElement) {
+            messageElement.style.opacity = '0.5';
+            messageElement.style.pointerEvents = 'none';
+        }
+        
+        // 使用原有的REST API删除消息（逻辑删除）
+        try {
+            console.log('调用REST API删除消息:', messageId);
+            const response = await fetch(`/api/chat/message/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            console.log('删除API响应:', result);
+            
+            if (result.code === 200) {
+                console.log('消息逻辑删除成功');
+                // 通过WebSocket通知其他用户
+                if (stompClient && stompClient.connected) {
+                    const deleteNotification = {
+                        messageType: 'delete',
+                        messageId: parseInt(messageId),
+                        groupId: currentGroupId
+                    };
+                    stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(deleteNotification));
+                }
+            } else {
+                throw new Error(result.message || '删除失败');
+            }
+        } catch (apiError) {
+            console.error('REST API删除失败，尝试WebSocket方式:', apiError);
+            // 如果REST API失败，回退到WebSocket方式
+            if (stompClient && stompClient.connected) {
+                const deleteNotification = {
+                    messageType: 'delete',
+                    messageId: parseInt(messageId),
+                    groupId: currentGroupId
+                };
+                stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(deleteNotification));
+            }
+        }
+        
+        // 立即移除元素（不等待服务器响应）
+        setTimeout(() => {
+            if (messageElement && messageElement.parentNode) {
+                messageElement.remove();
+                console.log('消息元素已移除');
+            }
+        }, 300);
+        
+    } catch (error) {
+        console.error('删除消息失败:', error);
+        alert('删除消息失败: ' + error.message);
+        
+        if (messageElement) {
+            messageElement.style.opacity = '1';
+            messageElement.style.pointerEvents = 'auto';
+        }
+    }
 }
 
 // 显示右键菜单
 function showContextMenu(event, message, messageElement) {
-    // 移除已存在的菜单
     const existingMenu = document.getElementById('contextMenu');
     if (existingMenu) {
         existingMenu.remove();
     }
     
-    // 只有自己发送的消息才能删除
     if (!message.me) {
+        return;
+    }
+    
+    // 检查消息是否有真实的数据库ID
+    const hasRealId = messageElement.getAttribute('data-has-real-id') === 'true';
+    if (!hasRealId) {
+        console.log('消息没有有效的数据库ID，无法删除');
         return;
     }
     
@@ -912,7 +778,6 @@ function showContextMenu(event, message, messageElement) {
     menu.appendChild(deleteOption);
     document.body.appendChild(menu);
     
-    // 点击其他地方关闭菜单
     document.addEventListener('click', function closeMenu(e) {
         if (!menu.contains(e.target)) {
             menu.remove();
@@ -921,47 +786,166 @@ function showContextMenu(event, message, messageElement) {
     });
 }
 
-// 删除消息
-async function deleteMessage(message, messageElement) {
-    if (!confirm('确定要删除这条消息吗？')) {
+// 其他功能函数...
+function onImageSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
         return;
     }
     
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件不能超过5MB');
+        return;
+    }
+    
+    sendImageMessage(file);
+}
+
+async function sendImageMessage(imageFile) {
+    if (!currentGroupId) return;
+    
     try {
-        // 直接从界面中移除消息
-        if (messageElement) {
-            messageElement.style.opacity = '0.5';
-            messageElement.style.pointerEvents = 'none';
-        }
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        formData.append('groupId', currentGroupId);
         
-        // 通过WebSocket通知其他用户删除消息（使用消息的唯一标识）
-        if (stompClient && stompClient.connected) {
-            const deleteNotification = {
-                messageType: 'delete',
-                messageIdentifier: `${message.senderId}-${message.time}`, // 使用发送者ID和时间作为唯一标识
-                groupId: currentGroupId,
-                content: message.content
+        const response = await fetch('/upload-image', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            const imageMessage = {
+                messageType: 'IMAGE',
+                imageUrl: result.data.imageUrl
             };
-            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(deleteNotification));
+            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(imageMessage));
+        } else {
+            console.error('图片上传失败');
+            alert('图片发送失败');
         }
-        
-        // 延迟移除元素，给用户一个视觉反馈
-        setTimeout(() => {
-            if (messageElement && messageElement.parentNode) {
-                messageElement.remove();
-            }
-        }, 500);
-        
-        console.log('消息删除成功');
         
     } catch (error) {
-        console.error('删除消息失败:', error);
-        alert('删除消息失败: ' + error.message);
+        console.error('发送图片消息失败:', error);
+        alert('图片发送失败');
+    }
+}
+
+function onFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+    
+    sendFileMessage(file);
+}
+
+async function sendFileMessage(file) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
         
-        // 恢复消息显示
-        if (messageElement) {
-            messageElement.style.opacity = '1';
-            messageElement.style.pointerEvents = 'auto';
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const fileMessage = {
+                messageType: 'FILE',
+                fileName: response.data.fileName || response.data.originalFilename,
+                fileUrl: response.data.fileUrl || response.data.url || response.data.imageUrl || response.data.audioUrl
+            };
+            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(fileMessage));
+        } else {
+            throw new Error('文件上传响应格式错误');
         }
+        
+    } catch (error) {
+        console.error('发送文件消息失败:', error);
+        alert('文件发送失败: ' + error.message);
+    }
+}
+
+function showImageModal(imageUrl) {
+    if (!imageUrl) return;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        cursor: pointer;
+    `;
+    
+    const img = document.createElement('img');
+    img.src = imageUrl;
+    img.style.cssText = `
+        max-width: 90%;
+        max-height: 90%;
+        border-radius: 8px;
+    `;
+    
+    modal.appendChild(img);
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+}
+
+function formatTime(t, returnDate = false) {
+    if (!t) return returnDate ? new Date() : '';
+    
+    try {
+        let date;
+        
+        if (typeof t === 'string') {
+            if (t.includes('T') && !t.includes('Z') && !t.includes('+')) {
+                const localTimeStr = t.replace('T', ' ');
+                date = new Date(localTimeStr);
+            } else {
+                date = new Date(t);
+            }
+        } else {
+            date = new Date(t);
+        }
+        
+        if (isNaN(date.getTime())) {
+            console.warn('Invalid date format:', t);
+            return returnDate ? new Date() : '';
+        }
+        
+        if (returnDate) {
+            return date;
+        }
+        
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        
+        return `${month}-${day} ${hours}:${minutes}`;
+    } catch (error) {
+        console.error('Error formatting time:', error, 'Input:', t);
+        return returnDate ? new Date() : '';
     }
 }

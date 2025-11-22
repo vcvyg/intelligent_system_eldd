@@ -15,5 +15,7 @@ public class MessageVO {
     private boolean me; // Is this message sent by the current user?
     private String audioUrl; // 音频文件URL
     private String imageUrl; // 图片文件URL
+    private String fileName; // 文件名
+    private String fileUrl; // 文件URL
     private Integer duration; // 音频时长（秒）
 }

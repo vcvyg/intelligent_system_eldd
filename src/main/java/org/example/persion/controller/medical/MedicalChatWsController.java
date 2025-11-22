@@ -53,10 +53,12 @@ public class MedicalChatWsController {
             System.out.println("正在处理来自用户 " + senderId + " (" + senderUsername + ") 发往群组 " + groupId + " 的消息。");
 
             // 1. 解析消息内容
-            String messageType = "text";
+            String messageType = "TEXT";
             String messageContent = content;
             String audioUrl = null;
             String imageUrl = null;
+            String fileName = null;
+            String fileUrl = null;
             Integer duration = null;
             
             if (content.startsWith("{")) {
@@ -67,15 +69,24 @@ public class MedicalChatWsController {
                     if (jsonNode.has("messageType")) {
                         messageType = jsonNode.get("messageType").asText();
                         
-                        if ("audio".equals(messageType)) {
+                        if (jsonNode.has("content")) {
+                            messageContent = jsonNode.get("content").asText();
+                        }
+                        
+                        if ("VOICE".equals(messageType)) {
                             audioUrl = jsonNode.has("audioUrl") ? jsonNode.get("audioUrl").asText() : null;
                             duration = jsonNode.has("duration") ? jsonNode.get("duration").asInt() : null;
-                            messageContent = "[语音消息]";
-                        } else if ("image".equals(messageType)) {
+                        } else if ("IMAGE".equals(messageType)) {
                             imageUrl = jsonNode.has("imageUrl") ? jsonNode.get("imageUrl").asText() : null;
-                            messageContent = "[图片消息]";
+                        } else if ("FILE".equals(messageType)) {
+                            fileName = jsonNode.has("fileName") ? jsonNode.get("fileName").asText() : null;
+                            fileUrl = jsonNode.has("fileUrl") ? jsonNode.get("fileUrl").asText() : null;
                         } else if ("delete".equals(messageType)) {
-                            // (删除逻辑暂时省略)
+                            // 处理删除消息
+                            Long messageId = jsonNode.has("messageId") ? jsonNode.get("messageId").asLong() : null;
+                            if (messageId != null) {
+                                handleDeleteMessage(groupId, messageId, senderId);
+                            }
                             return;
                         }
                     }
@@ -93,11 +104,14 @@ public class MedicalChatWsController {
             chatMessage.setMessageType(messageType);
             chatMessage.setContent(messageContent);
             
-            if ("audio".equals(messageType)) {
+            if ("VOICE".equals(messageType)) {
                 chatMessage.setAudioUrl(audioUrl);
                 chatMessage.setDuration(duration);
-            } else if ("image".equals(messageType)) {
+            } else if ("IMAGE".equals(messageType)) {
                 chatMessage.setImageUrl(imageUrl);
+            } else if ("FILE".equals(messageType)) {
+                chatMessage.setFileName(fileName);
+                chatMessage.setFileUrl(fileUrl);
             }
 
             java.time.LocalDateTime currentTime = java.time.LocalDateTime.now();
@@ -153,6 +167,14 @@ public class MedicalChatWsController {
         vo.setImageUrl(convertToRelativePath(chatMessage.getImageUrl()));
         vo.setDuration(chatMessage.getDuration());
         
+        // 设置文件字段
+        if (chatMessage.getFileName() != null) {
+            vo.setFileName(chatMessage.getFileName());
+        }
+        if (chatMessage.getFileUrl() != null) {
+            vo.setFileUrl(convertToRelativePath(chatMessage.getFileUrl()));
+        }
+        
         // Format time from entity's createTime, which is now a LocalDateTime
         if (chatMessage.getCreateTime() != null) {
             // 使用ISO格式，确保时间正确传递
@@ -199,26 +221,51 @@ public class MedicalChatWsController {
     }
     
     /**
-     * 处理删除消息通知
+     * 处理删除消息
      */
     private void handleDeleteMessage(Long groupId, Long messageId, Long senderId) {
         try {
-            // 获取群组所有成员
+            // 1. 验证消息是否存在且属于发送者
+            ChatMessage existingMessage = chatMessageMapper.selectById(messageId);
+            if (existingMessage == null) {
+                System.err.println("要删除的消息不存在: messageId=" + messageId);
+                return;
+            }
+            
+            if (!existingMessage.getSenderId().equals(senderId)) {
+                System.err.println("用户无权删除此消息: messageId=" + messageId + ", senderId=" + senderId);
+                return;
+            }
+            
+            // 2. 逻辑删除消息（设置deleted=1）
+            existingMessage.setDeleted(1);
+            int updatedRows = chatMessageMapper.updateById(existingMessage);
+            if (updatedRows > 0) {
+                System.out.println("消息已逻辑删除: messageId=" + messageId + ", deleted=1");
+            } else {
+                System.err.println("逻辑删除消息失败: messageId=" + messageId);
+                return;
+            }
+            
+            // 3. 获取群组所有成员
             List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
             List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
             List<User> allMembers = Stream.concat(familyMembers.stream(), medicalMembers.stream())
                     .distinct()
                     .toList();
             
-            // 创建删除通知消息
+            // 4. 创建删除通知消息
             MessageVO deleteNotification = new MessageVO();
             deleteNotification.setGroupId(groupId);
             deleteNotification.setMessageType("delete");
             deleteNotification.setSenderId(senderId);
             deleteNotification.setContent("消息已删除");
-            deleteNotification.setTime(java.time.LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME));
+            deleteNotification.setTime(java.time.LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
             
-            // 广播删除通知给所有群组成员
+            // 添加消息ID用于前端删除
+            deleteNotification.setId(messageId);
+            
+            // 5. 广播删除通知给所有群组成员
             for (User member : allMembers) {
                 messagingTemplate.convertAndSendToUser(
                     member.getUsername(),
@@ -227,13 +274,13 @@ public class MedicalChatWsController {
                 );
             }
             
-            // 也广播到群组主题
+            // 6. 也广播到群组主题
             messagingTemplate.convertAndSend("/topic/group/" + groupId, deleteNotification);
             
             System.out.println("删除消息通知已广播: messageId=" + messageId + ", groupId=" + groupId);
             
         } catch (Exception e) {
-            System.err.println("处理删除消息通知失败: " + e.getMessage());
+            System.err.println("处理删除消息失败: " + e.getMessage());
             e.printStackTrace();
         }
     }

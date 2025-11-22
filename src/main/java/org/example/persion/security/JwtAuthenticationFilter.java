@@ -27,6 +27,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // 跳过文件相关路径，不进行JWT认证
+        String requestURI = request.getRequestURI();
+        if (shouldSkipAuthentication(requestURI)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String token = getTokenFromRequest(request);
 
         if (token != null && jwtUtil.validateToken(token)) {
@@ -45,6 +52,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * 判断是否应该跳过JWT认证
+     */
+    private boolean shouldSkipAuthentication(String requestURI) {
+        // 文件相关路径完全跳过JWT认证
+        return requestURI.startsWith("/uploads/") ||
+               requestURI.startsWith("/api/files/") ||
+               requestURI.startsWith("/api/upload/") ||
+               requestURI.startsWith("/download") ||
+               requestURI.startsWith("/file-access/") ||
+               requestURI.startsWith("/api/auth/") ||
+               requestURI.startsWith("/ws-chat/") ||
+               requestURI.endsWith(".html") ||
+               requestURI.endsWith(".css") ||
+               requestURI.endsWith(".js") ||
+               requestURI.endsWith(".png") ||
+               requestURI.endsWith(".jpg") ||
+               requestURI.endsWith(".jpeg") ||
+               requestURI.endsWith(".gif") ||
+               requestURI.equals("/");
     }
 
     /**

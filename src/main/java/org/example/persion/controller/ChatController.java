@@ -1,8 +1,12 @@
 package org.example.persion.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
+import org.example.persion.entity.ChatMessage;
 import org.example.persion.entity.ElderlyInfo;
+import org.example.persion.repository.ChatMessageMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.security.SecurityUtil;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -20,6 +24,7 @@ public class ChatController {
 
     private final RedisTemplate<String, String> redisTemplate;
     private final ElderlyInfoMapper elderlyInfoMapper;
+    private final ChatMessageMapper chatMessageMapper;
 
     private static final String UNREAD_COUNT_KEY_PREFIX = "unread:count:";
 
@@ -84,5 +89,91 @@ public class ChatController {
         redisTemplate.delete(unreadKey);
 
         return Result.success();
+    }
+
+    /**
+     * 根据消息信息查找消息ID
+     */
+    @PostMapping("/message/find")
+    public Result<ChatMessage> findMessage(@RequestBody FindMessageDTO dto) {
+        try {
+            LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(ChatMessage::getGroupId, dto.getGroupId())
+                   .eq(ChatMessage::getSenderId, dto.getSenderId())
+                   .eq(ChatMessage::getContent, dto.getContent())
+                   .eq(ChatMessage::getMessageType, dto.getMessageType())
+                   .eq(ChatMessage::getDeleted, 0)
+                   .orderByDesc(ChatMessage::getCreateTime)
+                   .last("LIMIT 1");
+            
+            ChatMessage message = chatMessageMapper.selectOne(wrapper);
+            return Result.success(message);
+        } catch (Exception e) {
+            return Result.error("查找消息失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 删除消息
+     */
+    @DeleteMapping("/message/{messageId}")
+    public Result<Void> deleteMessage(@PathVariable Long messageId) {
+        try {
+            System.out.println("=== 删除消息请求开始 ===");
+            System.out.println("消息ID: " + messageId);
+            
+            Long currentUserId = SecurityUtil.getUserId();
+            System.out.println("当前用户ID: " + currentUserId);
+            
+            if (currentUserId == null) {
+                System.out.println("用户未登录，删除失败");
+                return Result.error("用户未登录");
+            }
+            
+            // 检查消息是否存在且属于当前用户
+            ChatMessage message = chatMessageMapper.selectById(messageId);
+            System.out.println("查询到的消息: " + message);
+            
+            if (message == null) {
+                System.out.println("消息不存在，删除失败");
+                return Result.error("消息不存在");
+            }
+            
+            System.out.println("消息发送者ID: " + message.getSenderId());
+            System.out.println("当前用户ID: " + currentUserId);
+            
+            if (!message.getSenderId().equals(currentUserId)) {
+                System.out.println("权限不足，删除失败");
+                return Result.error("只能删除自己发送的消息");
+            }
+            
+            // 软删除消息
+            System.out.println("开始软删除消息...");
+            message.setDeleted(1);
+            int updateResult = chatMessageMapper.updateById(message);
+            System.out.println("更新结果: " + updateResult);
+            
+            if (updateResult > 0) {
+                System.out.println("消息删除成功！messageId=" + messageId);
+                return Result.success();
+            } else {
+                System.out.println("消息删除失败！updateResult=" + updateResult);
+                return Result.error("删除失败");
+            }
+            
+        } catch (Exception e) {
+            System.err.println("删除消息异常: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("删除消息失败: " + e.getMessage());
+        }
+    }
+
+    @Data
+    public static class FindMessageDTO {
+        private Long groupId;
+        private Long senderId;
+        private String content;
+        private String messageType;
+        private String time;
     }
 }

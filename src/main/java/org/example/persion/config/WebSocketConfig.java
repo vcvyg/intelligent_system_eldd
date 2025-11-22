@@ -37,19 +37,36 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .setAllowedOriginPatterns("*")
                 .addInterceptors(new HandshakeInterceptor() {
                     @Override
-                    public boolean beforeHandshake(@NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response, @NonNull WebSocketHandler wsHandler, @NonNull Map<String, Object> attributes) {
+                    public boolean beforeHandshake(@NonNull ServerHttpRequest request, @NonNull ServerHttpResponse response, @NonNull WebSocketHandler wsHandler, @NonNull Map<String, Object> attributes) throws Exception {
                         System.out.println("WebSocket handshake request: " + request.getURI());
-                        
-                        // 暂时跳过token验证，先测试连接
-                        // TODO: 重新启用token验证
-                        
-                        // 设置一个测试用户ID
-                        attributes.put("userId", 7L);
-                        attributes.put("username", "3745");
-                        attributes.put("role", "MEDICAL");
-                        
-                        System.out.println("WebSocket handshake successful (token validation disabled for testing)");
-                        return true;
+
+                        String query = request.getURI().getQuery();
+                        if (query != null && query.contains("token=")) {
+                            String token = query.substring(query.indexOf("token=") + 6);
+                            try {
+                                token = java.net.URLDecoder.decode(token, StandardCharsets.UTF_8.name());
+                                if (jwtUtil.validateToken(token)) {
+                                    Long userId = jwtUtil.getUserIdFromToken(token);
+                                    String username = jwtUtil.getUsernameFromToken(token);
+                                    String role = jwtUtil.getRoleFromToken(token);
+
+                                    // 验证通过，将用户信息存入WebSocket session
+                                    attributes.put("userId", userId);
+                                    attributes.put("username", username);
+                                    attributes.put("role", role);
+                                    
+                                    System.out.println("WebSocket handshake successful for user: " + username + " with role: " + role);
+                                    return true;
+                                }
+                            } catch (Exception e) {
+                                System.err.println("WebSocket handshake failed due to token validation error: " + e.getMessage());
+                            }
+                        }
+
+                        // 如果没有token或token无效，拒绝连接
+                        System.err.println("WebSocket handshake failed: Missing or invalid token.");
+                        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return false;
                     }
 
                     @Override

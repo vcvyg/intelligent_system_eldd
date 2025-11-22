@@ -35,6 +35,65 @@ function logout() {
     window.location.href = 'login.html';
 }
 
+// FormData请求封装（不设置Content-Type）
+async function requestFormData(url, options = {}) {
+    const token = getToken();
+
+    const defaultOptions = {
+        headers: {
+            // 不设置Content-Type，让浏览器自动设置multipart/form-data
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        }
+    };
+
+    const finalOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
+    };
+
+    try {
+        const response = await fetch(API_BASE_URL + url, finalOptions);
+
+        // 检查响应类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('Response is not JSON:', contentType);
+            alert('服务器返回了非JSON数据，可能是未授权访问');
+            logout();
+            return null;
+        }
+
+        const data = await response.json();
+
+        // 处理未授权
+        if (response.status === 401 || response.status === 403) {
+            alert('登录已过期，请重新登录');
+            logout();
+            return null;
+        }
+
+        // 处理业务错误 - 修改为检查code字段
+        if (data.code !== 200) {
+            throw new Error(data.message || '请求失败');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('FormData Request error:', error);
+        // 如果是JSON解析错误,说明返回的不是JSON
+        if (error instanceof SyntaxError) {
+            alert('服务器返回了非JSON数据，请检查后端服务');
+        } else {
+            alert(error.message || '网络请求失败');
+        }
+        throw error;
+    }
+}
+
 // HTTP请求封装
 async function request(url, options = {}) {
     const token = getToken();
@@ -100,11 +159,20 @@ async function get(url) {
 }
 
 // POST请求
-async function post(url, data) {
-    return request(url, {
-        method: 'POST',
-        body: JSON.stringify(data)
-    });
+async function post(url, data, isFormData = false) {
+    const options = {
+        method: 'POST'
+    };
+    
+    if (isFormData) {
+        // FormData不需要设置Content-Type，浏览器会自动设置multipart/form-data
+        options.body = data;
+        // 创建一个特殊的request函数调用，不设置Content-Type
+        return requestFormData(url, options);
+    } else {
+        options.body = JSON.stringify(data);
+        return request(url, options);
+    }
 }
 
 // PUT请求

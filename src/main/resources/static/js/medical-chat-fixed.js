@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     document.getElementById('welcomeText').textContent = `欢迎，${currentUser.username}！`;
 
+
+
     await loadGroupList();
     connectWebSocket();
 

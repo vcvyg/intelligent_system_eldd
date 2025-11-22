@@ -147,11 +147,10 @@ public class ChatController {
                 return Result.error("只能删除自己发送的消息");
             }
             
-            // 软删除消息
+            // 软删除消息 - 使用MyBatis-Plus的逻辑删除
             System.out.println("开始软删除消息...");
-            message.setDeleted(1);
-            int updateResult = chatMessageMapper.updateById(message);
-            System.out.println("更新结果: " + updateResult);
+            int updateResult = chatMessageMapper.deleteById(messageId);
+            System.out.println("逻辑删除结果: " + updateResult);
             
             if (updateResult > 0) {
                 System.out.println("消息删除成功！messageId=" + messageId);

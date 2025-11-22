@@ -268,7 +268,13 @@ async function loadGroupList() {
         groups.forEach(group => {
             const div = document.createElement('div');
             div.className = 'user-item';
-            div.innerHTML = `<span>${group.groupName}</span>`;
+            const memberCount = group.members ? group.members.length : 0;
+            div.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <span style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${group.groupName}</span>
+                    <span style="font-size: 11px; color: #999; margin-left: 8px;">${memberCount}人</span>
+                </div>
+            `;
             div.onclick = () => selectGroup(group.groupId, group.groupName);
             div.dataset.groupId = group.groupId;
             userList.appendChild(div);
@@ -322,7 +328,35 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
 async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
-    document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
+    
+    // 尝试获取群组详细信息，包括成员列表
+    try {
+        const groupInfoRes = await get(`/family/chat/group/${groupId}/info`);
+        const groupInfo = groupInfoRes.data;
+        
+        const memberCount = groupInfo.members ? groupInfo.members.length : 0;
+        const memberNames = groupInfo.members ? 
+            groupInfo.members.map(m => m.realName || m.username).join('、') : '';
+        
+        document.getElementById('chatHeader').innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div style="flex: 1;">
+                    <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">与 ${groupInfo.groupName} 的家庭群聊</div>
+                    <div style="font-size: 12px; color: #666;">共${memberCount}人在群聊中</div>
+                </div>
+                <div style="text-align: right; max-width: 250px;">
+                    <div style="font-size: 11px; color: #999; margin-bottom: 2px;">群成员</div>
+                    <div style="font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memberNames}">
+                        ${memberNames}
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error("Failed to load group info:", error);
+        // 如果获取群组信息失败，使用原来的简单显示方式
+        document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
+    }
 
     // Enable inputs
     chatInput.disabled = false;

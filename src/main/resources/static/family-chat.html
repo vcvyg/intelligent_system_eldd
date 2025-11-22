@@ -275,6 +275,35 @@
         .context-menu li:hover {
             background-color: #f0f0f0;
         }
+
+        /* 右键菜单样式 */
+        .context-menu {
+            position: absolute;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            min-width: 80px;
+        }
+
+        .context-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 4px 0;
+        }
+
+        .context-menu li {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .context-menu li:hover {
+            background-color: #f0f0f0;
+        }
     </style>
 </head>
 

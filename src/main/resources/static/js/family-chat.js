@@ -6,7 +6,7 @@ let stompClient = null;
 let currentUser = null;
 
 // UI Elements
-let chatInput, sendBtn, fileBtn, fileInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn;
+let chatInput, sendBtn, fileBtn, fileInput, imageBtn, imageInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn;
 
 // Voice Recording
 let mediaRecorder = null;
@@ -30,6 +30,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     sendBtn = document.getElementById('sendBtn');
     fileBtn = document.getElementById('file-btn');
     fileInput = document.getElementById('file-input');
+    imageBtn = document.getElementById('image-btn');
+    imageInput = document.getElementById('image-input');
     voiceBtn = document.getElementById('voice-btn');
     chatMessages = document.getElementById('chatMessages');
     contextMenu = document.getElementById('context-menu');
@@ -49,6 +51,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     fileBtn.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', uploadFile);
+    imageBtn.addEventListener('click', () => imageInput.click());
+    imageInput.addEventListener('change', uploadImage);
     voiceBtn.addEventListener('click', function () {
         console.log('Voice button clicked, isRecording:', isRecording);
         toggleRecording();
@@ -63,25 +67,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     deleteMessageBtn.addEventListener('click', deleteMessage);
 });
 
+let currentGroupSubscription = null;
+
 function connectWebSocket() {
     const token = localStorage.getItem('token');
+    console.log('正在连接WebSocket...');
     // 通过URL参数传递token，与其他聊天页面保持一致
     const socket = new SockJS(`/ws-chat?token=${encodeURIComponent(token)}`);
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
-        console.log('WebSocket connected:', frame);
+        console.log('WebSocket连接成功:', frame);
+        
+        // Subscribe to personal message queue
         stompClient.subscribe('/user/queue/group-messages', function (message) {
+            console.log('收到个人队列消息:', message.body);
             const msg = JSON.parse(message.body);
             handleNewMessage(msg);
         });
+        
+        // Subscribe to current group topic for immediate message display
+        if (currentGroupId) {
+            subscribeToGroupTopic(currentGroupId);
+        }
     }, function (error) {
-        console.error('WebSocket connection failed:', error);
+        console.error('WebSocket连接失败:', error);
         // 重连逻辑
         setTimeout(connectWebSocket, 5000);
     });
 }
 
+function subscribeToGroupTopic(groupId) {
+    // Unsubscribe from previous group if any
+    if (currentGroupSubscription) {
+        currentGroupSubscription.unsubscribe();
+    }
+    
+    // Subscribe to the new group topic
+    if (stompClient && stompClient.connected) {
+        currentGroupSubscription = stompClient.subscribe('/topic/group/' + groupId, function (message) {
+            const msg = JSON.parse(message.body);
+            console.log('收到群组话题消息:', msg);
+            
+            // 群组话题只用于接收自己发送的消息的服务器确认
+            // 这样可以替换临时消息为正式消息
+            if (msg.groupId === currentGroupId && msg.me) {
+                console.log('收到自己消息的服务器确认，替换临时消息');
+                
+                // 查找并移除最近的临时消息
+                const tempMessages = document.querySelectorAll('.temporary-message');
+                if (tempMessages.length > 0) {
+                    // 移除最后一个临时消息（最新的）
+                    const lastTempMessage = tempMessages[tempMessages.length - 1];
+                    lastTempMessage.remove();
+                    console.log('已移除临时消息');
+                }
+                
+                // 显示正式消息
+                appendMessage(msg);
+            }
+        });
+        console.log('已订阅群组话题:', '/topic/group/' + groupId);
+    }
+}
+
 function handleNewMessage(msg) {
+    console.log('处理新消息:', msg);
+    
     if (msg.messageType === 'delete') {
         const elementToRemove = document.querySelector(`[data-message-id='${msg.id}']`);
         if (elementToRemove) {
@@ -91,16 +142,19 @@ function handleNewMessage(msg) {
     }
 
     if (msg.groupId === currentGroupId) {
-        // 如果是自己发送的消息，先移除临时消息再显示正式消息
+        // 如果是当前群组的消息
         if (msg.me) {
-            // 移除可能存在的临时消息
-            const tempMessages = document.querySelectorAll('[data-message-id^="temp_"]');
-            if (tempMessages.length > 0) {
-                tempMessages[tempMessages.length - 1].remove(); // 移除最后一个临时消息
-            }
+            // 自己发送的消息：不在这里处理，由群组话题订阅处理
+            console.log('收到自己的消息，由群组话题处理');
+            return;
+        } else {
+            // 其他人发送的消息：直接显示
+            console.log('收到其他人的消息，直接显示');
+            appendMessage(msg);
         }
-        appendMessage(msg);
     } else {
+        // 其他群组的消息：显示通知
+        console.log('消息属于其他群组，显示提示');
         showNewMsgTip(msg);
         updateUnreadBadge(msg.groupId, 1);
     }
@@ -173,7 +227,16 @@ function appendMessage(msg) {
             break;
     }
 
-    div.innerHTML = `${senderName}${messageBubble}<div class="meta">${formatTime(msg.time)}</div>`;
+    // 为临时消息添加视觉标识
+    const tempIndicator = msg.isTemporary ? '<span class="temp-indicator" style="opacity: 0.6;">发送中...</span>' : '';
+    div.innerHTML = `${senderName}${messageBubble}<div class="meta">${formatTime(msg.time)}${tempIndicator}</div>`;
+    
+    // 为临时消息添加样式
+    if (msg.isTemporary) {
+        div.style.opacity = '0.7';
+        div.classList.add('temporary-message');
+    }
+    
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
@@ -265,6 +328,7 @@ async function selectGroup(groupId, groupName) {
     chatInput.disabled = false;
     sendBtn.disabled = false;
     fileBtn.disabled = false;
+    imageBtn.disabled = false;
     voiceBtn.disabled = false;
 
     document.querySelectorAll('.user-item').forEach(item => {
@@ -273,6 +337,11 @@ async function selectGroup(groupId, groupName) {
             item.classList.add('active');
         }
     });
+
+    // Subscribe to the new group topic for real-time messages
+    if (stompClient && stompClient.connected) {
+        subscribeToGroupTopic(groupId);
+    }
 
     try {
         await post(`/chat/groups/${groupId}/read`);
@@ -300,9 +369,15 @@ async function loadGroupMessages() {
 
 function sendMessage(messageObject) {
     if (!currentGroupId || !stompClient || !stompClient.connected) {
+        console.error('无法发送消息: currentGroupId=', currentGroupId, 'stompClient=', stompClient, 'connected=', stompClient?.connected);
         return;
     }
     try {
+        console.log('发送消息到群组', currentGroupId, ':', messageObject);
+        
+        // 生成唯一的临时ID
+        const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
         // 立即在本地显示消息（乐观更新）
         const localMessage = {
             ...messageObject,
@@ -310,12 +385,14 @@ function sendMessage(messageObject) {
             senderName: currentUser.username,
             senderRole: currentUser.role,
             time: new Date().toISOString(),
-            id: 'temp_' + Date.now() // 临时ID
+            id: tempId,
+            isTemporary: true // 标记为临时消息
         };
         appendMessage(localMessage);
         
         // 发送到服务器
         stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
+        console.log('消息已发送到服务器');
     } catch (e) {
         console.error('Send message error:', e);
     }
@@ -330,40 +407,7 @@ function sendTextMessage() {
 
 // --- File and Voice Upload Functions ---
 
-async function uploadFile() {
-    const file = fileInput.files[0];
-    if (!file) return;
 
-    // 检查文件大小 (限制为10MB)
-    if (file.size > 10 * 1024 * 1024) {
-        alert('文件大小不能超过10MB');
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    console.log('上传文件:', file.name, '类型:', file.type, '大小:', file.size);
-
-    try {
-        const result = await post('/upload/file', formData, true); // true for FormData
-        console.log('File upload result:', result);
-
-        // 强制所有上传的文件都识别为FILE类型，确保正确显示
-        const fileMessage = {
-            messageType: 'FILE',
-            content: `[文件] ${result.data.fileName || result.data.originalFilename}`,
-            fileName: result.data.fileName || result.data.originalFilename,
-            fileUrl: result.data.fileUrl || result.data.url || result.data.imageUrl || result.data.audioUrl
-        };
-        console.log('子女端发送文件消息:', fileMessage);
-        sendMessage(fileMessage);
-    } catch (error) {
-        console.error('File upload failed:', error);
-        alert('文件上传失败');
-    }
-    fileInput.value = ''; // Reset input
-}
 
 function toggleRecording() {
     console.log('toggleRecording called, isRecording:', isRecording);
@@ -453,17 +497,135 @@ async function deleteMessage() {
     const messageId = currentMessageElement.dataset.messageId;
     if (!messageId) return;
 
+    const elementToRemove = currentMessageElement; // 保存引用
+    
     try {
-        await del(`/chat/message/${messageId}`);
-        // Optimistic removal
-        currentMessageElement.remove();
+        console.log('开始删除消息，ID:', messageId);
+        const result = await del(`/chat/message/${messageId}`);
+        console.log('删除API返回结果:', result);
+        
+        // 删除成功，移除元素
+        if (elementToRemove && elementToRemove.parentNode) {
+            elementToRemove.remove();
+        }
         currentMessageElement = null;
+        console.log('消息删除成功');
+        
+        // 不显示任何提示，因为删除成功了
     } catch (error) {
-        console.error('Failed to delete message:', error);
-        alert('删除失败');
+        console.error('删除消息失败:', error);
+        // 只有真正失败时才显示错误
+        if (error.message && !error.message.includes('null')) {
+            alert('删除失败: ' + error.message);
+        }
     }
     contextMenu.style.display = 'none';
 }
+
+
+// --- File Upload Functions ---
+
+function uploadFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+    
+    sendFileMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+function uploadFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+    
+    sendFileMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+function uploadImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件不能超过5MB');
+        return;
+    }
+    
+    sendImageMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+async function sendFileMessage(file) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const fileMessage = {
+                messageType: 'FILE',
+                content: `[文件] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                fileUrl: response.data.fileUrl || response.data.url
+            };
+            // 使用sendMessage函数来立即显示消息并发送到服务器
+            sendMessage(fileMessage);
+        } else {
+            throw new Error('文件上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送文件消息失败:', error);
+        alert('文件发送失败: ' + error.message);
+    }
+}
+
+async function sendImageMessage(imageFile) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const imageMessage = {
+                messageType: 'IMAGE',
+                content: `[图片] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                imageUrl: response.data.imageUrl || response.data.url
+            };
+            // 使用sendMessage函数来立即显示消息并发送到服务器
+            sendMessage(imageMessage);
+        } else {
+            throw new Error('图片上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送图片消息失败:', error);
+        alert('图片发送失败: ' + error.message);
+    }
+}
+
+
 
 
 // --- Utility Functions ---

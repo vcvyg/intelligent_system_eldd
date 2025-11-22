@@ -352,8 +352,10 @@
                         <!-- 聊天消息 -->
                     </div>
                     <div class="chat-input">
-                        <button id="file-btn" class="btn" disabled><i class="fas fa-paperclip"></i></button>
+                        <button id="file-btn" class="btn" disabled title="发送文件"><i class="fas fa-paperclip"></i></button>
                         <input type="file" id="file-input" style="display: none;">
+                        <button id="image-btn" class="btn" disabled title="发送图片"><i class="fas fa-image"></i></button>
+                        <input type="file" id="image-input" accept="image/*" style="display: none;">
                         <button id="voice-btn" class="btn" disabled><i class="fas fa-microphone"></i></button>
                         <input type="text" id="chatInput" placeholder="输入消息..." disabled>
                         <button id="sendBtn" disabled>发送</button>

@@ -1,21 +1,43 @@
 // 全局变量，存储Stomp客户端
 let stompClient = null;
 
+// DOM元素缓存，提高性能
+const domCache = {
+    container: null,
+    welcomeText: null,
+    
+    init() {
+        this.container = document.getElementById('alert-list-container');
+        this.welcomeText = document.getElementById('welcomeText');
+    }
+};
+
 /**
  * 加载告警列表
  */
 async function loadAlerts() {
-    const container = document.getElementById('alert-list-container');
+    const container = domCache.container;
+    if (!container) return;
+    
+    // 显示加载状态
+    container.innerHTML = '<div class="loading">加载中</div>';
+    
     try {
         const response = await request('/medical/alerts', {
             method: 'GET'
         });
+        
         // 清空现有列表
         container.innerHTML = '';
+        
         if (response.data && response.data.records && response.data.records.length > 0) {
+            // 使用文档片段提高性能
+            const fragment = document.createDocumentFragment();
             response.data.records.forEach(alert => {
-                renderAlert(alert);
+                const alertElement = createAlertElement(alert);
+                fragment.appendChild(alertElement);
             });
+            container.appendChild(fragment);
         } else {
             container.innerHTML = '<p class="empty-tip">暂无告警记录</p>';
         }
@@ -26,20 +48,14 @@ async function loadAlerts() {
 }
 
 /**
- * 渲染单个告警卡片
+ * 创建告警元素（优化版）
  * @param {object} alert - 告警数据对象
- * @param {boolean} prepend - 是否在列表顶部插入 (用于实时更新)
+ * @returns {HTMLElement} 告警卡片元素
  */
-function renderAlert(alert, prepend = false) {
-    const container = document.getElementById('alert-list-container');
-    const emptyTip = container.querySelector('.empty-tip');
-    if (emptyTip) {
-        emptyTip.remove();
-    }
-
+function createAlertElement(alert) {
     const alertCard = document.createElement('div');
     alertCard.className = 'alert-card';
-    alertCard.id = `alert-card-${alert.id}`; // 为卡片添加唯一ID
+    alertCard.id = `alert-card-${alert.id}`;
 
     // 根据告警级别添加不同样式和颜色
     const levelClass = getLevelClass(alert.alertLevel);
@@ -66,13 +82,6 @@ function renderAlert(alert, prepend = false) {
         case '处理中':
             actionButtons = `<button class="btn-complete" onclick="finishProcessingAlert(${alert.id})">处理完成</button>`;
             break;
-        case '已处理':
-        case '已忽略':
-            // 已处理、已忽略状态不显示操作按钮
-            break;
-        default:
-            // 其他状态也不显示操作按钮
-            break;
     }
 
     alertCard.innerHTML = `
@@ -96,6 +105,25 @@ function renderAlert(alert, prepend = false) {
             </div>
         </div>
     `;
+
+    return alertCard;
+}
+
+/**
+ * 渲染单个告警卡片（用于实时更新）
+ * @param {object} alert - 告警数据对象
+ * @param {boolean} prepend - 是否在列表顶部插入
+ */
+function renderAlert(alert, prepend = false) {
+    const container = domCache.container;
+    if (!container) return;
+    
+    const emptyTip = container.querySelector('.empty-tip, .loading');
+    if (emptyTip) {
+        emptyTip.remove();
+    }
+
+    const alertCard = createAlertElement(alert);
 
     if (prepend) {
         container.prepend(alertCard);

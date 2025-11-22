@@ -5,26 +5,61 @@ let currentGroupName = '';
 let stompClient = null;
 let currentUser = null;
 
+// DOM元素缓存，提高性能
+const domCache = {
+    welcomeText: null,
+    chatInput: null,
+    sendBtn: null,
+    chatMessages: null,
+    chatHeader: null,
+    userList: null,
+    recordBtn: null,
+    
+    init() {
+        this.welcomeText = document.getElementById('welcomeText');
+        this.chatInput = document.getElementById('chatInput');
+        this.sendBtn = document.getElementById('sendBtn');
+        this.chatMessages = document.getElementById('chatMessages');
+        this.chatHeader = document.getElementById('chatHeader');
+        this.userList = document.getElementById('userList');
+        this.recordBtn = document.getElementById('recordBtn');
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
+    // 初始化DOM缓存
+    domCache.init();
+    
+    // 快速权限检查
     currentUser = checkLogin();
     if (!currentUser || currentUser.role !== 'MEDICAL') {
         alert('权限不足或登录已过期');
         logout();
         return;
     }
-    document.getElementById('welcomeText').textContent = `欢迎，${currentUser.username}！`;
+    
+    // 设置欢迎文本
+    if (domCache.welcomeText) {
+        domCache.welcomeText.textContent = `欢迎，${currentUser.username}！`;
+    }
 
-
-
-    await loadGroupList();
-    connectWebSocket();
-
-    document.getElementById('chatInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+    // 异步加载数据，避免阻塞页面渲染
+    Promise.all([
+        loadGroupList(),
+        connectWebSocket()
+    ]).catch(error => {
+        console.error('初始化失败:', error);
     });
+
+    // 添加键盘事件监听
+    if (domCache.chatInput) {
+        domCache.chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    }
 });
 
 function connectWebSocket() {
@@ -143,7 +178,7 @@ function handleDeleteNotification(msg) {
 function appendMessage(msg) {
     console.log('Appending message:', msg);
     
-    const box = document.getElementById('chatMessages');
+    const box = domCache.chatMessages;
     
     // 简单直接的逻辑：使用消息的真实ID
     const messageId = msg.id || `msg-${msg.senderId}-${new Date(msg.time).getTime()}`;
@@ -311,7 +346,7 @@ async function loadGroupList() {
     try {
         const res = await get('/medical/chat/groups');
         const groups = res.data || [];
-        const userList = document.getElementById('userList');
+        const userList = domCache.userList;
         userList.innerHTML = groups.length === 0 ? '<div style="padding:20px;color:#999;">暂无负责的老人</div>' : '';
         
         groups.forEach(group => {
@@ -331,7 +366,7 @@ async function loadGroupList() {
 
         await loadUnreadCounts();
     } catch (e) {
-        document.getElementById('userList').innerHTML = '<div style="padding:20px;color:red;">加载失败</div>';
+        domCache.userList.innerHTML = '<div style="padding:20px;color:red;">加载失败</div>';
     }
 }
 

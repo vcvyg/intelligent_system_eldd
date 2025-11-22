@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/medical-alerts.css">
 </head>
 
 <body>
@@ -77,22 +78,32 @@
     </div>
 
     <script src="js/sockjs.min.js"></script>
-    <script src="js/stomp.umd.min.js"></script>
+    <script src="js/stomp.min.js"></script>
     <script src="js/common.js"></script>
     <script src="js/medical-alerts.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // 初始化DOM缓存
+            domCache.init();
+            
             const userInfo = checkLogin();
             if (!userInfo || userInfo.role !== 'MEDICAL') {
                 alert('权限不足');
                 logout();
                 return;
             }
-            document.getElementById('welcomeText').textContent = `欢迎, ${userInfo.username}!`;
+            
+            if (domCache.welcomeText) {
+                domCache.welcomeText.textContent = `欢迎, ${userInfo.username}!`;
+            }
 
-            // 初始化告警页面
-            loadAlerts();
-            connectWebSocket(userInfo.userId);
+            // 异步初始化告警页面，避免阻塞渲染
+            Promise.all([
+                loadAlerts(),
+                connectWebSocket(userInfo.userId)
+            ]).catch(error => {
+                console.error('初始化失败:', error);
+            });
         });
     </script>
 </body>

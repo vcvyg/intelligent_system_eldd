@@ -2,175 +2,210 @@
 <html lang="zh-CN">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>家庭群聊 - 智慧养老系统</title>
-  <link rel="stylesheet" href="css/pension-variables.css">
-  <link rel="stylesheet" href="css/penou-base.css">
-  <link rel="stylesheet" href="css/admin.css">
-  <style>
-    .chat-container {
-      display: flex;
-      height: 80vh;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 2px 16px rgba(106, 142, 173, 0.08);
-      overflow: hidden;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家庭群聊 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        .chat-container {
+            display: flex;
+            height: 80vh;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 16px rgba(106, 142, 173, 0.08);
+            overflow: hidden;
+        }
 
-    .chat-users {
-      width: 250px;
-      background: #f7f8fa;
-      border-right: 1px solid #e5e7eb;
-      display: flex;
-      flex-direction: column;
-    }
+        .chat-users {
+            width: 250px;
+            background: #f7f8fa;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .chat-users h3 {
-      font-size: 16px;
-      font-weight: 600;
-      color: #333;
-      padding: 18px 20px;
-      margin: 0;
-      border-bottom: 1px solid #e5e7eb;
-    }
+        .chat-users h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            padding: 18px 20px;
+            margin: 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
 
-    .user-list {
-      flex: 1;
-      overflow-y: auto;
-    }
+        .user-list {
+            flex: 1;
+            overflow-y: auto;
+        }
 
-    .user-item {
-      padding: 14px 20px;
-      cursor: pointer;
-      border-bottom: 1px solid #f0f0f0;
-      transition: background 0.2s;
-      font-size: 15px;
-    }
+        .user-item {
+            padding: 14px 20px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+            font-size: 15px;
+        }
 
-    .user-item.active,
-    .user-item:hover {
-      background: #e9eafe;
-    }
-    .user-item {
-        position: relative; /* Needed for badge positioning */
-    }
-    .unread-badge {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        background-color: #f44336; /* Red */
-        color: white;
-        font-size: 11px;
-        font-weight: bold;
-        padding: 0 6px;
-        height: 18px;
-        line-height: 18px;
-        border-radius: 9px;
-        min-width: 18px;
-        text-align: center;
-    }
+        .user-item.active,
+        .user-item:hover {
+            background: #e9eafe;
+        }
+        .user-item {
+            position: relative; /* Needed for badge positioning */
+        }
+        .unread-badge {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #f44336; /* Red */
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0 6px;
+            height: 18px;
+            line-height: 18px;
+            border-radius: 9px;
+            min-width: 18px;
+            text-align: center;
+        }
 
-    .chat-main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-    }
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
 
-    .chat-header {
-      padding: 18px 24px;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 17px;
-      font-weight: 600;
-    }
+        .chat-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 17px;
+            font-weight: 600;
+        }
 
-    .chat-messages {
-      flex: 1;
-      padding: 24px;
-      overflow-y: auto;
-      background: #f9fafb;
-    }
+        .chat-messages {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
 
-    .message {
-      margin-bottom: 18px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-    }
+        .message {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
 
-    .message.me {
-      align-items: flex-end;
-    }
+        .message.me {
+            align-items: flex-end;
+        }
 
-    .message .sender-name {
-        font-size: 12px;
-        color: #888;
-        margin: 0 10px 4px 10px;
-    }
+        .message .sender-name {
+            font-size: 12px;
+            color: #888;
+            margin: 0 10px 4px 10px;
+        }
 
-    .message.me .sender-name {
-        display: none;
-    }
+        .message.me .sender-name {
+            display: none;
+        }
 
-    .message .bubble {
-      max-width: 60%;
-      padding: 12px 18px;
-      border-radius: 18px;
-      background: #fff;
-      color: #333;
-      font-size: 15px;
-      margin: 0 10px;
-      word-break: break-all;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-    }
+        .message .bubble {
+            max-width: 60%;
+            padding: 12px 18px;
+            border-radius: 18px;
+            background: #fff;
+            color: #333;
+            font-size: 15px;
+            margin: 0 10px;
+            word-break: break-all;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
 
-    .message.me .bubble {
-      background: #667eea;
-      color: white;
-    }
+        .message.me .bubble {
+            background: #667eea;
+            color: white;
+        }
 
-    .message .meta {
-      font-size: 12px;
-      color: #aaa;
-      margin: 4px 10px 0 10px;
-    }
+        .message .meta {
+            font-size: 12px;
+            color: #aaa;
+            margin: 4px 10px 0 10px;
+        }
 
-    .chat-input {
-      display: flex;
-      align-items: center;
-      padding: 18px 24px;
-      border-top: 1px solid #e5e7eb;
-      background: #fff;
-    }
+        .chat-input {
+            display: flex;
+            align-items: center;
+            padding: 18px 24px;
+            border-top: 1px solid #e5e7eb;
+            background: #fff;
+        }
 
-    .chat-input textarea {
-      flex: 1;
-      resize: none;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font-size: 15px;
-      min-height: 38px;
-      outline: none;
-      margin-right: 12px;
-    }
+        .chat-input textarea, .chat-input input[type="text"] {
+            flex: 1;
+            resize: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 15px;
+            min-height: 38px;
+            outline: none;
+            margin-right: 12px;
+        }
 
-    .chat-input button {
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 0 24px;
-      font-size: 15px;
-      cursor: pointer;
-      height: 40px;
-    }
-  </style>
+        .chat-input button {
+            background: #667eea;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 0 24px;
+            font-size: 15px;
+            cursor: pointer;
+            height: 40px;
+        }
+
+        .chat-input .btn {
+            background: transparent;
+            color: #555;
+            padding: 0 8px;
+            font-size: 20px;
+        }
+        
+        #voice-btn.recording {
+            color: #f44336;
+        }
+
+        .context-menu {
+            display: none;
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .context-menu ul {
+            list-style: none;
+            margin: 0;
+            padding: 5px 0;
+        }
+        .context-menu li {
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+        .context-menu li:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
 </head>
 
 <body>
-  <div class="admin-container">
+<div class="admin-container">
     <!-- 侧边栏导航 -->
     <aside class="sidebar">
         <div class="logo">
@@ -194,38 +229,46 @@
 
     <!-- 主内容区 -->
     <main class="main-content">
-      <header class="top-bar">
-        <h1>家庭群聊</h1>
-        <div class="user-info">
-          <span id="welcomeText">欢迎！</span>
+        <header class="top-bar">
+            <h1>家庭群聊</h1>
+            <div class="user-info">
+                <span id="welcomeText">欢迎！</span>
+            </div>
+        </header>
+        <div class="content-wrapper" style="padding: 20px;">
+            <div class="chat-container">
+                <div class="chat-users">
+                    <h3>老人群组</h3>
+                    <div class="user-list" id="userList">
+                        <!-- 动态加载群组列表 -->
+                    </div>
+                </div>
+                <div class="chat-main">
+                    <div class="chat-header" id="chatHeader">请选择一个群组开始聊天</div>
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- 聊天消息 -->
+                    </div>
+                    <div class="chat-input">
+                        <button id="file-btn" class="btn" disabled><i class="fas fa-paperclip"></i></button>
+                        <input type="file" id="file-input" style="display: none;">
+                        <button id="voice-btn" class="btn" disabled><i class="fas fa-microphone"></i></button>
+                        <input type="text" id="chatInput" placeholder="输入消息..." disabled>
+                        <button id="sendBtn" disabled>发送</button>
+                    </div>
+                </div>
+            </div>
         </div>
-      </header>
-      <div class="content-wrapper" style="padding: 20px;">
-        <div class="chat-container">
-          <div class="chat-users">
-            <h3>老人群组</h3>
-            <div class="user-list" id="userList">
-              <!-- 动态加载群组列表 -->
-            </div>
-          </div>
-          <div class="chat-main">
-            <div class="chat-header" id="chatHeader">请选择一个群组开始聊天</div>
-            <div class="chat-messages" id="chatMessages">
-              <!-- 聊天消息 -->
-            </div>
-            <div class="chat-input">
-              <textarea id="chatInput" placeholder="输入消息..." disabled></textarea>
-              <button onclick="sendMessage()" disabled id="sendBtn">发送</button>
-            </div>
-          </div>
-        </div>
-      </div>
     </main>
-  </div>
-  <script src="js/common.js"></script>
-  <script src="js/family-chat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <div id="context-menu" class="context-menu">
+        <ul>
+            <li id="delete-message">删除</li>
+        </ul>
+    </div>
+</div>
+<script src="js/common.js"></script>
+<script src="js/family-chat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 </body>
 
 </html>

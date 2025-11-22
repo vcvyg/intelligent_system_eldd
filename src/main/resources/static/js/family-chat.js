@@ -5,6 +5,17 @@ let currentGroupName = '';
 let stompClient = null;
 let currentUser = null;
 
+// UI Elements
+let chatInput, sendBtn, fileBtn, fileInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn;
+
+// Voice Recording
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+// Context Menu
+let currentMessageElement = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     currentUser = checkLogin();
     if (!currentUser || currentUser.role !== 'FAMILY') {
@@ -14,15 +25,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     document.getElementById('welcomeText').textContent = `欢迎，${currentUser.username}！`;
 
+    // Initialize UI Elements
+    chatInput = document.getElementById('chatInput');
+    sendBtn = document.getElementById('sendBtn');
+    fileBtn = document.getElementById('file-btn');
+    fileInput = document.getElementById('file-input');
+    voiceBtn = document.getElementById('voice-btn');
+    chatMessages = document.getElementById('chatMessages');
+    contextMenu = document.getElementById('context-menu');
+    deleteMessageBtn = document.getElementById('delete-message');
+
     await loadGroupList();
     connectWebSocket();
 
-    document.getElementById('chatInput').addEventListener('keydown', function(e) {
+    // Event Listeners
+    sendBtn.addEventListener('click', sendTextMessage);
+    chatInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            sendMessage();
+            sendTextMessage();
         }
     });
+
+    fileBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', uploadFile);
+    voiceBtn.addEventListener('click', toggleRecording);
+
+    // Context Menu Listeners
+    chatMessages.addEventListener('contextmenu', showContextMenu);
+    document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+        currentMessageElement = null;
+    });
+    deleteMessageBtn.addEventListener('click', deleteMessage);
 });
 
 function connectWebSocket() {
@@ -38,47 +73,83 @@ function connectWebSocket() {
 }
 
 function handleNewMessage(msg) {
+    if (msg.messageType === 'delete') {
+        const elementToRemove = document.querySelector(`[data-message-id='${msg.id}']`);
+        if (elementToRemove) {
+            elementToRemove.remove();
+        }
+        return;
+    }
+
     if (msg.groupId === currentGroupId) {
         appendMessage(msg);
     } else {
         showNewMsgTip(msg);
-        updateUnreadBadge(msg.groupId, 1); // Increment count by 1
+        updateUnreadBadge(msg.groupId, 1);
     }
 }
 
 function appendMessage(msg) {
-    const box = document.getElementById('chatMessages');
+    const box = chatMessages;
     const div = document.createElement('div');
     div.className = 'message' + (msg.me ? ' me' : '');
+    div.dataset.messageId = msg.id; // Store message ID for deletion
+
     const senderName = msg.me ? '' : `<div class="sender-name">${escapeHtml(msg.senderName)} (${escapeHtml(msg.senderRole)})</div>`;
-    div.innerHTML = `${senderName}<div class="bubble">${escapeHtml(msg.content)}</div><div class="meta">${formatTime(msg.time)}</div>`;
+    let messageBubble = '';
+
+    switch (msg.messageType) {
+        case 'VOICE':
+            messageBubble = `<div class="bubble">
+                                <audio controls src="${msg.audioUrl}"></audio>
+                             </div>`;
+            break;
+        case 'FILE':
+            messageBubble = `<div class="bubble">
+                                <a href="${msg.fileUrl}" target="_blank" download>
+                                    <i class="fas fa-file"></i> ${escapeHtml(msg.fileName || '附件')}
+                                </a>
+                             </div>`;
+            break;
+        case 'IMAGE':
+            messageBubble = `<div class="bubble">
+                                <img src="${msg.imageUrl}" alt="图片" style="max-width: 200px; border-radius: 8px; cursor: pointer;" onclick="showImageModal('${msg.imageUrl}')">
+                             </div>`;
+            break;
+        default: // TEXT
+            messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+            break;
+    }
+
+    div.innerHTML = `${senderName}${messageBubble}<div class="meta">${formatTime(msg.time)}</div>`;
     box.appendChild(div);
     box.scrollTop = box.scrollHeight;
 }
 
+function showImageModal(imageUrl) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1001;`;
+    modal.innerHTML = `<img src="${imageUrl}" style="max-width:90%; max-height:90%;">`;
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
+}
+
+
 function showNewMsgTip(msg) {
     const box = document.createElement('div');
     box.textContent = `收到来自 [${msg.senderName}] 的新消息: ${msg.content}`;
-    box.style.position = 'fixed';
-    box.style.right = '30px';
-    box.style.bottom = '30px';
-    box.style.background = '#667eea';
-    box.style.color = '#fff';
-    box.style.padding = '14px 22px';
-    box.style.borderRadius = '8px';
-    box.style.zIndex = 9999;
-    box.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+    box.style.cssText = `position:fixed; right:30px; bottom:30px; background:#667eea; color:#fff; padding:14px 22px; border-radius:8px; z-index:9999; box-shadow:0 2px 8px rgba(0,0,0,0.15);`;
     document.body.appendChild(box);
     setTimeout(() => box.remove(), 3500);
 }
 
 async function loadGroupList() {
     try {
-        const res = await get('/family/chat/groups'); // Family-specific endpoint
+        const res = await get('/family/chat/groups');
         const groups = res.data || [];
         const userList = document.getElementById('userList');
         userList.innerHTML = groups.length === 0 ? '<div style="padding:20px;color:#999;">暂无关联的家人</div>' : '';
-        
+
         groups.forEach(group => {
             const div = document.createElement('div');
             div.className = 'user-item';
@@ -106,7 +177,8 @@ async function loadUnreadCounts() {
                 }
             }
         }
-    } catch (error) {
+    }
+    catch (error) {
         console.error("Failed to load unread counts:", error);
     }
 }
@@ -122,13 +194,7 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
         groupItem.appendChild(badge);
     }
 
-    let newCount;
-    if (isAbsolute) {
-        newCount = count;
-    } else {
-        const currentCount = parseInt(badge.textContent || '0');
-        newCount = currentCount + count;
-    }
+    let newCount = isAbsolute ? count : (parseInt(badge.textContent || '0') + count);
 
     if (newCount > 0) {
         badge.textContent = newCount > 99 ? '99+' : newCount;
@@ -142,8 +208,12 @@ async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
     document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
-    document.getElementById('chatInput').disabled = false;
-    document.getElementById('sendBtn').disabled = false;
+    
+    // Enable inputs
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+    fileBtn.disabled = false;
+    voiceBtn.disabled = false;
 
     document.querySelectorAll('.user-item').forEach(item => {
         item.classList.remove('active');
@@ -153,12 +223,8 @@ async function selectGroup(groupId, groupName) {
     });
 
     try {
-        await post(`/chat/groups/${groupId}/read`);
-        const badge = document.querySelector(`.user-item[data-group-id='${groupId}'] .unread-badge`);
-        if (badge) {
-            badge.style.display = 'none';
-            badge.textContent = '0';
-        }
+        await post(`/api/chat/groups/${groupId}/read`);
+        updateUnreadBadge(groupId, 0, true);
     } catch (error) {
         console.error("Failed to mark as read:", error);
     }
@@ -169,34 +235,160 @@ async function selectGroup(groupId, groupName) {
 async function loadGroupMessages() {
     if (!currentGroupId) return;
     try {
+        // This endpoint should return messages with their IDs
         const res = await get(`/medical/chat/group/${currentGroupId}/messages`);
         const messagePage = res.data || { records: [] };
-        const box = document.getElementById('chatMessages');
-        box.innerHTML = '';
+        chatMessages.innerHTML = '';
         messagePage.records.forEach(appendMessage);
     } catch (e) {
-        document.getElementById('chatMessages').innerHTML = '<div style="color:red;">消息加载失败</div>';
+        chatMessages.innerHTML = '<div style="color:red;">消息加载失败</div>';
     }
 }
 
-function sendMessage() {
-    const input = document.getElementById('chatInput');
-    const content = input.value.trim();
-    if (!content || !currentGroupId || !stompClient || !stompClient.connected) {
+function sendMessage(messageObject) {
+     if (!currentGroupId || !stompClient || !stompClient.connected) {
         return;
     }
     try {
-        stompClient.send(`/app/chat/group/${currentGroupId}`, {}, content);
-        input.value = '';
-    }
-    catch (e) {
+        stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
+    } catch (e) {
         console.error('Send message error:', e);
     }
 }
 
+function sendTextMessage() {
+    const content = chatInput.value.trim();
+    if (!content) return;
+    sendMessage({ messageType: 'TEXT', content: content });
+    chatInput.value = '';
+}
+
+// --- File and Voice Upload Functions ---
+
+async function uploadFile() {
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const result = await post('/upload/file', formData, true); // true for FormData
+        sendMessage({
+            messageType: 'FILE',
+            content: `[文件] ${result.data.fileName}`,
+            fileName: result.data.fileName,
+            fileUrl: result.data.url
+        });
+    } catch (error) {
+        console.error('File upload failed:', error);
+        alert('文件上传失败');
+    }
+    fileInput.value = ''; // Reset input
+}
+
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+async function startRecording() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        isRecording = true;
+        voiceBtn.classList.add('recording');
+
+        mediaRecorder.ondataavailable = event => {
+            audioChunks.push(event.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            await uploadVoiceMessage(audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+        };
+
+        mediaRecorder.start();
+    } catch (err) {
+        console.error('Error starting recording:', err);
+        alert('无法启动录音功能，请检查麦克风权限。');
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        voiceBtn.classList.remove('recording');
+    }
+}
+
+async function uploadVoiceMessage(blob) {
+    const formData = new FormData();
+    formData.append('audio', blob, 'voice.wav');
+
+    try {
+        const result = await post('/upload/audio', formData, true);
+        sendMessage({
+            messageType: 'VOICE',
+            content: '[语音消息]',
+            audioUrl: result.data.url,
+            duration: result.data.duration
+        });
+    } catch (error) {
+        console.error('Voice upload failed:', error);
+        alert('语音上传失败');
+    }
+}
+
+
+// --- Context Menu and Deletion ---
+
+function showContextMenu(e) {
+    const messageElement = e.target.closest('.message');
+    if (!messageElement) return;
+
+    const msgId = messageElement.dataset.messageId;
+    const isMyMessage = messageElement.classList.contains('me');
+
+    if (!isMyMessage || !msgId) return;
+
+    e.preventDefault();
+    currentMessageElement = messageElement;
+    contextMenu.style.top = `${e.pageY}px`;
+    contextMenu.style.left = `${e.pageX}px`;
+    contextMenu.style.display = 'block';
+}
+
+async function deleteMessage() {
+    if (!currentMessageElement) return;
+
+    const messageId = currentMessageElement.dataset.messageId;
+    if (!messageId) return;
+
+    try {
+        await del(`/api/chat/message/${messageId}`);
+        // Optimistic removal
+        currentMessageElement.remove();
+        currentMessageElement = null;
+    } catch (error) {
+        console.error('Failed to delete message:', error);
+        alert('删除失败');
+    }
+    contextMenu.style.display = 'none';
+}
+
+
+// --- Utility Functions ---
+
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    return str.replace(/[&<>\"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 }
 
 function formatTime(t) {

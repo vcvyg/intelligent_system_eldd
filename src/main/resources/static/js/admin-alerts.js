@@ -35,7 +35,10 @@ async function loadAlerts() {
         });
 
         const result = await response.json();
+        console.log('API响应:', result); // 调试日志
+        
         if (result.code === 200) {
+            console.log('预警数据:', result.data); // 调试日志
             renderAlertTable(result.data.records);
             updatePagination(result.data);
         } else {
@@ -327,12 +330,26 @@ function closeHandleModal() {
 
 // 更新分页信息
 function updatePagination(pageData) {
-    currentPage = pageData.current;
-    totalPages = pageData.pages;
+    console.log('分页数据:', pageData); // 调试日志
+    
+    currentPage = pageData.current || 1;
+    totalPages = pageData.pages || 0;
+    const totalRecords = pageData.total || 0;
 
-    document.getElementById('pageInfo').textContent = `第 ${currentPage} / ${totalPages} 页`;
-    document.getElementById('prevBtn').disabled = currentPage <= 1;
-    document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+    // 如果没有数据，显示合理的分页信息
+    if (totalRecords === 0) {
+        document.getElementById('pageInfo').textContent = `暂无数据`;
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = true;
+    } else {
+        // 确保显示正确的分页信息
+        const displayCurrentPage = Math.max(currentPage, 1);
+        const displayTotalPages = Math.max(totalPages, 1);
+        
+        document.getElementById('pageInfo').textContent = `第 ${displayCurrentPage} / ${displayTotalPages} 页 (共 ${totalRecords} 条)`;
+        document.getElementById('prevBtn').disabled = displayCurrentPage <= 1;
+        document.getElementById('nextBtn').disabled = displayCurrentPage >= displayTotalPages;
+    }
 }
 
 // 上一页

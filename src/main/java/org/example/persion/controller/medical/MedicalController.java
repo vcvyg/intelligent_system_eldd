@@ -24,7 +24,26 @@ public class MedicalController {
 
     @GetMapping("/test")
     public Result<String> test() {
+        System.out.println("MedicalController - test接口被调用");
         return Result.success("医护端接口测试成功");
+    }
+
+    /**
+     * 获取所有老人列表（医护人员可以查看所有老人档案）
+     * @return 所有老人列表
+     */
+    @GetMapping("/patients")
+    public Result<List<ElderlyInfoVO>> getAllPatients() {
+        try {
+            System.out.println("MedicalController - getAllPatients接口被调用");
+            List<ElderlyInfoVO> patients = medicalPatientService.getAllPatients();
+            System.out.println("MedicalController - 查询到患者数量: " + (patients != null ? patients.size() : 0));
+            return Result.success(patients);
+        } catch (Exception e) {
+            System.err.println("MedicalController - getAllPatients异常: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取患者列表失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -32,7 +51,7 @@ public class MedicalController {
      * @param userId Spring Security注入的当前用户ID
      * @return 老人列表
      */
-    @GetMapping("/patients")
+    @GetMapping("/my-patients")
     public Result<List<ElderlyInfoVO>> getMyPatients(@AuthenticationPrincipal Long userId) {
         List<ElderlyInfoVO> patients = medicalPatientService.getMyPatients(userId);
         return Result.success(patients);

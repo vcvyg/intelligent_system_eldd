@@ -25,6 +25,27 @@ public class MedicalPatientServiceImpl implements MedicalPatientService {
     private final HealthDataMapper healthDataMapper;
 
     /**
+     * 获取所有老人列表
+     * 
+     * @return 所有老人信息VO列表
+     */
+    @Override
+    public List<ElderlyInfoVO> getAllPatients() {
+        // 查询所有未删除的老人信息
+        LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ElderlyInfo::getDeleted, 0);
+        wrapper.orderByAsc(ElderlyInfo::getName);
+        
+        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(wrapper);
+
+        return elderlyList.stream().map(elderly -> {
+            ElderlyInfoVO vo = new ElderlyInfoVO();
+            BeanUtils.copyProperties(elderly, vo);
+            return vo;
+        }).collect(Collectors.toList());
+    }
+
+    /**
      * 获取当前医护人员负责的老人列表
      * 
      * @param medicalStaffId 当前登录的医护人员ID

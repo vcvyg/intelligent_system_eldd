@@ -11,6 +11,12 @@ import java.util.List;
 public interface MedicalPatientService {
 
     /**
+     * 获取所有老人列表
+     * @return 所有老人信息VO列表
+     */
+    List<ElderlyInfoVO> getAllPatients();
+
+    /**
      * 获取当前医护人员负责的老人列表
      * @param medicalStaffId 当前登录的医护人员ID
      * @return 老人信息VO列表

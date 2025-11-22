@@ -8,7 +8,6 @@
     <select id="selectElderlyWithRoom" resultType="org.example.persion.vo.ElderlyInfoVO">
         SELECT 
             e.id,
-            e.user_id,
             e.name,
             e.age,
             e.gender,

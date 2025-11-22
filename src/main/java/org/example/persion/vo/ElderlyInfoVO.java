@@ -12,8 +12,6 @@ public class ElderlyInfoVO {
 
     private Long id;
 
-    private Long userId;
-
     private String name;
 
     private Integer age;

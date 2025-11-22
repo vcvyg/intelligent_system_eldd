@@ -23,9 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -70,24 +68,58 @@ public class AlertServiceImpl implements AlertService {
         Page<AlertRecordVO> voPage = new Page<>();
         BeanUtils.copyProperties(alertPage, voPage, "records");
 
-        List<AlertRecordVO> voList = alertPage.getRecords().stream().map(alert -> {
-            AlertRecordVO vo = new AlertRecordVO();
-            BeanUtils.copyProperties(alert, vo);
-            // 查询并设置老人姓名和房间号
-            if (alert.getElderlyId() != null) {
-                ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(alert.getElderlyId());
-                if (elderlyInfo != null) {
-                    vo.setElderlyName(elderlyInfo.getName());
-                    if (elderlyInfo.getRoomId() != null) {
-                        Room room = roomMapper.selectById(elderlyInfo.getRoomId());
-                        if (room != null) {
-                            vo.setRoomName(room.getRoomNumber());
+        // 优化：批量查询老人和房间信息，避免N+1查询问题
+        List<AlertRecordVO> voList = new ArrayList<>();
+        if (!alertPage.getRecords().isEmpty()) {
+            // 收集所有老人ID
+            Set<Long> elderlyIds = alertPage.getRecords().stream()
+                    .map(AlertRecord::getElderlyId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            
+            // 批量查询老人信息
+            Map<Long, ElderlyInfo> elderlyMap = new HashMap<>();
+            Set<Long> roomIds = new HashSet<>();
+            if (!elderlyIds.isEmpty()) {
+                List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectBatchIds(elderlyIds);
+                elderlyMap = elderlyList.stream()
+                        .collect(Collectors.toMap(ElderlyInfo::getId, e -> e));
+                
+                // 收集房间ID
+                roomIds = elderlyList.stream()
+                        .map(ElderlyInfo::getRoomId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+            }
+            
+            // 批量查询房间信息
+            Map<Long, Room> roomMap = new HashMap<>();
+            if (!roomIds.isEmpty()) {
+                List<Room> roomList = roomMapper.selectBatchIds(roomIds);
+                roomMap = roomList.stream()
+                        .collect(Collectors.toMap(Room::getId, r -> r));
+            }
+            
+            // 组装VO
+            for (AlertRecord alert : alertPage.getRecords()) {
+                AlertRecordVO vo = new AlertRecordVO();
+                BeanUtils.copyProperties(alert, vo);
+                
+                if (alert.getElderlyId() != null) {
+                    ElderlyInfo elderlyInfo = elderlyMap.get(alert.getElderlyId());
+                    if (elderlyInfo != null) {
+                        vo.setElderlyName(elderlyInfo.getName());
+                        if (elderlyInfo.getRoomId() != null) {
+                            Room room = roomMap.get(elderlyInfo.getRoomId());
+                            if (room != null) {
+                                vo.setRoomName(room.getRoomNumber());
+                            }
                         }
                     }
                 }
+                voList.add(vo);
             }
-            return vo;
-        }).collect(Collectors.toList());
+        }
 
         voPage.setRecords(voList);
         return voPage;

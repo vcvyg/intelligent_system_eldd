@@ -98,12 +98,22 @@
             }
 
             // 异步初始化告警页面，避免阻塞渲染
-            Promise.all([
-                loadAlerts(),
-                connectWebSocket(userInfo.userId)
-            ]).catch(error => {
+            // 优先加载数据，WebSocket连接可以稍后
+            loadAlerts().then(() => {
+                // 数据加载完成后再连接WebSocket
+                connectWebSocket(userInfo.userId);
+            }).catch(error => {
                 console.error('初始化失败:', error);
+                // 即使数据加载失败，也尝试连接WebSocket
+                connectWebSocket(userInfo.userId);
             });
+            
+            // 设置定时刷新（可选）
+            setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    loadAlerts(true); // 强制刷新
+                }
+            }, 60000); // 每分钟刷新一次
         });
     </script>
 </body>

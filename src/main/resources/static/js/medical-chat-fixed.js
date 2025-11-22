@@ -29,13 +29,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function connectWebSocket() {
     const token = localStorage.getItem('token');
+    console.log('正在连接WebSocket...');
     const socket = new SockJS(`/ws-chat?token=${encodeURIComponent(token)}`);
     stompClient = Stomp.over(socket);
     stompClient.connect({}, function (frame) {
-        console.log('WebSocket connected:', frame);
+        console.log('WebSocket连接成功:', frame);
         
         // Subscribe to personal message queue
         stompClient.subscribe('/user/queue/group-messages', function (message) {
+            console.log('收到个人队列消息:', message.body);
             const msg = JSON.parse(message.body);
             handleNewMessage(msg);
         });
@@ -45,7 +47,9 @@ function connectWebSocket() {
             subscribeToGroupTopic(currentGroupId);
         }
     }, function(error) {
-        console.error('WebSocket connection error:', error);
+        console.error('WebSocket连接失败:', error);
+        // 重连逻辑
+        setTimeout(connectWebSocket, 5000);
     });
 }
 
@@ -61,33 +65,55 @@ function subscribeToGroupTopic(groupId) {
     if (stompClient && stompClient.connected) {
         currentGroupSubscription = stompClient.subscribe('/topic/group/' + groupId, function (message) {
             const msg = JSON.parse(message.body);
-            console.log('Received group message:', msg);
+            console.log('收到群组话题消息:', msg);
             
-            if (msg.groupId === currentGroupId) {
-                // 对于语音、图片、文件消息，总是显示
-                // 对于文本消息，只显示其他人发送的（避免重复）
-                if (msg.messageType === 'VOICE' || msg.messageType === 'IMAGE' || msg.messageType === 'FILE' || !msg.me) {
-                    appendMessage(msg);
+            // 群组话题只用于接收自己发送的消息的服务器确认
+            // 这样可以替换临时消息为正式消息
+            if (msg.groupId === currentGroupId && msg.me) {
+                console.log('收到自己消息的服务器确认，替换临时消息');
+                
+                // 查找并移除最近的临时消息
+                const tempMessages = document.querySelectorAll('.temporary-message');
+                if (tempMessages.length > 0) {
+                    // 移除最后一个临时消息（最新的）
+                    const lastTempMessage = tempMessages[tempMessages.length - 1];
+                    lastTempMessage.remove();
+                    console.log('已移除临时消息');
                 }
+                
+                // 显示正式消息
+                appendMessage(msg);
             }
         });
-        console.log('Subscribed to group topic:', '/topic/group/' + groupId);
+        console.log('已订阅群组话题:', '/topic/group/' + groupId);
     }
 }
 
 function handleNewMessage(msg) {
+    console.log('处理新消息:', msg);
+    
+    if (msg.messageType === 'delete') {
+        // 处理删除消息通知
+        handleDeleteNotification(msg);
+        return;
+    }
+
     if (msg.groupId === currentGroupId) {
-        if (msg.messageType === 'delete') {
-            // 处理删除消息通知
-            handleDeleteNotification(msg);
+        // 如果是当前群组的消息
+        if (msg.me) {
+            // 自己发送的消息：不在这里处理，由群组话题订阅处理
+            console.log('收到自己的消息，由群组话题处理');
+            return;
         } else {
+            // 其他人发送的消息：直接显示
+            console.log('收到其他人的消息，直接显示');
             appendMessage(msg);
         }
     } else {
-        if (msg.messageType !== 'delete') {
-            showNewMsgTip(msg);
-            updateUnreadBadge(msg.groupId, 1);
-        }
+        // 其他群组的消息：显示通知
+        console.log('消息属于其他群组，显示提示');
+        showNewMsgTip(msg);
+        updateUnreadBadge(msg.groupId, 1);
     }
 }
 
@@ -243,7 +269,15 @@ function appendMessage(msg) {
         messageContent = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
     }
     
-    div.innerHTML = `${senderName}${messageContent}<div class="meta">${formatTime(msg.time)}</div>`;
+    // 为临时消息添加视觉标识
+    const tempIndicator = msg.isTemporary ? '<span class="temp-indicator" style="opacity: 0.6;">发送中...</span>' : '';
+    div.innerHTML = `${senderName}${messageContent}<div class="meta">${formatTime(msg.time)}${tempIndicator}</div>`;
+    
+    // 为临时消息添加样式
+    if (msg.isTemporary) {
+        div.style.opacity = '0.7';
+        div.classList.add('temporary-message');
+    }
     
     // 添加右键菜单功能
     div.addEventListener('contextmenu', function(e) {
@@ -453,20 +487,15 @@ async function loadGroupMessages() {
 function sendMessage() {
     const input = document.getElementById('chatInput');
     const content = input.value.trim();
-    if (!content || !currentGroupId || !stompClient || !stompClient.connected) {
-        return;
-    }
-    try {
-        // 发送消息到服务器，等待WebSocket返回后显示
-        const messageObject = {
-            messageType: 'TEXT',
-            content: content
-        };
-        stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
-        input.value = '';
-    } catch (e) {
-        console.error('Send message error:', e);
-    }
+    if (!content) return;
+    
+    const messageObject = {
+        messageType: 'TEXT',
+        content: content
+    };
+    
+    sendMessageWithContent(messageObject);
+    input.value = '';
 }
 
 // 语音录制相关变量
@@ -556,12 +585,13 @@ async function sendAudioMessage(audioBlob) {
             // 通过WebSocket发送语音消息
             const audioMessage = {
                 messageType: 'VOICE',
+                content: '[语音消息]',
                 audioUrl: result.data.audioUrl,
                 duration: result.data.duration || 0
             };
             
             console.log('发送语音消息:', audioMessage);
-            stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(audioMessage));
+            sendMessageWithContent(audioMessage);
 
         } else {
             const errorText = await response.text();
@@ -959,5 +989,267 @@ function formatTime(t, returnDate = false) {
     } catch (error) {
         console.error('Error formatting time:', error, 'Input:', t);
         return returnDate ? new Date() : '';
+    }
+}
+// 图片和文件上传功能
+
+// 图片选择处理
+function onImageSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件不能超过5MB');
+        return;
+    }
+    
+    sendImageMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+// 文件选择处理
+function onFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+    
+    sendFileMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+// 发送图片消息
+async function sendImageMessage(imageFile) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const imageMessage = {
+                messageType: 'IMAGE',
+                content: `[图片] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                imageUrl: response.data.imageUrl || response.data.url
+            };
+            // 使用sendMessageWithContent函数来立即显示消息并发送到服务器
+            sendMessageWithContent(imageMessage);
+        } else {
+            throw new Error('图片上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送图片消息失败:', error);
+        alert('图片发送失败: ' + error.message);
+    }
+}
+
+// 发送文件消息
+async function sendFileMessage(file) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const fileMessage = {
+                messageType: 'FILE',
+                content: `[文件] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                fileUrl: response.data.fileUrl || response.data.url
+            };
+            // 使用sendMessageWithContent函数来立即显示消息并发送到服务器
+            sendMessageWithContent(fileMessage);
+        } else {
+            throw new Error('文件上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送文件消息失败:', error);
+        alert('文件发送失败: ' + error.message);
+    }
+}
+
+// 继续原有的图片选择处理逻辑
+function onImageSelected_old(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        alert('请选择图片文件');
+        return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+        alert('图片文件不能超过5MB');
+        return;
+    }
+    
+    sendImageMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+// 文件选择处理
+function onFileSelected(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    if (file.size > 10 * 1024 * 1024) {
+        alert('文件大小不能超过10MB');
+        return;
+    }
+    
+    sendFileMessage(file);
+    event.target.value = ''; // 清空文件输入
+}
+
+// 发送图片消息
+async function sendImageMessage(imageFile) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const imageMessage = {
+                messageType: 'IMAGE',
+                content: `[图片] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                imageUrl: response.data.imageUrl || response.data.url
+            };
+            // 使用sendMessage函数来立即显示消息并发送到服务器
+            sendMessageWithContent(imageMessage);
+        } else {
+            throw new Error('图片上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送图片消息失败:', error);
+        alert('图片发送失败: ' + error.message);
+    }
+}
+
+// 发送文件消息
+async function sendFileMessage(file) {
+    if (!currentGroupId) return;
+    
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await post('/upload/file', formData, true);
+        
+        if (response && response.data) {
+            const fileMessage = {
+                messageType: 'FILE',
+                content: `[文件] ${response.data.fileName || response.data.originalFilename}`,
+                fileName: response.data.fileName || response.data.originalFilename,
+                fileUrl: response.data.fileUrl || response.data.url
+            };
+            // 使用sendMessage函数来立即显示消息并发送到服务器
+            sendMessageWithContent(fileMessage);
+        } else {
+            throw new Error('文件上传响应格式错误');
+        }
+        
+    } catch (error) {
+        console.error('发送文件消息失败:', error);
+        alert('文件发送失败: ' + error.message);
+    }
+}
+
+// 发送带内容的消息（用于图片、文件、语音等）
+function sendMessageWithContent(messageObject) {
+    if (!currentGroupId || !stompClient || !stompClient.connected) {
+        console.error('无法发送消息: currentGroupId=', currentGroupId, 'stompClient=', stompClient, 'connected=', stompClient?.connected);
+        return;
+    }
+    try {
+        console.log('发送消息到群组', currentGroupId, ':', messageObject);
+        
+        // 生成唯一的临时ID
+        const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // 立即在本地显示消息（乐观更新）
+        const localMessage = {
+            ...messageObject,
+            me: true,
+            senderName: currentUser.username,
+            senderRole: currentUser.role,
+            time: new Date().toISOString(),
+            id: tempId,
+            isTemporary: true // 标记为临时消息
+        };
+        appendMessage(localMessage);
+        
+        // 发送到服务器
+        stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
+        console.log('消息已发送到服务器');
+    } catch (e) {
+        console.error('Send message error:', e);
+    }
+}
+
+// 显示图片模态框
+function showImageModal(imageUrl) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; z-index:1001;`;
+    modal.innerHTML = `<img src="${imageUrl}" style="max-width:90%; max-height:90%;">`;
+    modal.onclick = () => modal.remove();
+    document.body.appendChild(modal);
+}
+
+// 工具函数
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]));
+}
+
+function formatTime(t) {
+    if (!t) return '';
+    try {
+        const date = new Date(t);
+        if (isNaN(date.getTime())) {
+            console.error('Invalid date:', t);
+            return '';
+        }
+        
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const messageDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        
+        const timeStr = date.toLocaleTimeString('zh-CN', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
+        
+        if (messageDate.getTime() === today.getTime()) {
+            return timeStr;
+        } else if (messageDate.getTime() === today.getTime() - 24 * 60 * 60 * 1000) {
+            return `昨天 ${timeStr}`;
+        } else {
+            return `${date.getMonth() + 1}/${date.getDate()} ${timeStr}`;
+        }
+    } catch (error) {
+        console.error('Error formatting time:', error, 'Input:', t);
+        return '';
     }
 }

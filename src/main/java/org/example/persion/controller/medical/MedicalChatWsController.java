@@ -81,6 +81,8 @@ public class MedicalChatWsController {
                         } else if ("FILE".equals(messageType)) {
                             fileName = jsonNode.has("fileName") ? jsonNode.get("fileName").asText() : null;
                             fileUrl = jsonNode.has("fileUrl") ? jsonNode.get("fileUrl").asText() : null;
+                            System.out.println("DEBUG - 解析FILE消息: fileName=" + fileName + ", fileUrl=" + fileUrl);
+                            System.out.println("DEBUG - 原始JSON: " + jsonNode.toString());
                         } else if ("delete".equals(messageType)) {
                             // 处理删除消息
                             Long messageId = jsonNode.has("messageId") ? jsonNode.get("messageId").asLong() : null;
@@ -110,6 +112,7 @@ public class MedicalChatWsController {
             } else if ("IMAGE".equals(messageType)) {
                 chatMessage.setImageUrl(imageUrl);
             } else if ("FILE".equals(messageType)) {
+                System.out.println("DEBUG - 保存FILE消息: fileName=" + fileName + ", fileUrl=" + fileUrl);
                 chatMessage.setFileName(fileName);
                 chatMessage.setFileUrl(fileUrl);
             }
@@ -173,6 +176,13 @@ public class MedicalChatWsController {
         }
         if (chatMessage.getFileUrl() != null) {
             vo.setFileUrl(convertToRelativePath(chatMessage.getFileUrl()));
+        }
+        
+        // 调试日志
+        if ("FILE".equals(chatMessage.getMessageType())) {
+            System.out.println("DEBUG - createMessageVO FILE消息: fileName=" + chatMessage.getFileName() + 
+                             ", fileUrl=" + chatMessage.getFileUrl() + 
+                             ", content=" + chatMessage.getContent());
         }
         
         // Format time from entity's createTime, which is now a LocalDateTime

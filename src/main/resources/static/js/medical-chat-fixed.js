@@ -187,6 +187,11 @@ function appendMessage(msg) {
         `;
     } else if (messageType === 'file') {
         // 文件消息 - 兼容历史消息和JSON格式
+        console.log('医护端收到文件消息:', msg);
+        console.log('原始fileName:', msg.fileName);
+        console.log('原始fileUrl:', msg.fileUrl);
+        console.log('原始content:', msg.content);
+        
         let displayName = msg.fileName || '附件';
         let fileUrl = msg.fileUrl || '';
         
@@ -196,10 +201,15 @@ function appendMessage(msg) {
                 const contentData = JSON.parse(msg.content);
                 displayName = contentData.fileName || displayName;
                 fileUrl = contentData.fileUrl || fileUrl;
+                console.log('从content解析出的fileName:', contentData.fileName);
+                console.log('从content解析出的fileUrl:', contentData.fileUrl);
             } catch (e) {
                 console.warn('解析文件消息content失败:', e);
             }
         }
+        
+        console.log('最终使用的displayName:', displayName);
+        console.log('最终使用的fileUrl:', fileUrl);
         
         // 如果没有文件名，尝试从URL中提取
         if (!displayName || displayName === '附件') {

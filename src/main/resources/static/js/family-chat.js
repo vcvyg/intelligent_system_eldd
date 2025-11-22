@@ -350,12 +350,14 @@ async function uploadFile() {
         console.log('File upload result:', result);
 
         // 强制所有上传的文件都识别为FILE类型，确保正确显示
-        sendMessage({
+        const fileMessage = {
             messageType: 'FILE',
             content: `[文件] ${result.data.fileName || result.data.originalFilename}`,
             fileName: result.data.fileName || result.data.originalFilename,
             fileUrl: result.data.fileUrl || result.data.url || result.data.imageUrl || result.data.audioUrl
-        });
+        };
+        console.log('子女端发送文件消息:', fileMessage);
+        sendMessage(fileMessage);
     } catch (error) {
         console.error('File upload failed:', error);
         alert('文件上传失败');

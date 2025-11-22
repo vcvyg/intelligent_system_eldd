@@ -148,9 +148,13 @@ public class MedicalChatController {
                 vo.setMessageType(msg.getMessageType());
                 
                 // 设置多媒体字段
-                vo.setAudioUrl(msg.getAudioUrl());
-                vo.setImageUrl(msg.getImageUrl());
+                vo.setAudioUrl(convertToRelativePath(msg.getAudioUrl()));
+                vo.setImageUrl(convertToRelativePath(msg.getImageUrl()));
                 vo.setDuration(msg.getDuration());
+                
+                // 设置文件字段 - 这是关键修复！
+                vo.setFileName(msg.getFileName());
+                vo.setFileUrl(convertToRelativePath(msg.getFileUrl()));
                 
                 // 正确格式化时间
                 if (msg.getCreateTime() != null) {

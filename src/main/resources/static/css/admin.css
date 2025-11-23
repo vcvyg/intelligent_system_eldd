@@ -190,6 +190,46 @@
     color: var(--color-text-gray);
 }
 
+.stat-icon.warning {
+    background: var(--color-warning);
+    color: var(--color-white);
+}
+
+.stat-card-warning {
+    border: 2px solid var(--color-warning);
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% {
+        border-color: var(--color-warning);
+    }
+    50% {
+        border-color: var(--color-danger);
+    }
+}
+
+.abnormal-badge {
+    display: inline-block;
+    background: var(--color-danger);
+    color: var(--color-white);
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    animation: pulse-badge 1.5s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
 /* 预警页面专属样式 */
 .stat-icon.alerts-total { background: var(--color-primary); color: var(--color-white); }
 .stat-icon.alerts-pending { background: var(--color-warning); color: var(--color-white); }
@@ -542,6 +582,12 @@
     height: 100%;
     background-color: rgba(0,0,0,0.5);
     animation: fadeIn 0.3s;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal[style*="display: flex"] {
+    display: flex !important;
 }
 
 .modal-content {
@@ -573,14 +619,20 @@
     color: var(--color-text-dark);
 }
 
-.close {
+.close,
+.modal-close {
     font-size: 28px;
     font-weight: bold;
     color: var(--color-text-light);
     cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
 }
 
-.close:hover {
+.close:hover,
+.modal-close:hover {
     color: var(--color-text-dark);
 }
 
@@ -610,7 +662,8 @@
 
 .form-group input,
 .form-group select,
-.form-group textarea {
+.form-group textarea,
+.form-input {
     width: 100%;
     padding: 10px 15px;
     border: 1px solid var(--color-border);

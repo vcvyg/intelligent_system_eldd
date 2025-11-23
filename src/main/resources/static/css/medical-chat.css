@@ -1,0 +1,439 @@
+/* 医护聊天页面样式 - 优化版 */
+
+.chat-container {
+  display: flex;
+  height: 85vh;
+  min-height: 600px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(106, 142, 173, 0.08);
+  overflow: hidden;
+  margin: 20px auto 0 auto;
+  max-width: 1200px;
+  width: 95%;
+}
+
+.chat-users {
+  width: 280px;
+  background: #f7f8fa;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+
+.chat-users h3 {
+  font-size: 17px;
+  font-weight: 600;
+  color: #667eea;
+  padding: 18px 20px 10px 20px;
+  margin: 0;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f7f8fa;
+}
+
+.user-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0 10px 0;
+  background: #f7f8fa;
+}
+
+.user-item {
+  padding: 14px 20px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background 0.2s;
+  font-size: 15px;
+  color: #333;
+}
+
+.user-item.active,
+.user-item:hover {
+  background: #e9eafe;
+  color: #6a8ead;
+}
+
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #f9fafb;
+}
+
+.chat-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 17px;
+  color: #333;
+  background: #f9fafb;
+  font-weight: 600;
+}
+
+.chat-messages {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: #f9fafb;
+  min-height: 200px;
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  padding: 18px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.chat-input textarea {
+  flex: 1;
+  resize: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 15px;
+  min-height: 38px;
+  outline: none;
+  margin-right: 12px;
+  background: #f9fafb;
+}
+
+.chat-input button {
+  background: #6d8ba6;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 18px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+}
+
+.chat-input button:hover {
+  background: #58728c;
+}
+
+/* 消息样式 */
+.message {
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.message.me {
+  flex-direction: row-reverse;
+}
+
+.message .bubble {
+  max-width: 60%;
+  padding: 12px 18px;
+  border-radius: 18px;
+  background: #667eea;
+  color: #fff;
+  font-size: 15px;
+  margin: 0 10px;
+  word-break: break-all;
+}
+
+.message.me .bubble {
+  background: #764ba2;
+}
+
+.message .meta {
+  font-size: 12px;
+  color: #888;
+  margin: 0 6px;
+}
+
+/* 临时消息样式 */
+.message.temporary-message {
+  opacity: 0.7;
+}
+
+.message.temporary-message .bubble {
+  background: #999 !important;
+  position: relative;
+}
+
+.message.temporary-message .bubble::after {
+  content: "发送中...";
+  position: absolute;
+  right: -60px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* 图标按钮样式 */
+.chat-icon-btn {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  margin-right: 8px !important;
+  cursor: pointer !important;
+  outline: none !important;
+  height: 36px !important;
+  width: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+.chat-icon-btn:hover {
+  background: rgba(0,0,0,0.05) !important;
+  transform: scale(1.05) !important;
+}
+
+.chat-icon-btn:active {
+  transform: scale(0.95) !important;
+}
+
+.chat-icon-btn .icon {
+  width: 20px !important;
+  height: 20px !important;
+  display: block !important;
+  pointer-events: none !important;
+}
+
+/* 录制状态样式 */
+.chat-icon-btn.recording {
+  background: #ff4757 !important;
+  animation: pulse 1.5s infinite !important;
+}
+
+.chat-icon-btn.recording:hover {
+  background: #ff3742 !important;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 71, 87, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 71, 87, 0); }
+}
+
+/* 语音消息样式 */
+.audio-message {
+  background: #e3f2fd !important;
+  padding: 12px 16px !important;
+  min-width: 120px;
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.play-btn {
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.play-btn:hover {
+  background: #1976d2;
+}
+
+.audio-duration {
+  font-size: 12px;
+  color: #666;
+  min-width: 30px;
+}
+
+.audio-wave {
+  flex: 1;
+  text-align: center;
+  font-size: 14px;
+}
+
+.message.me .audio-message {
+  background: #764ba2 !important;
+  color: white;
+}
+
+.message.me .audio-duration {
+  color: rgba(255,255,255,0.8);
+}
+
+.message.me .play-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
+.message.me .play-btn:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* 图片消息样式 */
+.image-message {
+  padding: 4px !important;
+  background: transparent !important;
+}
+
+.image-message img {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.image-message img:hover {
+  transform: scale(1.02);
+}
+
+.image-bubble {
+  margin: 0 10px;
+  max-width: 60%;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.image-bubble img {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  border-radius: 6px;
+  cursor: pointer;
+  display: block;
+  object-fit: cover;
+}
+
+/* 文件消息样式 */
+.file-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+}
+
+.file-bubble i {
+  color: #576b95;
+  font-size: 16px;
+}
+
+.file-bubble a {
+  color: inherit;
+  text-decoration: none;
+  flex: 1;
+  font-size: 14px;
+}
+
+.file-bubble a:hover {
+  text-decoration: underline;
+}
+
+/* 语音消息样式 */
+.voice-bubble {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 150px;
+  border: none;
+  box-shadow: none;
+}
+
+.voice-bubble i {
+  color: #576b95;
+  font-size: 16px;
+}
+
+.voice-bubble audio {
+  flex: 1;
+  height: 30px;
+}
+
+.voice-bubble .duration {
+  font-size: 12px;
+  color: #999;
+}
+
+/* 右键菜单样式 */
+#contextMenu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  z-index: 10000;
+  min-width: 100px;
+}
+
+#contextMenu div {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+#contextMenu div:hover {
+  background: #f8f9fa;
+}
+
+/* 消息悬停效果 */
+.message:hover {
+  background: rgba(0,0,0,0.02);
+  border-radius: 8px;
+}
+
+.message.me:hover {
+  background: rgba(118,75,162,0.05);
+}
+
+/* 响应式设计 */
+@media (max-width: 1400px) {
+  .chat-container {
+    max-width: 95vw;
+    width: 95%;
+  }
+}
+
+@media (max-width: 1000px) {
+  .chat-container {
+    max-width: 98vw;
+    width: 98%;
+    margin: 10px auto 0 auto;
+  }
+  
+  .chat-users {
+    width: 240px;
+  }
+}
+
+@media (max-width: 700px) {
+  .chat-container {
+    flex-direction: column;
+    min-width: 0;
+    height: 90vh;
+  }
+
+  .chat-users {
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    height: 200px;
+  }
+
+  .chat-main {
+    min-width: 0;
+    flex: 1;
+  }
+}

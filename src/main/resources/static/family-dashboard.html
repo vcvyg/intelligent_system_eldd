@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 </head>
 <body>
     <div class="admin-container">
@@ -16,7 +17,6 @@
             <div class="logo">
                 <h2>智慧养老系统</h2>
                 <p class="role-badge">子女端</p>
-
             </div>
             <nav class="nav-menu">
                 <a href="family-dashboard.html" class="nav-item active">
@@ -27,10 +27,96 @@
                     <span class="icon">💬</span>
                     <span>沟通通道</span>
                 </a>
+                <a href="family-location.html" class="nav-item">
+                    <span class="icon">📍</span>
+                    <span>GPS定位</span>
+                </a>
+                <a href="family-services.html" class="nav-item">
+                    <span class="icon">🏥</span>
+                    <span>医护服务</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="logout-btn" onclick="logout()">退出登录</button>
             </div>
         </aside>
-    </div>div
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>家人数据总览</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎！</span>
+                </div>
+            </header>
+
+            <!-- 统计卡片 -->
+            <section class="stats-section">
+                <div class="stats-grid" id="statsGrid">
+                    <!-- 动态加载 -->
+                </div>
+            </section>
+
+            <!-- 老人列表 -->
+            <section class="table-section" style="margin: 0 30px 30px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 0;">
+                    <h2 style="margin: 0;">关联老人列表</h2>
+                    <button class="btn-primary" onclick="showBindElderlyModal()">
+                        <span style="margin-right: 5px;">➕</span>绑定老人
+                    </button>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>姓名</th>
+                            <th>年龄</th>
+                            <th>关系</th>
+                            <th>最新心率</th>
+                            <th>最新血压</th>
+                            <th>最新体温</th>
+                            <th>健康状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="elderlyListBody">
+                        <tr>
+                            <td colspan="8" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <!-- 绑定老人模态框 -->
+    <div id="bindElderlyModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>绑定老人</h2>
+                <span class="modal-close" onclick="closeBindElderlyModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">搜索老人（姓名或身份证号）</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="searchElderlyInput" class="form-input" 
+                               placeholder="请输入老人姓名或身份证号" 
+                               style="flex: 1;"
+                               onkeypress="if(event.key === 'Enter') searchElderly()">
+                        <button class="btn-primary" onclick="searchElderly()">搜索</button>
+                    </div>
+                </div>
+                <div id="searchResults" style="margin-top: 20px;">
+                    <p style="text-align: center; color: var(--color-text-gray); padding: 20px;">
+                        请输入搜索关键词查找老人
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/family-dashboard.js"></script>
 </body>
+</html>

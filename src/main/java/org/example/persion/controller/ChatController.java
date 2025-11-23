@@ -104,7 +104,7 @@ public class ChatController {
                    .eq(ChatMessage::getMessageType, dto.getMessageType())
                    .eq(ChatMessage::getDeleted, 0)
                    .orderByDesc(ChatMessage::getCreateTime)
-                   .last("LIMIT 1");
+                   .last("OFFSET 0 ROWS FETCH NEXT 1 ROWS ONLY");
             
             ChatMessage message = chatMessageMapper.selectOne(wrapper);
             return Result.success(message);

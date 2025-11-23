@@ -6,6 +6,7 @@ import org.example.persion.entity.ElderlyFamilyRelation;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
+import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.FamilyRelationService;
 import org.springframework.stereotype.Service;
 
@@ -24,16 +25,19 @@ public class FamilyRelationServiceImpl implements FamilyRelationService {
 
     @Override
     public List<Map<String, Object>> getElderlyListByFamilyUser() {
-        // TODO: 从JWT token中获取当前子女用户ID
-        // 暂时使用固定ID进行演示,实际项目中需要从SecurityContext获取
-        Long currentFamilyUserId = 1L;
+        Long currentFamilyUserId = SecurityUtil.getUserId();
+        if (currentFamilyUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
         return familyRelationMapper.selectElderlyListByFamilyUser(currentFamilyUserId);
     }
 
     @Override
     public boolean bindElderly(Long elderlyId, String relationType, Integer isPrimaryContact) {
-        // TODO: 从JWT token中获取当前子女用户ID
-        Long currentFamilyUserId = 1L;
+        Long currentFamilyUserId = SecurityUtil.getUserId();
+        if (currentFamilyUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
 
         // 检查是否已存在关联
         LambdaQueryWrapper<ElderlyFamilyRelation> wrapper = new LambdaQueryWrapper<>();
@@ -65,8 +69,10 @@ public class FamilyRelationServiceImpl implements FamilyRelationService {
 
     @Override
     public boolean unbindElderly(Long elderlyId) {
-        // TODO: 从JWT token中获取当前子女用户ID
-        Long currentFamilyUserId = 1L;
+        Long currentFamilyUserId = SecurityUtil.getUserId();
+        if (currentFamilyUserId == null) {
+            throw new RuntimeException("无法获取当前用户信息");
+        }
 
         LambdaQueryWrapper<ElderlyFamilyRelation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ElderlyFamilyRelation::getElderlyId, elderlyId)

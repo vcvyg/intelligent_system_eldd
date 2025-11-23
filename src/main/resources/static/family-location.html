@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS定位 - 智慧养老系统</title>
+    <!-- 高德地图API将在JS中动态加载 -->
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .location-container {
+            padding: 30px;
+        }
+
+        .elderly-selector {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: var(--color-bg-lighter);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .elderly-selector select {
+            padding: 10px 15px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .map-container {
+            height: 500px;
+            background: var(--color-bg-light);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-placeholder {
+            text-align: center;
+            color: var(--color-text-gray);
+        }
+
+        .location-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-card {
+            background: var(--color-bg-lighter);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .info-card h3 {
+            margin: 0 0 15px 0;
+            font-size: 16px;
+            color: var(--color-text-dark);
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .info-item .label {
+            color: var(--color-text-gray);
+        }
+
+        .info-item .value {
+            color: var(--color-text-dark);
+            font-weight: 500;
+        }
+
+        .geofence-section {
+            background: var(--color-bg-lighter);
+            padding: 25px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .geofence-section h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: var(--color-text-dark);
+        }
+
+        .geofence-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .geofence-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--color-border);
+        }
+
+        .geofence-item .info {
+            flex: 1;
+        }
+
+        .geofence-item .name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .geofence-item .radius {
+            font-size: 12px;
+            color: var(--color-text-gray);
+        }
+
+        .alert-history {
+            background: var(--color-bg-lighter);
+            padding: 25px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .alert-history h3 {
+            margin: 0 0 20px 0;
+            font-size: 18px;
+            color: var(--color-text-dark);
+        }
+
+        .alert-item {
+            padding: 15px;
+            background: white;
+            border-radius: var(--radius-sm);
+            border-left: 4px solid var(--color-danger);
+            margin-bottom: 10px;
+        }
+
+        .alert-item .time {
+            font-size: 12px;
+            color: var(--color-text-gray);
+            margin-bottom: 5px;
+        }
+
+        .alert-item .content {
+            font-size: 14px;
+            color: var(--color-text-dark);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">子女端</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="family-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>家人数据总览</span>
+                </a>
+                <a href="family-chat.html" class="nav-item">
+                    <span class="icon">💬</span>
+                    <span>沟通通道</span>
+                </a>
+                <a href="family-location.html" class="nav-item active">
+                    <span class="icon">📍</span>
+                    <span>GPS定位</span>
+                </a>
+                <a href="family-services.html" class="nav-item">
+                    <span class="icon">🏥</span>
+                    <span>医护服务</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>GPS定位与电子围栏</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎！</span>
+                </div>
+            </header>
+
+            <div class="location-container">
+                <!-- 老人选择器 -->
+                <div class="elderly-selector">
+                    <label for="elderlySelect" style="margin-right: 10px; font-weight: 500;">选择老人：</label>
+                    <select id="elderlySelect" onchange="loadLocationData()">
+                        <option value="">请选择...</option>
+                    </select>
+                    <button class="btn-primary" style="margin-left: 15px;" onclick="refreshLocation()">刷新位置</button>
+                </div>
+
+                <!-- 地图容器 -->
+                <div class="map-container" id="mapContainer">
+                    <div id="map" style="width: 100%; height: 100%;"></div>
+                    <div class="map-placeholder" id="mapPlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg-light); z-index: 1;">
+                        <p style="font-size: 18px; margin-bottom: 10px;">🗺️ 地图区域</p>
+                        <p style="font-size: 14px;">请选择老人查看位置信息</p>
+                    </div>
+                </div>
+
+                <!-- 位置信息卡片 -->
+                <div class="location-info" id="locationInfo" style="display: none;">
+                    <div class="info-card">
+                        <h3>📍 当前位置</h3>
+                        <div class="info-item">
+                            <span class="label">经度：</span>
+                            <span class="value" id="longitude">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">纬度：</span>
+                            <span class="value" id="latitude">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">地址：</span>
+                            <span class="value" id="address">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">更新时间：</span>
+                            <span class="value" id="updateTime">-</span>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h3>📱 设备信息</h3>
+                        <div class="info-item">
+                            <span class="label">设备状态：</span>
+                            <span class="value" id="deviceStatus">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">设备类型：</span>
+                            <span class="value" id="deviceType">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="label">最后同步：</span>
+                            <span class="value" id="lastSync">-</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 电子围栏设置 -->
+                <div class="geofence-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3>电子围栏</h3>
+                        <button class="btn-primary" onclick="showAddGeofenceModal()">添加围栏</button>
+                    </div>
+                    <div class="geofence-list" id="geofenceList">
+                        <div style="text-align: center; padding: 40px; color: var(--color-text-gray);">
+                            暂无电子围栏设置
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 围栏警报历史 -->
+                <div class="alert-history">
+                    <h3>围栏警报历史</h3>
+                    <div id="alertHistoryList">
+                        <div style="text-align: center; padding: 40px; color: var(--color-text-gray);">
+                            暂无警报记录
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 添加围栏模态框 -->
+    <div id="addGeofenceModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>添加电子围栏</h2>
+                <span class="close" onclick="closeAddGeofenceModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>围栏名称</label>
+                    <input type="text" id="geofenceName" placeholder="例如：家、医院等">
+                </div>
+                <div class="form-group">
+                    <label>中心位置（经纬度）</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                        <input type="number" id="geofenceLat" placeholder="纬度" step="0.000001">
+                        <input type="number" id="geofenceLng" placeholder="经度" step="0.000001">
+                    </div>
+                    <button type="button" class="btn-secondary" style="width: 100%;" onclick="selectLocationOnMap()">在地图上选择位置</button>
+                    <p style="font-size: 12px; color: var(--color-text-gray); margin-top: 5px;">提示：点击按钮后，在地图上点击选择围栏中心位置</p>
+                </div>
+                <div class="form-group">
+                    <label>围栏半径（米）</label>
+                    <input type="number" id="geofenceRadius" placeholder="例如：500" min="10" max="10000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeAddGeofenceModal()">取消</button>
+                <button class="btn-primary" onclick="saveGeofence()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/family-location.js"></script>
+</body>
+</html>
+

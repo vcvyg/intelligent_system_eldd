@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医护服务 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .services-container {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-border);
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 15px;
+            color: var(--color-text-gray);
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: var(--color-primary);
+        }
+
+        .tab.active {
+            color: var(--color-primary);
+            border-bottom-color: var(--color-primary);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .service-card {
+            background: var(--color-bg-lighter);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 15px;
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .service-header h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--color-text-dark);
+        }
+
+        .service-status {
+            padding: 4px 12px;
+            border-radius: var(--radius-xl);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: var(--color-warning);
+            color: white;
+        }
+
+        .status-processing {
+            background: var(--color-info);
+            color: white;
+        }
+
+        .status-completed {
+            background: var(--color-success);
+            color: white;
+        }
+
+        .service-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-item {
+            font-size: 14px;
+        }
+
+        .info-item .label {
+            color: var(--color-text-gray);
+            margin-right: 8px;
+        }
+
+        .info-item .value {
+            color: var(--color-text-dark);
+            font-weight: 500;
+        }
+
+        .service-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .appointment-form {
+            background: var(--color-bg-lighter);
+            padding: 25px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .payment-section {
+            background: var(--color-bg-lighter);
+            padding: 25px;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .payment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: var(--radius-sm);
+            margin-bottom: 10px;
+            border: 1px solid var(--color-border);
+        }
+
+        .payment-item .info {
+            flex: 1;
+        }
+
+        .payment-item .amount {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏导航 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">子女端</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="family-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>家人数据总览</span>
+                </a>
+                <a href="family-chat.html" class="nav-item">
+                    <span class="icon">💬</span>
+                    <span>沟通通道</span>
+                </a>
+                <a href="family-location.html" class="nav-item">
+                    <span class="icon">📍</span>
+                    <span>GPS定位</span>
+                </a>
+                <a href="family-services.html" class="nav-item active">
+                    <span class="icon">🏥</span>
+                    <span>医护服务</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部栏 -->
+            <header class="top-bar">
+                <h1>医护服务与探访预约</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎！</span>
+                </div>
+            </header>
+
+            <div class="services-container">
+                <!-- 标签页 -->
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('services')">服务进度</button>
+                    <button class="tab" onclick="switchTab('appointment')">探访预约</button>
+                    <button class="tab" onclick="switchTab('payment')">生活支付</button>
+                </div>
+
+                <!-- 服务进度 -->
+                <div id="servicesTab" class="tab-content active">
+                    <div style="margin-bottom: 20px;">
+                        <label for="elderlySelect" style="margin-right: 10px; font-weight: 500;">选择老人：</label>
+                        <select id="elderlySelect" onchange="loadServiceProgress()" style="padding: 8px 15px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); min-width: 200px;">
+                            <option value="">请选择...</option>
+                        </select>
+                    </div>
+                    <div id="serviceProgressList">
+                        <div style="text-align: center; padding: 40px; color: var(--color-text-gray);">
+                            请选择老人查看服务进度
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 探访预约 -->
+                <div id="appointmentTab" class="tab-content">
+                    <div class="appointment-form">
+                        <h2 style="margin: 0 0 20px 0;">预约探访</h2>
+                        <form id="appointmentForm">
+                            <div class="form-group">
+                                <label>选择老人</label>
+                                <select id="appointmentElderly" required>
+                                    <option value="">请选择...</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>预约日期</label>
+                                    <input type="date" id="appointmentDate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>预约时间</label>
+                                    <input type="time" id="appointmentTime" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>探访目的</label>
+                                <select id="appointmentPurpose" required>
+                                    <option value="">请选择...</option>
+                                    <option value="日常探访">日常探访</option>
+                                    <option value="陪同就医">陪同就医</option>
+                                    <option value="节日探望">节日探望</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>备注说明</label>
+                                <textarea id="appointmentNote" rows="3" placeholder="请输入备注信息（可选）"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <button type="button" class="btn-primary" onclick="submitAppointment()">提交预约</button>
+                                <button type="reset" class="btn-secondary" style="margin-left: 10px;">重置</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 预约记录 -->
+                    <div class="table-section">
+                        <h2>我的预约记录</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>老人姓名</th>
+                                    <th>预约日期</th>
+                                    <th>预约时间</th>
+                                    <th>探访目的</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointmentListBody">
+                                <tr>
+                                    <td colspan="6" class="loading">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 生活支付 -->
+                <div id="paymentTab" class="tab-content">
+                    <div class="payment-section">
+                        <h2 style="margin: 0 0 20px 0;">待支付项目</h2>
+                        <div id="paymentList">
+                            <div style="text-align: center; padding: 40px; color: var(--color-text-gray);">
+                                暂无待支付项目
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-section">
+                        <h2>支付记录</h2>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>支付时间</th>
+                                    <th>项目名称</th>
+                                    <th>老人姓名</th>
+                                    <th>金额</th>
+                                    <th>支付方式</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentHistoryBody">
+                                <tr>
+                                    <td colspan="6" class="loading">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/family-services.js"></script>
+</body>
+</html>
+

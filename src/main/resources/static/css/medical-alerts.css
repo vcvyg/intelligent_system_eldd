@@ -1,0 +1,475 @@
+/* 医护告警页面样式 */
+
+.alert-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.alert-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    border-left: 4px solid #ddd;
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alert-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* 告警等级样式 */
+.alert-card.level-low {
+    border-left-color: #52c41a;
+}
+
+.alert-card.level-medium {
+    border-left-color: #faad14;
+}
+
+.alert-card.level-high {
+    border-left-color: #ff7875;
+}
+
+.alert-card.level-critical {
+    border-left-color: #ff4d4f;
+    background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+/* 处理状态样式 */
+.alert-card.processing {
+    background: linear-gradient(135deg, #fff 0%, #f0f9ff 100%);
+    border-left-color: #1890ff;
+}
+
+.alert-card.handled {
+    opacity: 0.7;
+    background: #f6f6f6;
+}
+
+.alert-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.alert-level {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+    text-transform: uppercase;
+}
+
+.level-level-low {
+    background: #52c41a;
+}
+
+.level-level-medium {
+    background: #faad14;
+}
+
+.level-level-high {
+    background: #ff7875;
+}
+
+.level-level-critical {
+    background: #ff4d4f;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.alert-type {
+    background: #f0f0f0;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+}
+
+.alert-time {
+    color: #999;
+    font-size: 13px;
+    margin-left: auto;
+}
+
+.alert-body {
+    margin-bottom: 16px;
+}
+
+.alert-info {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.info-item {
+    font-size: 14px;
+    color: #666;
+}
+
+.info-item strong {
+    color: #333;
+}
+
+.alert-content {
+    font-size: 15px;
+    color: #333;
+    line-height: 1.5;
+    margin: 8px 0;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    border-left: 3px solid #e9ecef;
+}
+
+.alert-value {
+    font-size: 14px;
+    color: #666;
+    background: #fff3cd;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border-left: 3px solid #ffc107;
+    margin: 8px 0 0 0;
+}
+
+.alert-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.alert-status {
+    font-size: 13px;
+    color: #666;
+    padding: 4px 8px;
+    background: #f0f0f0;
+    border-radius: 12px;
+}
+
+.alert-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 按钮样式 */
+.btn-handle {
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-handle:hover {
+    background: #40a9ff;
+    transform: translateY(-1px);
+}
+
+.btn-ignore {
+    background: #d9d9d9;
+    color: #666;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-ignore:hover {
+    background: #bfbfbf;
+    transform: translateY(-1px);
+}
+
+.btn-complete {
+    background: #52c41a;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-complete:hover {
+    background: #73d13d;
+    transform: translateY(-1px);
+}
+
+/* 空状态样式 */
+.empty-tip {
+    text-align: center;
+    color: #999;
+    font-size: 16px;
+    padding: 60px 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #e9ecef;
+}
+
+/* 筛选栏样式 */
+.filter-bar {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-bar select {
+    padding: 6px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 14px;
+    background: #fff;
+}
+
+.filter-bar button {
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.filter-bar button:hover {
+    background: #40a9ff;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .alert-list {
+        padding: 12px;
+    }
+    
+    .alert-card {
+        padding: 16px;
+    }
+    
+    .alert-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .alert-time {
+        margin-left: 0;
+    }
+    
+    .alert-info {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .alert-footer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .alert-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    color: #999;
+}
+
+.loading::after {
+    content: '';
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #1890ff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast 提示样式 */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toast.show {
+    transform: translateX(0);
+}
+
+.toast-success {
+    background: #52c41a;
+}
+
+.toast-error {
+    background: #ff4d4f;
+}
+
+.toast-info {
+    background: #1890ff;
+}
+
+/* 按钮禁用状态 */
+.btn-handle:disabled,
+.btn-ignore:disabled,
+.btn-complete:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.btn-handle:disabled:hover,
+.btn-ignore:disabled:hover,
+.btn-complete:disabled:hover {
+    transform: none !important;
+    background: inherit;
+}
+
+/* 骨架屏加载样式 */
+.skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+}
+
+.skeleton-card {
+    background: #f0f0f0;
+    border-radius: 12px;
+    height: 120px;
+    position: relative;
+    overflow: hidden;
+}
+
+.skeleton-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+    animation: skeleton-loading 1.5s infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        left: -100%;
+    }
+    100% {
+        left: 100%;
+    }
+}
+
+/* 错误状态样式 */
+.error-tip {
+    text-align: center;
+    padding: 60px 20px;
+    background: #fff2f0;
+    border-radius: 12px;
+    border: 2px dashed #ffccc7;
+}
+
+.error-tip p {
+    color: #ff4d4f;
+    font-size: 16px;
+    margin-bottom: 16px;
+}
+
+.retry-btn {
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.retry-btn:hover {
+    background: #ff7875;
+}
+
+/* 优化告警卡片动画 */
+.alert-card {
+    animation: slideInUp 0.2s ease-out forwards;
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+@keyframes slideInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 减少骨架屏动画频率 */
+.skeleton-card::before {
+    animation: skeleton-loading 2s infinite;
+}

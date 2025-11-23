@@ -44,12 +44,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // 异步加载数据，避免阻塞页面渲染
-    Promise.all([
-        loadGroupList(),
-        connectWebSocket()
-    ]).catch(error => {
-        console.error('初始化失败:', error);
+    // 先加载群组列表，WebSocket连接可以稍后（即使失败也不影响页面使用）
+    loadGroupList().catch(error => {
+        console.error('加载群组列表失败:', error);
     });
+    
+    // WebSocket连接失败不应该阻止页面加载
+    // 延迟一下再连接，避免页面加载时立即失败
+    setTimeout(() => {
+        updateConnectionStatus('connecting');
+        connectWebSocket().catch(error => {
+            // 静默处理，让重连机制处理
+            // 只在控制台输出一次警告
+            console.warn('WebSocket初始连接失败，将自动重试（最多' + maxReconnectAttempts + '次）');
+        });
+    }, 500);
 
     // 添加键盘事件监听
     if (domCache.chatInput) {
@@ -60,32 +69,368 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+    
+    // 页面卸载时清理资源
+    window.addEventListener('beforeunload', function() {
+        isManualDisconnect = true;
+        stopConnectionHealthCheck();
+        if (reconnectTimer) {
+            clearTimeout(reconnectTimer);
+        }
+        if (stompClient && stompClient.connected) {
+            stompClient.disconnect();
+        }
+    });
+    
+    // 监听网络状态变化，网络恢复时自动重连
+    window.addEventListener('online', function() {
+        console.log('网络已恢复，尝试重新连接WebSocket');
+        if (!isManualDisconnect && (!stompClient || !stompClient.connected)) {
+            reconnectAttempts = 0;
+            shouldStopReconnecting = false;
+            updateConnectionStatus('reconnecting');
+            connectWebSocket().catch(err => {
+                console.warn('网络恢复后重连失败:', err);
+            });
+        }
+    });
+    
+    window.addEventListener('offline', function() {
+        console.log('网络已断开');
+        updateConnectionStatus('disconnected');
+    });
 });
+
+// 重连相关变量
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 10; // 增加重连次数
+let reconnectTimer = null;
+let isConnecting = false;
+let isManualDisconnect = false;
+let shouldStopReconnecting = false; // 标志：是否应该停止重连
+let connectionHealthCheckInterval = null; // 连接健康检查定时器
+let lastHeartbeatTime = null; // 最后一次收到心跳的时间
+
+// 更新连接状态（仅输出到控制台）
+function updateConnectionStatus(status) {
+    const statusConfig = {
+        'connected': { text: '✅ WebSocket已连接', emoji: '✅' },
+        'connecting': { text: '🔄 WebSocket连接中...', emoji: '🔄' },
+        'disconnected': { text: '❌ WebSocket未连接', emoji: '❌' },
+        'reconnecting': { text: '🔄 WebSocket重连中...', emoji: '🔄' }
+    };
+    
+    const config = statusConfig[status] || statusConfig['disconnected'];
+    const timestamp = new Date().toLocaleTimeString('zh-CN');
+    console.log(`[${timestamp}] ${config.text}`);
+}
+
+// 启动连接健康检查
+function startConnectionHealthCheck() {
+    if (connectionHealthCheckInterval) {
+        clearInterval(connectionHealthCheckInterval);
+    }
+    
+    connectionHealthCheckInterval = setInterval(() => {
+        if (isManualDisconnect) return;
+        
+        // 检查连接状态
+        if (!stompClient || !stompClient.connected) {
+            console.log('健康检查：连接已断开，尝试重连...');
+            updateConnectionStatus('reconnecting');
+            // 重置重连次数，允许重新尝试
+            if (reconnectAttempts >= maxReconnectAttempts) {
+                reconnectAttempts = 0;
+                shouldStopReconnecting = false;
+            }
+            connectWebSocket().catch(err => {
+                console.warn('健康检查重连失败:', err);
+            });
+        } else {
+            // 检查心跳（如果超过30秒没有收到心跳，认为连接异常）
+            if (lastHeartbeatTime) {
+                const timeSinceLastHeartbeat = Date.now() - lastHeartbeatTime;
+                if (timeSinceLastHeartbeat > 30000) {
+                    console.warn('健康检查：超过30秒未收到心跳，连接可能异常');
+                    // 断开并重连
+                    if (stompClient && stompClient.connected) {
+                        stompClient.disconnect();
+                    }
+                    updateConnectionStatus('reconnecting');
+                    reconnectAttempts = 0;
+                    shouldStopReconnecting = false;
+                    connectWebSocket().catch(err => {
+                        console.warn('健康检查重连失败:', err);
+                    });
+                }
+            }
+        }
+    }, 5000); // 每5秒检查一次
+}
+
+// 停止连接健康检查
+function stopConnectionHealthCheck() {
+    if (connectionHealthCheckInterval) {
+        clearInterval(connectionHealthCheckInterval);
+        connectionHealthCheckInterval = null;
+    }
+}
+
+// 检查token是否过期
+function isTokenExpired() {
+    const token = localStorage.getItem('token');
+    if (!token) return true;
+    
+    try {
+        // 简单的JWT token过期检查（解析payload）
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const exp = payload.exp * 1000; // 转换为毫秒
+        return Date.now() >= exp;
+    } catch (e) {
+        // 如果无法解析，假设token无效
+        return true;
+    }
+}
+
+// 确保WebSocket连接的函数（改进版：即使达到最大重连次数，在用户操作时也要尝试）
+async function ensureWebSocketConnected(forceReconnect = false) {
+    // 检查token是否过期
+    if (isTokenExpired()) {
+        console.warn('Token已过期，无法连接WebSocket');
+        updateConnectionStatus('disconnected');
+        alert('登录已过期，请重新登录');
+        logout();
+        return false;
+    }
+    
+    if (stompClient && stompClient.connected && !forceReconnect) {
+        return true;
+    }
+    
+    // 如果之前达到最大重连次数，但在用户操作时，重置计数器并重试
+    if (forceReconnect || reconnectAttempts >= maxReconnectAttempts) {
+        console.log('用户操作触发，重置重连计数器并尝试连接');
+        reconnectAttempts = 0;
+        shouldStopReconnecting = false;
+    }
+    
+    if (isConnecting) {
+        // 如果正在连接，等待一下
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return stompClient && stompClient.connected;
+    }
+    
+    // 尝试连接
+    updateConnectionStatus('connecting');
+    await connectWebSocket();
+    return stompClient && stompClient.connected;
+}
 
 function connectWebSocket() {
     const token = localStorage.getItem('token');
-    console.log('正在连接WebSocket...');
-    const socket = new SockJS(`/ws-chat?token=${encodeURIComponent(token)}`);
-    stompClient = Stomp.over(socket);
-    stompClient.connect({}, function (frame) {
-        console.log('WebSocket连接成功:', frame);
-        
-        // Subscribe to personal message queue
-        stompClient.subscribe('/user/queue/group-messages', function (message) {
-            console.log('收到个人队列消息:', message.body);
-            const msg = JSON.parse(message.body);
-            handleNewMessage(msg);
+    if (!token) {
+        console.warn('登录信息不存在，无法连接WebSocket');
+        return Promise.reject(new Error('No token'));
+    }
+
+    // 如果已经连接，直接返回
+    if (stompClient && stompClient.connected) {
+        return Promise.resolve();
+    }
+
+    // 如果正在连接，等待连接完成
+    if (isConnecting) {
+        return new Promise((resolve) => {
+            const checkInterval = setInterval(() => {
+                if (!isConnecting) {
+                    clearInterval(checkInterval);
+                    resolve();
+                } else if (stompClient && stompClient.connected) {
+                    clearInterval(checkInterval);
+                    resolve();
+                }
+            }, 100);
+            
+            // 最多等待5秒
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve();
+            }, 5000);
         });
-        
-        // Subscribe to current group topic for immediate message display
-        if (currentGroupId) {
-            subscribeToGroupTopic(currentGroupId);
+    }
+
+    isConnecting = true;
+    console.log('正在连接WebSocket... (尝试 ' + (reconnectAttempts + 1) + '/' + maxReconnectAttempts + ')');
+    
+    return new Promise((resolve, reject) => {
+        try {
+            const wsUrl = `/ws-chat?token=${encodeURIComponent(token)}`;
+            console.log('连接WebSocket URL:', wsUrl.replace(/token=[^&]+/, 'token=***'));
+            
+            const socket = new SockJS(wsUrl);
+            // 使用Stomp.over，但传入一个factory函数来避免警告
+            if (typeof Stomp !== 'undefined') {
+                // 检查是否有新的API
+                if (Stomp.Stomp && typeof Stomp.Stomp.over === 'function') {
+                    stompClient = Stomp.Stomp.over(() => socket);
+                } else if (typeof Stomp.over === 'function') {
+                    // 旧版API，直接使用
+                    stompClient = Stomp.over(socket);
+                } else {
+                    // 如果都不支持，创建一个包装器
+                    stompClient = Stomp.over(socket);
+                }
+            } else {
+                throw new Error('Stomp库未加载');
+            }
+
+            // 配置心跳，与服务器端保持一致
+            stompClient.heartbeat.outgoing = 10000; // 客户端每10秒发送一次心跳
+            stompClient.heartbeat.incoming = 10000; // 客户端期望每10秒收到一次心跳
+
+            // 覆盖默认的断开连接处理
+            stompClient.onWebSocketClose = function() {
+                console.warn('WebSocket连接已关闭');
+                isConnecting = false;
+                updateConnectionStatus('disconnected');
+                
+                // 如果是手动断开，不重连
+                if (isManualDisconnect) {
+                    stopConnectionHealthCheck();
+                    return;
+                }
+                
+                // 尝试自动重连
+                updateConnectionStatus('reconnecting');
+                attemptReconnect();
+            };
+
+            // 添加SockJS错误处理
+            socket.onerror = function(error) {
+                // 只在第一次失败或达到最大重连次数时输出错误
+                if (reconnectAttempts === 0 || reconnectAttempts >= maxReconnectAttempts - 1) {
+                    console.error('SockJS连接错误:', error);
+                }
+                isConnecting = false;
+                updateConnectionStatus('disconnected');
+                if (!isManualDisconnect) {
+                    updateConnectionStatus('reconnecting');
+                    attemptReconnect();
+                }
+                reject(new Error('SockJS connection error'));
+            };
+
+            // 添加SockJS关闭处理
+            socket.onclose = function(event) {
+                console.warn('SockJS连接关闭:', event);
+                isConnecting = false;
+                updateConnectionStatus('disconnected');
+                
+                if (!isManualDisconnect) {
+                    updateConnectionStatus('reconnecting');
+                    attemptReconnect();
+                }
+            };
+
+            stompClient.connect({}, function (frame) {
+                console.log('WebSocket连接成功:', frame);
+                isConnecting = false;
+                reconnectAttempts = 0; // 重置重连次数
+                shouldStopReconnecting = false; // 重置停止标志
+                lastHeartbeatTime = Date.now(); // 记录连接时间
+                updateConnectionStatus('connected');
+                
+                // 启动连接健康检查
+                startConnectionHealthCheck();
+                
+                // 监听心跳消息
+                const originalOnMessage = stompClient.ws.onmessage;
+                stompClient.ws.onmessage = function(event) {
+                    lastHeartbeatTime = Date.now();
+                    if (originalOnMessage) {
+                        originalOnMessage.call(this, event);
+                    }
+                };
+                
+                // Subscribe to personal message queue
+                stompClient.subscribe('/user/queue/group-messages', function (message) {
+                    console.log('收到个人队列消息:', message.body);
+                    lastHeartbeatTime = Date.now(); // 收到消息也更新心跳时间
+                    const msg = JSON.parse(message.body);
+                    handleNewMessage(msg);
+                });
+                
+                // Subscribe to current group topic for immediate message display
+                if (currentGroupId) {
+                    subscribeToGroupTopic(currentGroupId);
+                }
+                
+                resolve();
+            }, function(error) {
+                // 只在第一次失败或达到最大重连次数时输出错误
+                if (reconnectAttempts === 0 || reconnectAttempts >= maxReconnectAttempts - 1) {
+                    console.error('STOMP连接失败:', error);
+                }
+                isConnecting = false;
+                updateConnectionStatus('disconnected');
+                
+                // 尝试自动重连
+                if (!isManualDisconnect) {
+                    updateConnectionStatus('reconnecting');
+                    attemptReconnect();
+                }
+                reject(error);
+            });
+        } catch (error) {
+            console.error('创建WebSocket连接时出错:', error);
+            isConnecting = false;
+            attemptReconnect();
+            reject(error);
         }
-    }, function(error) {
-        console.error('WebSocket连接失败:', error);
-        // 重连逻辑
-        setTimeout(connectWebSocket, 5000);
     });
+}
+
+// 尝试重连
+function attemptReconnect() {
+    // 如果已经达到最大重连次数，停止重连
+    if (reconnectAttempts >= maxReconnectAttempts || shouldStopReconnecting) {
+        if (reconnectAttempts === maxReconnectAttempts && !shouldStopReconnecting) {
+            console.warn('已达到最大重连次数，停止重连。WebSocket连接失败，但消息仍可通过HTTP API发送');
+            shouldStopReconnecting = true;
+            updateConnectionStatus('disconnected');
+            
+            // 显示用户友好的提示
+            const notification = document.createElement('div');
+            notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#ff9800;color:white;padding:15px 20px;border-radius:8px;z-index:10000;box-shadow:0 4px 12px rgba(0,0,0,0.15);max-width:300px;';
+            notification.innerHTML = '<strong>提示</strong><br>WebSocket连接失败，但您仍可通过HTTP API发送消息。点击发送按钮时会自动尝试重连。';
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 5000);
+        }
+        return;
+    }
+    
+    reconnectAttempts++;
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts - 1), 10000); // 指数退避，最多10秒
+    
+    // 只在第一次和最后一次重连时输出日志，减少控制台噪音
+    if (reconnectAttempts === 1 || reconnectAttempts === maxReconnectAttempts) {
+        console.log(`将在 ${delay}ms 后尝试第 ${reconnectAttempts} 次重连...`);
+    }
+    
+    if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+    }
+    
+    reconnectTimer = setTimeout(() => {
+        if (!shouldStopReconnecting) {
+            connectWebSocket().catch(err => {
+                // 只在达到最大重连次数时输出错误
+                if (reconnectAttempts >= maxReconnectAttempts) {
+                    console.error('重连失败:', err);
+                }
+            });
+        }
+    }, delay);
 }
 
 let currentGroupSubscription = null;
@@ -1211,14 +1556,14 @@ async function sendFileMessage(file) {
 }
 
 // 发送带内容的消息（用于图片、文件、语音等）
-function sendMessageWithContent(messageObject) {
-    if (!currentGroupId || !stompClient || !stompClient.connected) {
-        console.error('无法发送消息: currentGroupId=', currentGroupId, 'stompClient=', stompClient, 'connected=', stompClient?.connected);
+async function sendMessageWithContent(messageObject) {
+    if (!currentGroupId) {
+        console.error('无法发送消息: 未选择群组');
+        alert('请先选择一个群组');
         return;
     }
+    
     try {
-        console.log('发送消息到群组', currentGroupId, ':', messageObject);
-        
         // 生成唯一的临时ID
         const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
@@ -1226,7 +1571,7 @@ function sendMessageWithContent(messageObject) {
         const localMessage = {
             ...messageObject,
             me: true,
-            senderName: currentUser.username,
+            senderName: currentUser.realName || currentUser.username,
             senderRole: currentUser.role,
             time: new Date().toISOString(),
             id: tempId,
@@ -1234,11 +1579,98 @@ function sendMessageWithContent(messageObject) {
         };
         appendMessage(localMessage);
         
-        // 发送到服务器
-        stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
-        console.log('消息已发送到服务器');
+        // 尝试通过WebSocket发送（强制重连，确保连接可用）
+        const connected = await ensureWebSocketConnected(true); // 强制重连
+        let sendSuccess = false;
+        
+        if (connected && stompClient && stompClient.connected) {
+            try {
+                stompClient.send(`/app/chat/group/${currentGroupId}`, {}, JSON.stringify(messageObject));
+                console.log('消息已通过WebSocket发送到服务器');
+                sendSuccess = true;
+                
+                // 更新临时消息状态
+                setTimeout(() => {
+                    const tempElement = document.getElementById(tempId);
+                    if (tempElement) {
+                        tempElement.classList.remove('temporary-message');
+                        tempElement.style.opacity = '1';
+                        const indicator = tempElement.querySelector('.temp-indicator');
+                        if (indicator) {
+                            indicator.remove();
+                        }
+                    }
+                }, 500);
+            } catch (sendError) {
+                console.warn('WebSocket发送失败，将使用HTTP API:', sendError);
+                sendSuccess = false;
+            }
+        }
+        
+        // 如果WebSocket发送失败，使用HTTP API作为降级方案
+        if (!sendSuccess) {
+            console.log('使用HTTP API发送消息（WebSocket降级方案）');
+            try {
+                const response = await fetch(`/api/medical/chat/group/${currentGroupId}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify(messageObject)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.code === 200 && result.data) {
+                        console.log('消息已通过HTTP API发送成功');
+                        
+                        // 更新临时消息，使用服务器返回的真实消息数据
+                        const tempElement = document.getElementById(tempId);
+                        if (tempElement) {
+                            const serverMessage = result.data;
+                            // 更新消息ID
+                            tempElement.dataset.messageData = JSON.stringify(serverMessage);
+                            tempElement.id = serverMessage.id || tempId;
+                            
+                            // 移除临时标识
+                            tempElement.classList.remove('temporary-message');
+                            tempElement.style.opacity = '1';
+                            const indicator = tempElement.querySelector('.temp-indicator');
+                            if (indicator) {
+                                indicator.remove();
+                            }
+                        }
+                        
+                        // 重新加载消息列表以确保同步
+                        setTimeout(() => {
+                            loadGroupMessages();
+                        }, 500);
+                    } else {
+                        throw new Error(result.message || '发送失败');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP请求失败: ${errorText}`);
+                }
+            } catch (httpError) {
+                console.error('HTTP API发送消息失败:', httpError);
+                // 标记消息为发送失败
+                const tempElement = document.getElementById(tempId);
+                if (tempElement) {
+                    tempElement.style.opacity = '0.5';
+                    const indicator = tempElement.querySelector('.temp-indicator');
+                    if (indicator) {
+                        indicator.textContent = '发送失败';
+                        indicator.style.color = 'red';
+                    }
+                }
+                alert('消息发送失败: ' + httpError.message);
+            }
+        }
     } catch (e) {
         console.error('Send message error:', e);
+        alert('发送消息失败: ' + e.message);
     }
 }
 

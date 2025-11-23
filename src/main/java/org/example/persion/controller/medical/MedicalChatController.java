@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.persion.common.Result;
 import org.example.persion.entity.ChatMessage;
 import org.example.persion.entity.ElderlyInfo;
@@ -12,10 +14,14 @@ import org.example.persion.repository.ChatMessageMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyMedicalRelationMapper;
+import org.example.persion.repository.UserMapper;
 import org.example.persion.security.SecurityUtil;
 import org.example.persion.vo.MessageVO;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +35,11 @@ public class MedicalChatController {
     private final ChatMessageMapper chatMessageMapper;
     private final ElderlyFamilyRelationMapper familyRelationMapper;
     private final ElderlyMedicalRelationMapper medicalRelationMapper;
+    private final UserMapper userMapper;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final RedisTemplate<String, Object> redisTemplate;
+    
+    private static final String UNREAD_COUNT_KEY_PREFIX = "unread:count:";
 
     /**
      * 获取当前医护人员负责的老人群组列表
@@ -205,7 +216,155 @@ public class MedicalChatController {
         return path;
     }
 
-
+    /**
+     * HTTP API端点：发送消息（WebSocket降级方案）
+     */
+    @PostMapping("/group/{groupId}/send")
+    public Result<MessageVO> sendMessage(@PathVariable Long groupId, @RequestBody String content) {
+        try {
+            Long senderId = SecurityUtil.getUserId();
+            if (senderId == null) {
+                return Result.error("用户未登录");
+            }
+            
+            User sender = userMapper.selectById(senderId);
+            if (sender == null) {
+                return Result.error("用户不存在");
+            }
+            
+            // 解析消息内容
+            String messageType = "TEXT";
+            String messageContent = content;
+            String audioUrl = null;
+            String imageUrl = null;
+            String fileName = null;
+            String fileUrl = null;
+            Integer duration = null;
+            
+            if (content != null && content.startsWith("{")) {
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    JsonNode jsonNode = mapper.readTree(content);
+                    
+                    if (jsonNode.has("messageType")) {
+                        messageType = jsonNode.get("messageType").asText();
+                        
+                        if (jsonNode.has("content")) {
+                            messageContent = jsonNode.get("content").asText();
+                        }
+                        
+                        if ("VOICE".equals(messageType)) {
+                            audioUrl = jsonNode.has("audioUrl") ? jsonNode.get("audioUrl").asText() : null;
+                            duration = jsonNode.has("duration") ? jsonNode.get("duration").asInt() : null;
+                        } else if ("IMAGE".equals(messageType)) {
+                            imageUrl = jsonNode.has("imageUrl") ? jsonNode.get("imageUrl").asText() : null;
+                        } else if ("FILE".equals(messageType)) {
+                            fileName = jsonNode.has("fileName") ? jsonNode.get("fileName").asText() : null;
+                            fileUrl = jsonNode.has("fileUrl") ? jsonNode.get("fileUrl").asText() : null;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("警告: 消息内容解析为JSON失败，将作为纯文本处理。错误: " + e.getMessage());
+                }
+            }
+            
+            // 创建并填充ChatMessage实体
+            ChatMessage chatMessage = new ChatMessage();
+            chatMessage.setGroupId(groupId);
+            chatMessage.setSenderId(sender.getId());
+            chatMessage.setSenderName(sender.getRealName() != null ? sender.getRealName() : sender.getUsername());
+            chatMessage.setSenderRole(sender.getRole());
+            chatMessage.setMessageType(messageType);
+            chatMessage.setContent(messageContent);
+            
+            if ("VOICE".equals(messageType)) {
+                chatMessage.setAudioUrl(audioUrl);
+                chatMessage.setDuration(duration);
+            } else if ("IMAGE".equals(messageType)) {
+                chatMessage.setImageUrl(imageUrl);
+            } else if ("FILE".equals(messageType)) {
+                chatMessage.setFileName(fileName);
+                chatMessage.setFileUrl(fileUrl);
+            }
+            
+            LocalDateTime currentTime = LocalDateTime.now();
+            chatMessage.setCreateTime(currentTime);
+            chatMessage.setUpdateTime(currentTime);
+            chatMessage.setDeleted(0);
+            
+            // 保存到数据库
+            chatMessageMapper.insert(chatMessage);
+            
+            // 尝试通过WebSocket广播消息（如果WebSocket可用）
+            try {
+                List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
+                List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
+                List<User> allMembers = Stream.concat(familyMembers.stream(), medicalMembers.stream())
+                        .distinct()
+                        .collect(Collectors.toList());
+                
+                for (User member : allMembers) {
+                    if (!member.getId().equals(sender.getId())) {
+                        String unreadKey = UNREAD_COUNT_KEY_PREFIX + member.getId() + ":" + groupId;
+                        redisTemplate.opsForValue().increment(unreadKey);
+                    }
+                    MessageVO personalMessageVO = createMessageVO(chatMessage, member.getId());
+                    String username = member.getUsername();
+                    if (username != null) {
+                        messagingTemplate.convertAndSendToUser(username, "/queue/group-messages", personalMessageVO);
+                    }
+                }
+                
+                MessageVO generalMessageVO = createMessageVO(chatMessage, senderId);
+                if (generalMessageVO != null) {
+                    messagingTemplate.convertAndSend("/topic/group/" + groupId, generalMessageVO);
+                }
+            } catch (Exception e) {
+                // WebSocket广播失败不影响消息保存
+                System.err.println("WebSocket广播失败（消息已保存到数据库）: " + e.getMessage());
+            }
+            
+            // 返回消息VO
+            MessageVO messageVO = createMessageVO(chatMessage, senderId);
+            return Result.success(messageVO);
+            
+        } catch (Exception e) {
+            System.err.println("发送消息失败: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("发送消息失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 创建MessageVO
+     */
+    private MessageVO createMessageVO(ChatMessage chatMessage, Long currentUserId) {
+        MessageVO vo = new MessageVO();
+        vo.setId(chatMessage.getId());
+        vo.setGroupId(chatMessage.getGroupId());
+        vo.setSenderId(chatMessage.getSenderId());
+        vo.setSenderName(chatMessage.getSenderName());
+        vo.setSenderRole(chatMessage.getSenderRole());
+        vo.setContent(chatMessage.getContent());
+        vo.setMessageType(chatMessage.getMessageType());
+        
+        vo.setAudioUrl(convertToRelativePath(chatMessage.getAudioUrl()));
+        vo.setImageUrl(convertToRelativePath(chatMessage.getImageUrl()));
+        vo.setDuration(chatMessage.getDuration());
+        vo.setFileName(chatMessage.getFileName());
+        vo.setFileUrl(convertToRelativePath(chatMessage.getFileUrl()));
+        
+        if (chatMessage.getCreateTime() != null) {
+            vo.setTime(chatMessage.getCreateTime().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        } else {
+            vo.setTime(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        }
+        
+        if (currentUserId != null) {
+            vo.setMe(currentUserId.equals(chatMessage.getSenderId()));
+        }
+        return vo;
+    }
 
     @Data
     public static class GroupVO {

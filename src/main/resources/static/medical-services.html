@@ -8,6 +8,171 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .content-wrapper {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .page-intro {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .page-intro p {
+            color: #4a5568;
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        .quick-stats {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .quick-stats .stat {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 12px 16px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .quick-stats .stat span {
+            display: block;
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .quick-stats .stat strong {
+            font-size: 20px;
+            color: #2d3748;
+        }
+
+        .card {
+            border-radius: 16px;
+            padding: 24px;
+            background: #fff;
+            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card-header h2 {
+            margin: 0;
+        }
+
+        .card-header p {
+            margin: 4px 0 0;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 24px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px 24px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 6px;
+            display: inline-block;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            padding: 10px 12px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #4c6ef5;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.15);
+        }
+
+        .btn-primary {
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .records-panel {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .records-panel table {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .records-panel h3 {
+            margin-bottom: 12px;
+        }
+
+        .table-wrapper {
+            background: #fff;
+            border: 1px solid #edf2f7;
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-bar select {
+            min-width: 220px;
+        }
+
+        @media (max-width: 1024px) {
+            .page-intro {
+                grid-template-columns: 1fr;
+            }
+
+            .section-grid,
+            .records-panel,
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-stats {
+                justify-content: flex-start;
+                flex-wrap: wrap;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -64,10 +229,33 @@
                 </div>
             </header>
 
-            <section class="content-wrapper" style="padding: 24px;">
-                <div class="card" style="margin-bottom: 20px;">
-                    <h2>服务记录上报</h2>
-                    <form id="serviceForm" class="form-grid">
+            <section class="content-wrapper">
+                <div class="page-intro">
+                    <div>
+                        <h2>生活服务录入</h2>
+                        <p>请先选择老人，再依次填写服务内容或生活缴费信息。系统会自动同步至家属端，确保沟通透明。</p>
+                    </div>
+                    <div class="quick-stats">
+                        <div class="stat">
+                            <span>今日服务</span>
+                            <strong id="todayServiceCount">--</strong>
+                        </div>
+                        <div class="stat">
+                            <span>待缴费用</span>
+                            <strong id="pendingPaymentAmount">--</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2>服务记录上报</h2>
+                                <p>记录每一次护理、康复或陪护服务，方便后续追踪与分析。</p>
+                            </div>
+                        </div>
+                        <form id="serviceForm" class="form-grid">
                         <div class="form-group">
                             <label>服务老人</label>
                             <select id="serviceElderly" required>
@@ -98,15 +286,21 @@
                             <label>详细说明</label>
                             <textarea id="serviceDescription" rows="3" placeholder="补充服务内容、效果等信息"></textarea>
                         </div>
-                        <div style="grid-column: span 2;">
+                        <div style="grid-column: span 2;display:flex;justify-content:flex-end;">
                             <button type="button" class="btn-primary" onclick="submitServiceRecord()">提交服务记录</button>
                         </div>
                     </form>
-                </div>
+                    </div>
 
-                <div class="card" style="margin-bottom: 20px;">
-                    <h2>生活缴费创建</h2>
-                    <form id="paymentForm" class="form-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div>
+                                <h2>生活缴费创建</h2>
+                                <p>创建生活费用通知，支持自动关联家属联系人并添加备注。</p>
+                            </div>
+                            <button type="button" class="btn-secondary" style="border-radius:999px;padding:8px 16px;" onclick="reloadRecords()">刷新列表</button>
+                        </div>
+                        <form id="paymentForm" class="form-grid">
                         <div class="form-group">
                             <label>关联老人</label>
                             <select id="paymentElderly" required onchange="loadFamilyContacts()">
@@ -135,55 +329,66 @@
                             <label>备注说明</label>
                             <textarea id="paymentRemark" rows="3" placeholder="填写费用明细、收款方式等信息"></textarea>
                         </div>
-                        <div style="grid-column: span 2;">
+                        <div style="grid-column: span 2;display:flex;justify-content:flex-end;">
                             <button type="button" class="btn-primary" onclick="submitPaymentRecord()">创建缴费通知</button>
                         </div>
                     </form>
+                    </div>
                 </div>
 
                 <div class="card">
-                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-                        <h2 style="margin:0;">最新记录</h2>
-                        <select id="recordElderly" onchange="reloadRecords()" style="min-width:200px;">
-                            <option value="">请选择老人以查看记录</option>
-                        </select>
+                    <div class="card-header">
+                        <div>
+                            <h2>最新记录</h2>
+                            <p>按照老人维度查看最近的服务、缴费及其状态。</p>
+                        </div>
+                        <div class="filter-bar">
+                            <label for="recordElderly" style="font-weight:600;color:#4a5568;">选择老人</label>
+                            <select id="recordElderly" onchange="reloadRecords()">
+                                <option value="">请选择老人以查看记录</option>
+                            </select>
+                        </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                    <div class="records-panel">
                         <div>
                             <h3>服务记录</h3>
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>日期</th>
-                                        <th>类型</th>
-                                        <th>医护人员</th>
-                                        <th>状态</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="serviceRecordBody">
-                                    <tr>
-                                        <td colspan="4" class="loading">请选择老人</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th>
+                                            <th>类型</th>
+                                            <th>医护人员</th>
+                                            <th>状态</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="serviceRecordBody">
+                                        <tr>
+                                            <td colspan="4" class="loading">请选择老人</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                         <div>
                             <h3>缴费记录</h3>
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>项目</th>
-                                        <th>金额</th>
-                                        <th>状态</th>
-                                        <th>到期日</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="paymentRecordBody">
-                                    <tr>
-                                        <td colspan="4" class="loading">请选择老人</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <div class="table-wrapper">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>项目</th>
+                                            <th>金额</th>
+                                            <th>状态</th>
+                                            <th>到期日</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paymentRecordBody">
+                                        <tr>
+                                            <td colspan="4" class="loading">请选择老人</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -22,6 +22,7 @@ import org.example.persion.service.MedicalFamilyServicesService;
 import org.example.persion.vo.FamilyContactVO;
 import org.example.persion.vo.FamilyPaymentRecordVO;
 import org.example.persion.vo.FamilyServiceRecordVO;
+import org.example.persion.vo.MedicalFamilyServiceSummaryVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -155,6 +156,30 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
                 })
                 .sorted(Comparator.comparing((FamilyContactVO vo) -> !Boolean.TRUE.equals(vo.getPrimaryContact())))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public MedicalFamilyServiceSummaryVO getSummary() {
+        LocalDate today = LocalDate.now();
+        Long todayServiceCount = familyServiceRecordMapper.selectCount(
+                new LambdaQueryWrapper<FamilyServiceRecord>()
+                        .eq(FamilyServiceRecord::getServiceDate, today)
+        );
+
+        List<FamilyPaymentRecord> pendingPayments = familyPaymentRecordMapper.selectList(
+                new LambdaQueryWrapper<FamilyPaymentRecord>()
+                        .eq(FamilyPaymentRecord::getStatus, PaymentStatus.PENDING)
+        );
+        BigDecimal pendingPaymentAmount = pendingPayments.stream()
+                .map(FamilyPaymentRecord::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        MedicalFamilyServiceSummaryVO summaryVO = new MedicalFamilyServiceSummaryVO();
+        summaryVO.setTodayServiceCount(todayServiceCount);
+        summaryVO.setPendingPaymentCount((long) pendingPayments.size());
+        summaryVO.setPendingPaymentAmount(pendingPaymentAmount);
+        return summaryVO;
     }
 
     private void validateServiceRecord(MedicalServiceRecordRequestDTO request) {

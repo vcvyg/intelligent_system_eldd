@@ -8,6 +8,7 @@ import org.example.persion.service.MedicalFamilyServicesService;
 import org.example.persion.vo.FamilyContactVO;
 import org.example.persion.vo.FamilyPaymentRecordVO;
 import org.example.persion.vo.FamilyServiceRecordVO;
+import org.example.persion.vo.MedicalFamilyServiceSummaryVO;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -42,6 +43,11 @@ public class MedicalFamilyServicesController {
     @GetMapping("/elderly/{elderlyId}/family-contacts")
     public Result<List<FamilyContactVO>> listFamilyContacts(@PathVariable Long elderlyId) {
         return Result.success(medicalFamilyServicesService.listFamilyContacts(elderlyId));
+    }
+
+    @GetMapping("/summary")
+    public Result<MedicalFamilyServiceSummaryVO> getSummary() {
+        return Result.success(medicalFamilyServicesService.getSummary());
     }
 }
 

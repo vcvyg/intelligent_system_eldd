@@ -5,6 +5,7 @@ import org.example.persion.dto.MedicalServiceRecordRequestDTO;
 import org.example.persion.vo.FamilyContactVO;
 import org.example.persion.vo.FamilyPaymentRecordVO;
 import org.example.persion.vo.FamilyServiceRecordVO;
+import org.example.persion.vo.MedicalFamilyServiceSummaryVO;
 
 import java.util.List;
 
@@ -19,5 +20,7 @@ public interface MedicalFamilyServicesService {
     List<FamilyPaymentRecordVO> listPaymentRecords(Long elderlyId);
 
     List<FamilyContactVO> listFamilyContacts(Long elderlyId);
+
+    MedicalFamilyServiceSummaryVO getSummary();
 }
 

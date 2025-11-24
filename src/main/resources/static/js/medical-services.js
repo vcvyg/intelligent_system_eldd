@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username} (医护人员)`;
     setDefaultDates();
-    await loadElderlyOptions();
+    await Promise.all([loadSummaryStats(), loadElderlyOptions()]);
 });
 
 function setDefaultDates() {
@@ -45,6 +45,29 @@ async function loadElderlyOptions() {
     } catch (error) {
         console.error('加载老人列表失败:', error);
         alert('无法加载老人列表，请稍后再试');
+    }
+}
+
+async function loadSummaryStats() {
+    const serviceCountEl = document.getElementById('todayServiceCount');
+    const pendingAmountEl = document.getElementById('pendingPaymentAmount');
+    try {
+        const result = await get('/medical/family-services/summary');
+        const data = result.data || {};
+        if (serviceCountEl) {
+            serviceCountEl.textContent = data.todayServiceCount != null ? data.todayServiceCount : 0;
+        }
+        if (pendingAmountEl) {
+            pendingAmountEl.textContent = `¥${formatAmount(data.pendingPaymentAmount)}`;
+        }
+    } catch (error) {
+        console.error('加载统计数据失败:', error);
+        if (serviceCountEl) {
+            serviceCountEl.textContent = '--';
+        }
+        if (pendingAmountEl) {
+            pendingAmountEl.textContent = '--';
+        }
     }
 }
 

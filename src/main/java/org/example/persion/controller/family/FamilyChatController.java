@@ -16,6 +16,7 @@ import org.example.persion.security.SecurityUtil;
 import org.example.persion.vo.MessageVO;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -114,19 +115,21 @@ public class FamilyChatController {
     public Result<Page<MessageVO>> getGroupMessages(
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "1") Integer current,
-            @RequestParam(defaultValue = "20") Integer size) {
+            @RequestParam(defaultValue = "50") Integer size) {
 
         Page<ChatMessage> page = new Page<>(current, size);
         LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ChatMessage::getGroupId, groupId);
         wrapper.eq(ChatMessage::getDeleted, 0); // 只查询未删除的消息
-        wrapper.orderByAsc(ChatMessage::getCreateTime);
+        wrapper.orderByDesc(ChatMessage::getCreateTime); // 先按时间倒序获取最新消息
 
         Page<ChatMessage> chatMessagePage = chatMessageMapper.selectPage(page, wrapper);
+        List<ChatMessage> records = chatMessagePage.getRecords();
+        Collections.reverse(records); // 前端展示按时间正序
 
         Page<MessageVO> voPage = new Page<>(chatMessagePage.getCurrent(), chatMessagePage.getSize(),
                 chatMessagePage.getTotal());
-        List<MessageVO> vos = chatMessagePage.getRecords().stream().map(msg -> {
+        List<MessageVO> vos = records.stream().map(msg -> {
             MessageVO vo = new MessageVO();
             vo.setId(msg.getId()); // 设置消息ID，用于删除功能
             vo.setGroupId(msg.getGroupId());

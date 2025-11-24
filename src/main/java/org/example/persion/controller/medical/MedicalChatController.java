@@ -22,6 +22,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -141,14 +142,16 @@ public class MedicalChatController {
             LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(ChatMessage::getGroupId, groupId);
             wrapper.eq(ChatMessage::getDeleted, 0); // 只查询未删除的消息
-            wrapper.orderByAsc(ChatMessage::getCreateTime);
+            wrapper.orderByDesc(ChatMessage::getCreateTime); // 先取最新消息
 
             System.out.println("MedicalChatController - 执行数据库查询...");
             Page<ChatMessage> chatMessagePage = chatMessageMapper.selectPage(page, wrapper);
             System.out.println("MedicalChatController - 查询结果: 总数=" + chatMessagePage.getTotal() + ", 当前页记录数=" + chatMessagePage.getRecords().size());
+            List<ChatMessage> records = chatMessagePage.getRecords();
+            Collections.reverse(records); // 还原为时间正序，便于前端展示
 
             Page<MessageVO> voPage = new Page<>(chatMessagePage.getCurrent(), chatMessagePage.getSize(), chatMessagePage.getTotal());
-            List<MessageVO> vos = chatMessagePage.getRecords().stream().map(msg -> {
+            List<MessageVO> vos = records.stream().map(msg -> {
                 MessageVO vo = new MessageVO();
                 vo.setId(msg.getId()); // 设置消息ID - 这是关键修复！
                 vo.setGroupId(msg.getGroupId());

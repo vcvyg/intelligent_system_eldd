@@ -4,10 +4,13 @@
 let currentPage = 1;
 let pageSize = 10;
 let totalPages = 1;
+let totalRecords = 0;
 
 // 房间列表缓存
 let roomList = [];
 let roomMap = new Map(); // 房间ID到房间对象的映射
+let syncingFromAge = false;
+let syncingFromBirthday = false;
 
 // 页面加载完成
 window.addEventListener('DOMContentLoaded', async () => {
@@ -22,10 +25,83 @@ window.addEventListener('DOMContentLoaded', async () => {
     // 显示欢迎信息
     document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
 
+    setupAgeBirthdaySync();
+
     // 先加载房间列表，等待完成后再加载老人列表
     await loadRooms();
     await loadElderly();
 });
+
+function setupAgeBirthdaySync() {
+    const ageInput = document.getElementById('age');
+    const birthdayInput = document.getElementById('birthday');
+
+    if (!ageInput || !birthdayInput) {
+        return;
+    }
+
+    ageInput.addEventListener('input', syncBirthdayFromAge);
+    ageInput.addEventListener('blur', syncBirthdayFromAge);
+    birthdayInput.addEventListener('change', syncAgeFromBirthday);
+    birthdayInput.addEventListener('blur', syncAgeFromBirthday);
+}
+
+function syncBirthdayFromAge() {
+    if (syncingFromBirthday) return;
+
+    const ageInput = document.getElementById('age');
+    const birthdayInput = document.getElementById('birthday');
+    const age = parseInt(ageInput.value, 10);
+
+    if (Number.isNaN(age) || age < 0 || age > 130) {
+        return;
+    }
+
+    const today = new Date();
+    const birthYear = today.getFullYear() - age;
+    const baseDate = new Date(birthYear, today.getMonth(), today.getDate());
+
+    syncingFromAge = true;
+    birthdayInput.value = formatDateForInput(baseDate);
+    syncingFromAge = false;
+}
+
+function syncAgeFromBirthday() {
+    if (syncingFromAge) return;
+
+    const birthdayInput = document.getElementById('birthday');
+    const ageInput = document.getElementById('age');
+    const value = birthdayInput.value;
+
+    if (!value) {
+        return;
+    }
+
+    const birthDate = new Date(value);
+    if (Number.isNaN(birthDate.getTime())) {
+        return;
+    }
+
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    const dayDiff = today.getDate() - birthDate.getDate();
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+        age -= 1;
+    }
+    age = Math.max(age, 0);
+
+    syncingFromBirthday = true;
+    ageInput.value = age;
+    syncingFromBirthday = false;
+}
+
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 // 加载房间列表
 async function loadRooms() {
@@ -55,14 +131,33 @@ async function loadElderly() {
         const response = await get(url);
         if (response && response.data) {
             const data = response.data;
-            totalPages = Math.ceil(data.total / pageSize);
+            const records = Array.isArray(data.records) ? data.records : [];
+            totalRecords = parseNumber(data.total);
+            const pagesFromApi = parseNumber(data.pages);
 
-            renderElderlyTable(data.records);
+            if (totalRecords === 0 && records.length > 0) {
+                totalRecords = records.length;
+            }
+
+            totalPages = pagesFromApi > 0
+                ? pagesFromApi
+                : Math.ceil(totalRecords / pageSize);
+
+            if ((totalPages === 0 || !Number.isFinite(totalPages)) && records.length > 0) {
+                totalPages = 1;
+            }
+
+            renderElderlyTable(records);
             updatePagination();
         }
     } catch (error) {
         console.error('加载老人列表失败:', error);
     }
+}
+
+function parseNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? num : 0;
 }
 
 // 渲染老人表格
@@ -102,9 +197,16 @@ function renderElderlyTable(elderlyList) {
 
 // 更新分页
 function updatePagination() {
-    document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
-    document.getElementById('prevBtn').disabled = currentPage === 1;
-    document.getElementById('nextBtn').disabled = currentPage === totalPages || totalPages === 0;
+    const pageInfoEl = document.getElementById('pageInfo');
+    if (totalPages === 0) {
+        pageInfoEl.textContent = '暂无数据';
+    } else {
+        const safeCurrent = Math.min(currentPage, totalPages);
+        pageInfoEl.textContent = `第 ${safeCurrent} 页 / 共 ${totalPages} 页`;
+    }
+
+    document.getElementById('prevBtn').disabled = currentPage <= 1 || totalPages === 0;
+    document.getElementById('nextBtn').disabled = totalPages === 0 || currentPage >= totalPages;
 }
 
 // 搜索老人
@@ -222,6 +324,12 @@ async function editElderly(id) {
             populateRoomSelect(elderly.roomId);
 
             document.getElementById('elderlyModal').style.display = 'block';
+
+            if ((!elderly.age || Number.isNaN(elderly.age)) && elderly.birthday) {
+                syncAgeFromBirthday();
+            } else if (elderly.age && !elderly.birthday) {
+                syncBirthdayFromAge();
+            }
         }
     } catch (error) {
         console.error('加载老人信息失败:', error);

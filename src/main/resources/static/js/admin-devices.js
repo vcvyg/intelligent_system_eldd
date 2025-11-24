@@ -35,9 +35,17 @@ async function loadDevices() {
         });
 
         const result = await response.json();
-        if (result.code === 200) {
-            renderDeviceTable(result.data.records);
-            updatePagination(result.data);
+        if (result.code === 200 && result.data) {
+            const pageData = result.data;
+            const records = Array.isArray(pageData.records) ? pageData.records : [];
+
+            renderDeviceTable(records);
+            updatePagination({
+                current: pageData.current,
+                pages: pageData.pages,
+                total: pageData.total,
+                records
+            });
         } else {
             showError(result.message);
         }
@@ -278,12 +286,40 @@ function closeDeviceModal() {
 
 // 更新分页信息
 function updatePagination(pageData) {
-    currentPage = pageData.current;
-    totalPages = pageData.pages;
+    const recordList = Array.isArray(pageData.records) ? pageData.records : [];
+    const totalFromApi = parsePositiveNumber(pageData.total);
+    const pagesFromApi = parsePositiveNumber(pageData.pages);
+    const currentFromApi = parsePositiveNumber(pageData.current);
+    const recordCount = totalFromApi || recordList.length;
 
-    document.getElementById('pageInfo').textContent = `第 ${currentPage} / ${totalPages} 页`;
+    totalPages = pagesFromApi > 0
+        ? pagesFromApi
+        : Math.ceil(recordCount / pageSize);
+
+    if ((totalPages === 0 || !Number.isFinite(totalPages)) && recordList.length > 0) {
+        totalPages = 1;
+    }
+
+    if (totalPages === 0) {
+        currentPage = 1;
+        document.getElementById('pageInfo').textContent = '暂无数据';
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('nextBtn').disabled = true;
+        return;
+    }
+
+    currentPage = currentFromApi > 0
+        ? Math.min(currentFromApi, totalPages)
+        : Math.min(currentPage, totalPages);
+
+    document.getElementById('pageInfo').textContent = `第 ${currentPage} 页 / 共 ${totalPages} 页`;
     document.getElementById('prevBtn').disabled = currentPage <= 1;
     document.getElementById('nextBtn').disabled = currentPage >= totalPages;
+}
+
+function parsePositiveNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) && num > 0 ? Math.floor(num) : 0;
 }
 
 // 上一页

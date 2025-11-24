@@ -274,6 +274,35 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <div class="table-section">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+                            <h2 style="margin:0;">医护服务进度</h2>
+                            <div style="display:flex;align-items:center;gap:12px;">
+                                <label for="progressElderly" style="font-weight:600;color:var(--color-text-gray);">选择老人</label>
+                                <select id="progressElderly" onchange="loadServiceProgress()">
+                                    <option value="">请选择老人以查看服务进度</option>
+                                </select>
+                                <button type="button" class="btn-secondary" onclick="loadServiceProgress()">刷新</button>
+                            </div>
+                        </div>
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>日期</th>
+                                    <th>服务类型</th>
+                                    <th>执行人</th>
+                                    <th>说明</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody id="serviceProgressBody">
+                                <tr>
+                                    <td colspan="5" class="loading">请选择老人</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- 生活支付 -->

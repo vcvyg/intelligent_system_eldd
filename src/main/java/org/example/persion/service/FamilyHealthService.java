@@ -13,7 +13,7 @@ public interface FamilyHealthService {
     /**
      * 获取子女端仪表盘数据（统计信息和老人列表）
      */
-    Map<String, Object> getDashboardData();
+    Map<String, Object> getDashboardData(String range);
 
     /**
      * 获取指定老人的最新健康数据

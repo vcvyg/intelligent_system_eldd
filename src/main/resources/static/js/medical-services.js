@@ -256,5 +256,5 @@ function formatAmount(value) {
 window.submitServiceRecord = submitServiceRecord;
 window.submitPaymentRecord = submitPaymentRecord;
 window.loadFamilyContacts = loadFamilyContacts;
-window.reloadRecords = () => reloadRecords();
+window.reloadRecords = reloadRecords;
 

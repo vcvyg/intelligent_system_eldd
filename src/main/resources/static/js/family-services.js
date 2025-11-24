@@ -9,6 +9,12 @@ const appointmentStatusMap = {
     CANCELLED: { text: '已取消', className: 'status-secondary' }
 };
 
+const serviceStatusMap = {
+    PENDING: { text: '待执行', className: 'status-warning' },
+    PROCESSING: { text: '进行中', className: 'status-info' },
+    COMPLETED: { text: '已完成', className: 'status-success' }
+};
+
 const paymentStatusMap = {
     PENDING: { text: '待支付', className: 'status-warning' },
     PAID: { text: '已支付', className: 'status-success' },
@@ -38,18 +44,38 @@ async function loadElderlyList() {
         const result = await get('/family/relation/my-elderly');
         if (result.code === 200 && result.data) {
             elderlyList = result.data;
-            const appointmentSelect = document.getElementById('appointmentElderly');
-            
             const options = elderlyList.map(elderly => {
                 const id = elderly.elderly_id || elderly.id;
                 const name = elderly.name || '-';
                 return `<option value="${id}">${name}</option>`;
             }).join('');
 
-            appointmentSelect.innerHTML = '<option value="">请选择...</option>' + options;
+            const appointmentSelect = document.getElementById('appointmentElderly');
+            if (appointmentSelect) {
+                appointmentSelect.innerHTML = '<option value="">请选择...</option>' + options;
+            }
+
+            const progressSelect = document.getElementById('progressElderly');
+            if (progressSelect) {
+                progressSelect.innerHTML = '<option value="">请选择老人以查看服务进度</option>' + options;
+            }
+
+            if (elderlyList.length === 1) {
+                const defaultId = elderlyList[0].elderly_id || elderlyList[0].id;
+                if (appointmentSelect) {
+                    appointmentSelect.value = defaultId;
+                }
+                if (progressSelect) {
+                    progressSelect.value = defaultId;
+                    await loadServiceProgress(defaultId);
+                }
+            } else {
+                await loadServiceProgress();
+            }
         }
     } catch (error) {
         console.error('加载老人列表失败:', error);
+        await loadServiceProgress();
     }
 }
 
@@ -265,5 +291,51 @@ async function loadPaymentHistory() {
 function formatAmount(value) {
     const num = Number(value || 0);
     return num.toFixed(2);
+}
+
+async function loadServiceProgress(forceElderlyId) {
+    const select = document.getElementById('progressElderly');
+    const elderlyId = forceElderlyId || (select ? select.value : '');
+    const tbody = document.getElementById('serviceProgressBody');
+    if (!tbody) {
+        return;
+    }
+    if (!elderlyId) {
+        setProgressPlaceholder('请选择老人');
+        return;
+    }
+    if (select && !select.value) {
+        select.value = elderlyId;
+    }
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+    try {
+        const result = await get(`/family/services/progress?elderlyId=${elderlyId}`);
+        const records = result.data || [];
+        if (records.length === 0) {
+            setProgressPlaceholder('暂无服务记录');
+            return;
+        }
+        tbody.innerHTML = records.map(record => {
+            const statusInfo = serviceStatusMap[record.status] || serviceStatusMap.PENDING;
+            return `
+                <tr>
+                    <td>${record.serviceDate || '-'}</td>
+                    <td>${record.serviceType || '-'}</td>
+                    <td>${record.medicalStaff || '-'}</td>
+                    <td>${record.description || '-'}</td>
+                    <td><span class="status-badge ${statusInfo.className}">${statusInfo.text}</span></td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('加载服务进度失败:', error);
+        setProgressPlaceholder('加载失败');
+    }
+}
+
+function setProgressPlaceholder(text) {
+    const tbody = document.getElementById('serviceProgressBody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--color-text-gray);">${text}</td></tr>`;
 }
 

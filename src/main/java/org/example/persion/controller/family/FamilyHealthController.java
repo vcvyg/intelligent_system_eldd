@@ -23,8 +23,9 @@ public class FamilyHealthController {
      * 获取仪表盘数据
      */
     @GetMapping("/dashboard")
-    public Result<Map<String, Object>> getDashboardData() {
-        Map<String, Object> data = familyHealthService.getDashboardData();
+    public Result<Map<String, Object>> getDashboardData(
+            @RequestParam(value = "range", defaultValue = "today") String range) {
+        Map<String, Object> data = familyHealthService.getDashboardData(range);
         return Result.success(data);
     }
 

@@ -53,6 +53,22 @@
 
             <!-- 统计卡片 -->
             <section class="stats-section">
+                <div style="display:flex;flex-direction:column;gap:12px;margin:0 30px 20px 30px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                        <div style="font-weight:600;color:var(--color-text-gray);">
+                            当前展示：<span id="currentRangeLabel" style="color:var(--color-text);">今日数据</span>
+                        </div>
+                        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                            <button class="btn-secondary" onclick="setTimeRange('today')" id="todayRangeBtn">仅看今日</button>
+                            <button class="btn-link" style="color:var(--color-primary);" onclick="toggleFullRangeFilters()" id="viewFullRangeBtn">查看完整数据</button>
+                        </div>
+                    </div>
+                    <div id="fullRangeFilters" style="display:none;gap:8px;flex-wrap:wrap;">
+                        <button class="btn-chip" data-range="7d" onclick="setTimeRange('7d')">近一周</button>
+                        <button class="btn-chip" data-range="14d" onclick="setTimeRange('14d')">近两周</button>
+                        <button class="btn-chip" data-range="30d" onclick="setTimeRange('30d')">近一月</button>
+                    </div>
+                </div>
                 <div class="stats-grid" id="statsGrid">
                     <!-- 动态加载 -->
                 </div>

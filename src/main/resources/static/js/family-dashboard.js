@@ -1,5 +1,15 @@
 // 子女端仪表盘脚本
 
+const TIME_RANGE_LABELS = {
+    today: '今日数据',
+    '7d': '近一周',
+    '14d': '近两周',
+    '30d': '近一月'
+};
+
+let currentRange = 'today';
+let fullRangeVisible = false;
+
 document.addEventListener('DOMContentLoaded', async () => {
     const userInfo = checkLogin();
     if (!userInfo || userInfo.role !== 'FAMILY') {
@@ -8,20 +18,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
     document.getElementById('welcomeText').textContent = `欢迎，${userInfo.username}！`;
-
-    await loadDashboardData();
+    updateRangeLabel();
+    highlightRangeButtons();
+    applyFullRangeVisibility();
+    await loadDashboardData(currentRange);
 });
 
 /**
  * 加载仪表盘数据
  */
-async function loadDashboardData() {
+async function loadDashboardData(range = currentRange) {
     try {
-        const result = await get('/family/health/dashboard');
+        const result = await get(`/family/health/dashboard?range=${range}`);
         if (result.code === 200 && result.data) {
             const data = result.data;
             renderStats(data);
             renderElderlyList(data.elderlyList);
+            if (data.range) {
+                currentRange = data.range;
+                updateRangeLabel();
+                highlightRangeButtons();
+            }
         } else {
             console.error('加载数据失败:', result.message);
             showError('加载数据失败: ' + (result.message || '未知错误'));
@@ -256,3 +273,65 @@ window.onclick = function(event) {
         closeBindElderlyModal();
     }
 }
+
+function setTimeRange(range) {
+    if (!range || currentRange === range) {
+        if (range === 'today') {
+            fullRangeVisible = false;
+            applyFullRangeVisibility();
+        }
+        return;
+    }
+
+    currentRange = range;
+    fullRangeVisible = range !== 'today';
+    updateRangeLabel();
+    highlightRangeButtons();
+    applyFullRangeVisibility();
+    loadDashboardData(range);
+}
+
+function toggleFullRangeFilters() {
+    fullRangeVisible = !fullRangeVisible;
+    applyFullRangeVisibility();
+}
+
+function applyFullRangeVisibility() {
+    const container = document.getElementById('fullRangeFilters');
+    const toggleBtn = document.getElementById('viewFullRangeBtn');
+    if (container) {
+        container.style.display = fullRangeVisible ? 'flex' : 'none';
+    }
+    if (toggleBtn) {
+        toggleBtn.textContent = fullRangeVisible ? '收起完整数据' : '查看完整数据';
+    }
+}
+
+function updateRangeLabel() {
+    const label = document.getElementById('currentRangeLabel');
+    if (label) {
+        label.textContent = TIME_RANGE_LABELS[currentRange] || '今日数据';
+    }
+}
+
+function highlightRangeButtons() {
+    const chips = document.querySelectorAll('#fullRangeFilters .btn-chip');
+    chips.forEach(chip => {
+        if (chip.dataset.range === currentRange) {
+            chip.classList.add('active');
+        } else {
+            chip.classList.remove('active');
+        }
+    });
+    const todayBtn = document.getElementById('todayRangeBtn');
+    if (todayBtn) {
+        if (currentRange === 'today') {
+            todayBtn.classList.add('active');
+        } else {
+            todayBtn.classList.remove('active');
+        }
+    }
+}
+
+window.setTimeRange = setTimeRange;
+window.toggleFullRangeFilters = toggleFullRangeFilters;

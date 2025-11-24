@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家属服务审批 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">管理员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="admin-dashboard.html" class="nav-item">
+                    <span class="icon">📊</span>
+                    <span>数据仪表盘</span>
+                </a>
+                <a href="admin-users.html" class="nav-item">
+                    <span class="icon">👥</span>
+                    <span>用户管理</span>
+                </a>
+                <a href="admin-elderly.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人信息管理</span>
+                </a>
+                <a href="admin-schedule.html" class="nav-item">
+                    <span class="icon">📅</span>
+                    <span>医护排班</span>
+                </a>
+                <a href="admin-leave.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>请假审批</span>
+                </a>
+                <a href="admin-family-services.html" class="nav-item active">
+                    <span class="icon">🤝</span>
+                    <span>家属服务审批</span>
+                </a>
+                <a href="admin-devices.html" class="nav-item">
+                    <span class="icon">📱</span>
+                    <span>设备管理</span>
+                </a>
+                <a href="admin-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>预警管理</span>
+                </a>
+                <!--<a href="admin-settings.html" class="nav-item">
+                     <span class="icon">⚙️</span>
+                     <span>系统设置</span>
+                 </a>-->
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>家属探访预约审批</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎,管理员!</span>
+                </div>
+            </header>
+
+            <section class="content-wrapper" style="padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <div>
+                        <h2 style="margin: 0;">探访预约列表</h2>
+                        <p style="color: var(--color-text-gray); margin: 4px 0 0 0; font-size: 14px;">
+                            子女端提交的探访申请需要管理员审核确认
+                        </p>
+                    </div>
+                    <div class="btn-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn-secondary active" data-status="" onclick="filterAppointments(event, '')">全部</button>
+                        <button class="btn-secondary" data-status="PENDING" onclick="filterAppointments(event, 'PENDING')">待审批</button>
+                        <button class="btn-secondary" data-status="APPROVED" onclick="filterAppointments(event, 'APPROVED')">已同意</button>
+                        <button class="btn-secondary" data-status="REJECTED" onclick="filterAppointments(event, 'REJECTED')">已拒绝</button>
+                        <button class="btn-secondary" data-status="CANCELLED" onclick="filterAppointments(event, 'CANCELLED')">已取消</button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>老人</th>
+                                <th>家属</th>
+                                <th>探访日期</th>
+                                <th>探访时间</th>
+                                <th>目的</th>
+                                <th>备注</th>
+                                <th>状态</th>
+                                <th>审批备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="appointmentTableBody">
+                            <tr>
+                                <td colspan="9" class="loading">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 审批模态框 -->
+    <div id="appointmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>审批探访预约</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="appointmentSummary" style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:16px;"></div>
+                <div class="form-group">
+                    <label>审批意见</label>
+                    <textarea id="appointmentRemark" rows="4" placeholder="可填写审批说明..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="hidden" id="currentAppointmentId">
+                <button class="btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn-danger" onclick="submitReview('REJECTED')">拒绝</button>
+                <button class="btn-primary" onclick="submitReview('APPROVED')">同意</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/admin-family-services.js"></script>
+</body>
+
+</html>
+

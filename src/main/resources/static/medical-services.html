@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生活服务录入 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-container">
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>智慧养老系统</h2>
+                <p class="role-badge">医护人员</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="medical-dashboard.html" class="nav-item">
+                    <span class="icon">🩺</span>
+                    <span>医护工作台</span>
+                </a>
+                <a href="medical-patients.html" class="nav-item">
+                    <span class="icon">👴</span>
+                    <span>老人档案</span>
+                </a>
+                <a href="medical-schedule.html" class="nav-item">
+                    <span class="icon">📅</span>
+                    <span>我的排班</span>
+                </a>
+                <a href="medical-rounds.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>巡诊记录</span>
+                </a>
+                <a href="medical-alerts.html" class="nav-item">
+                    <span class="icon">⚠️</span>
+                    <span>告警中心</span>
+                </a>
+                <a href="medical-chat.html" class="nav-item">
+                    <span class="icon">💬</span>
+                    <span>医护-子女聊天</span>
+                </a>
+                <a href="medical-leave.html" class="nav-item">
+                    <span class="icon">📝</span>
+                    <span>请假申请</span>
+                </a>
+                <a href="medical-services.html" class="nav-item active">
+                    <span class="icon">💳</span>
+                    <span>生活服务录入</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="logout-btn" onclick="logout()">退出登录</button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <h1>生活服务与支付录入</h1>
+                <div class="user-info">
+                    <span id="welcomeText">欢迎，医护人员！</span>
+                </div>
+            </header>
+
+            <section class="content-wrapper" style="padding: 24px;">
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2>服务记录上报</h2>
+                    <form id="serviceForm" class="form-grid">
+                        <div class="form-group">
+                            <label>服务老人</label>
+                            <select id="serviceElderly" required>
+                                <option value="">请选择...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>服务类型</label>
+                            <input type="text" id="serviceType" placeholder="如 康复训练 / 日常护理" required>
+                        </div>
+                        <div class="form-group">
+                            <label>服务日期</label>
+                            <input type="date" id="serviceDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>服务时间</label>
+                            <input type="time" id="serviceTime" required>
+                        </div>
+                        <div class="form-group">
+                            <label>服务状态</label>
+                            <select id="serviceStatus">
+                                <option value="COMPLETED">已完成</option>
+                                <option value="PROCESSING">进行中</option>
+                                <option value="PENDING">待处理</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>详细说明</label>
+                            <textarea id="serviceDescription" rows="3" placeholder="补充服务内容、效果等信息"></textarea>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <button type="button" class="btn-primary" onclick="submitServiceRecord()">提交服务记录</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card" style="margin-bottom: 20px;">
+                    <h2>生活缴费创建</h2>
+                    <form id="paymentForm" class="form-grid">
+                        <div class="form-group">
+                            <label>关联老人</label>
+                            <select id="paymentElderly" required onchange="loadFamilyContacts()">
+                                <option value="">请选择...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>通知家属</label>
+                            <select id="familyContact">
+                                <option value="">自动选择主要联系人</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>项目名称</label>
+                            <input type="text" id="itemName" placeholder="如 药品采购 / 生活用品" required>
+                        </div>
+                        <div class="form-group">
+                            <label>金额（元）</label>
+                            <input type="number" id="amount" min="0" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>到期日期</label>
+                            <input type="date" id="dueDate" required>
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label>备注说明</label>
+                            <textarea id="paymentRemark" rows="3" placeholder="填写费用明细、收款方式等信息"></textarea>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <button type="button" class="btn-primary" onclick="submitPaymentRecord()">创建缴费通知</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                        <h2 style="margin:0;">最新记录</h2>
+                        <select id="recordElderly" onchange="reloadRecords()" style="min-width:200px;">
+                            <option value="">请选择老人以查看记录</option>
+                        </select>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                        <div>
+                            <h3>服务记录</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>类型</th>
+                                        <th>医护人员</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="serviceRecordBody">
+                                    <tr>
+                                        <td colspan="4" class="loading">请选择老人</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <h3>缴费记录</h3>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>项目</th>
+                                        <th>金额</th>
+                                        <th>状态</th>
+                                        <th>到期日</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="paymentRecordBody">
+                                    <tr>
+                                        <td colspan="4" class="loading">请选择老人</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script src="js/medical-services.js"></script>
+</body>
+
+</html>
+

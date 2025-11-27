@@ -10,6 +10,86 @@
     <link rel="stylesheet" href="css/admin.css">
     <link rel="stylesheet" href="css/family-mobile.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <style>
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .mobile-elderly-scroll {
+            overflow-y: auto;
+            padding: 0 12px 90px;
+        }
+
+        .mobile-elderly-list {
+            display: flex;
+            flex-direction: column;
+            margin: 10px 20px 20px;
+            gap: 12px;
+        }
+
+        .mobile-elderly-card {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: 16px;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(15,23,42,0.05);
+        }
+
+        .mobile-elderly-card h3 {
+            margin: 0 0 6px;
+            font-size: 16px;
+        }
+
+        .mobile-elderly-card .meta {
+            font-size: 13px;
+            color: var(--color-text-gray);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .mobile-elderly-card .metrics {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .mobile-elderly-card .metrics span {
+            color: var(--color-text);
+        }
+
+        .mobile-elderly-card .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            body, html {
+                overflow-x: hidden;
+                background: var(--color-bg, #f5f7fb);
+            }
+            .stats-section {
+                padding-bottom: 10px;
+            }
+            .table-responsive {
+                margin-bottom: 12px;
+            }
+            .mobile-elderly-list {
+                margin: 10px 8px 20px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-elderly-scroll {
+                display: none;
+            }
+        }
+    </style>
 </head>
 <body data-family-nav="dashboard">
     <div class="admin-container">
@@ -77,6 +157,35 @@
                 <div class="stats-grid" id="statsGrid">
                     <!-- 动态加载 -->
                 </div>
+                <div class="mobile-elderly-scroll" id="mobileElderlyWrapper">
+                    <h3 style="margin:18px 12px 6px;font-size:16px;color:var(--color-text-dark);">绑定老人详情</h3>
+                    <div class="mobile-elderly-list" id="mobileElderlyList">
+                        <!-- 移动端卡片列表 -->
+                    </div>
+                </div>
+                <div class="range-data-section" id="rangeDataSection" style="display:none;margin-top:12px;">
+                    <h3 style="margin:18px 12px 10px;font-size:16px;color:var(--color-text-dark);">时间区间内的测量记录</h3>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>测量时间</th>
+                                    <th>老人</th>
+                                    <th>心率 (bpm)</th>
+                                    <th>收缩压 (mmHg)</th>
+                                    <th>舒张压 (mmHg)</th>
+                                    <th>体温 (°C)</th>
+                                    <th>血糖 (mmol/L)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rangeDataBody">
+                                <tr>
+                                    <td colspan="7" style="text-align:center;color:var(--color-text-gray);padding:30px;">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- 老人列表 -->
@@ -87,25 +196,29 @@
                         <span style="margin-right: 5px;">➕</span>绑定老人
                     </button>
                 </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>姓名</th>
-                            <th>年龄</th>
-                            <th>关系</th>
-                            <th>最新心率</th>
-                            <th>最新血压</th>
-                            <th>最新体温</th>
-                            <th>健康状态</th>
-                            <th>操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="elderlyListBody">
-                        <tr>
-                            <td colspan="8" class="loading">加载中...</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="desktop-elderly-table">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>姓名</th>
+                                    <th>年龄</th>
+                                    <th>关系</th>
+                                    <th>最新心率</th>
+                                    <th>最新血压</th>
+                                    <th>最新体温</th>
+                                    <th>健康状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="elderlyListBody">
+                                <tr>
+                                    <td colspan="8" class="loading">加载中...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
         </main>
         <nav class="bottom-nav" aria-label="移动端主导航">

@@ -9,6 +9,9 @@ const TIME_RANGE_LABELS = {
 
 let currentRange = 'today';
 let fullRangeVisible = false;
+let latestElderlyList = [];
+let baseStatsSnapshot = { totalElderly: 0, withHealthData: 0, normalStatus: 0, abnormalStatus: 0 };
+let aggregatedStatsSnapshot = null;
 
 function formatGender(value) {
     if (value === null || value === undefined) {
@@ -34,6 +37,17 @@ function maskIdCard(idCard) {
     }
     const middleLength = idCard.length - 8;
     return `${idCard.slice(0, 6)}${'*'.repeat(middleLength)}${idCard.slice(-2)}`;
+}
+
+function formatMetricValue(value, decimals = 0) {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+    const num = Number(value);
+    if (Number.isNaN(num)) {
+        return '-';
+    }
+    return num.toFixed(decimals);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -73,7 +87,14 @@ async function loadDashboardData(range = currentRange) {
         const result = await get(`/family/health/dashboard?range=${range}`);
         if (result.code === 200 && result.data) {
             const data = result.data;
-            renderStats(data);
+            baseStatsSnapshot = {
+                totalElderly: data.totalElderly || 0,
+                withHealthData: data.withHealthData || 0,
+                normalStatus: data.normalStatus || 0,
+                abnormalStatus: data.abnormalStatus || 0
+            };
+            aggregatedStatsSnapshot = null;
+            renderStats(baseStatsSnapshot);
             renderElderlyList(data.elderlyList);
             if (data.range) {
                 currentRange = data.range;
@@ -93,38 +114,45 @@ async function loadDashboardData(range = currentRange) {
 /**
  * 渲染统计卡片
  */
-function renderStats(data) {
+function renderStats(baseStats, aggregated = null) {
     const statsGrid = document.getElementById('statsGrid');
-    const abnormalCount = data.abnormalStatus || 0;
-    const abnormalBadge = abnormalCount > 0 ? `<span class="abnormal-badge">${abnormalCount}</span>` : '';
-    
+    if (!statsGrid) {
+        return;
+    }
+    const useAggregated = currentRange !== 'today' && aggregated && fullRangeVisible;
+    const measurementLabel = useAggregated ? '本区间测量次数' : '有最新测量数据';
+    const measurementValue = useAggregated ? aggregated.total : (baseStats.withHealthData || 0);
+    const normalValue = useAggregated ? aggregated.normal : (baseStats.normalStatus || 0);
+    const abnormalValue = useAggregated ? aggregated.abnormal : (baseStats.abnormalStatus || 0);
+    const abnormalBadge = abnormalValue > 0 ? `<span class="abnormal-badge">${abnormalValue}</span>` : '';
+
     statsGrid.innerHTML = `
         <div class="stat-card">
             <div class="stat-icon users">👴</div>
             <div class="stat-info">
                 <h3>关联老人数量</h3>
-                <p class="stat-value">${data.totalElderly || 0}</p>
+                <p class="stat-value">${baseStats.totalElderly || 0}</p>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon health">📊</div>
             <div class="stat-info">
-                <h3>有健康数据</h3>
-                <p class="stat-value">${data.withHealthData || 0}</p>
+                <h3>${measurementLabel}</h3>
+                <p class="stat-value">${measurementValue}</p>
             </div>
         </div>
         <div class="stat-card">
             <div class="stat-icon active">✅</div>
             <div class="stat-info">
                 <h3>健康状态正常</h3>
-                <p class="stat-value">${data.normalStatus || 0}</p>
+                <p class="stat-value">${normalValue}</p>
             </div>
         </div>
-        <div class="stat-card ${abnormalCount > 0 ? 'stat-card-warning' : ''}">
+        <div class="stat-card ${abnormalValue > 0 ? 'stat-card-warning' : ''}">
             <div class="stat-icon warning">⚠️</div>
             <div class="stat-info">
                 <h3>异常状态 ${abnormalBadge}</h3>
-                <p class="stat-value">${abnormalCount}</p>
+                <p class="stat-value">${abnormalValue}</p>
             </div>
         </div>
     `;
@@ -135,13 +163,22 @@ function renderStats(data) {
  */
 function renderElderlyList(elderlyList) {
     const tbody = document.getElementById('elderlyListBody');
+    const mobileList = document.getElementById('mobileElderlyList');
+    latestElderlyList = elderlyList || [];
     
     if (!elderlyList || elderlyList.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;">暂无关联老人</td></tr>';
+        const emptyHtml = '<tr><td colspan="8" style="text-align: center; padding: 40px;">暂无关联老人</td></tr>';
+        if (tbody) {
+            tbody.innerHTML = emptyHtml;
+        }
+        if (mobileList) {
+            mobileList.innerHTML = '<div class="mobile-elderly-card" style="text-align:center;color:var(--color-text-gray);">暂无关联老人</div>';
+        }
+        loadRangeDetailsIfNeeded();
         return;
     }
 
-    tbody.innerHTML = elderlyList.map(elderly => {
+    const rowHtml = elderlyList.map(elderly => {
         const name = elderly.name || '-';
         const age = elderly.age || '-';
         const relationType = elderly.relation_type || '-';
@@ -178,6 +215,141 @@ function renderElderlyList(elderlyList) {
             </tr>
         `;
     }).join('');
+
+    if (tbody) {
+        tbody.innerHTML = rowHtml;
+    }
+
+    if (mobileList) {
+        mobileList.innerHTML = elderlyList.map(elderly => {
+            const name = elderly.name || '-';
+            const age = elderly.age || '-';
+            const relationType = elderly.relation_type || '-';
+            const heartRate = elderly.latestHeartRate != null ? elderly.latestHeartRate + ' bpm' : '-';
+            const bloodPressure = (elderly.latestBloodPressureHigh != null && elderly.latestBloodPressureLow != null)
+                ? `${elderly.latestBloodPressureHigh}/${elderly.latestBloodPressureLow} mmHg`
+                : '-';
+            const temperature = elderly.latestTemperature != null ? elderly.latestTemperature + ' °C' : '-';
+            const healthStatus = elderly.healthStatus || '暂无数据';
+            const elderlyId = elderly.elderly_id || elderly.id;
+            let statusClass = 'status-success';
+            if (healthStatus === '异常') {
+                statusClass = 'status-warning';
+            } else if (healthStatus === '暂无数据') {
+                statusClass = 'status-disabled';
+            }
+
+            return `
+                <div class="mobile-elderly-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <h3>${name}</h3>
+                            <div class="meta">
+                                <span>年龄：${age}</span>
+                                <span>关系：${relationType}</span>
+                            </div>
+                        </div>
+                        <span class="status-badge ${statusClass}">${healthStatus}</span>
+                    </div>
+                    <div class="metrics">
+                        <div><strong>心率</strong><span>${heartRate}</span></div>
+                        <div><strong>血压</strong><span>${bloodPressure}</span></div>
+                        <div><strong>体温</strong><span>${temperature}</span></div>
+                    </div>
+                    <div class="actions">
+                        <small style="color:var(--color-text-gray);">${relationType || '家属'}</small>
+                        <button class="btn-view btn-sm" onclick="viewHealthDetail(${elderlyId}, '${name}')">查看详情</button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    loadRangeDetailsIfNeeded();
+}
+
+async function loadRangeDetailsIfNeeded() {
+    const section = document.getElementById('rangeDataSection');
+    const tbody = document.getElementById('rangeDataBody');
+    const aggregated = { total: 0, normal: 0, abnormal: 0 };
+    if (!section || !tbody) {
+        return;
+    }
+
+    if (currentRange === 'today') {
+        section.style.display = 'none';
+        return;
+    }
+
+    const rangeDayMap = { '7d': 7, '14d': 14, '30d': 30 };
+    const days = rangeDayMap[currentRange] || 7;
+
+    section.style.display = 'block';
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-text-gray);padding:30px;">加载测量记录...</td></tr>`;
+
+    const records = [];
+    for (const elderly of latestElderlyList) {
+        const elderlyId = elderly.elderly_id || elderly.id;
+        if (!elderlyId) {
+            continue;
+        }
+        try {
+            const res = await get(`/family/health/list/${elderlyId}?days=${days}`);
+            if (res.code === 200 && Array.isArray(res.data)) {
+                res.data.forEach(item => {
+                    records.push({
+                        ...item,
+                        elderlyName: elderly.name || '-'
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('加载老人测量记录失败', elderlyId, error);
+        }
+    }
+
+    if (records.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--color-text-gray);padding:30px;">该时间段暂无测量记录</td></tr>`;
+        aggregatedStatsSnapshot = aggregated;
+        renderStats(baseStatsSnapshot, aggregatedStatsSnapshot);
+        return;
+    }
+
+    records.sort((a, b) => {
+        const timeA = new Date(a.measureTime);
+        const timeB = new Date(b.measureTime);
+        return timeB - timeA;
+    });
+
+    const rowsHtml = records.map(record => {
+        const measureTime = record.measureTime ? formatDateTime(record.measureTime) : '-';
+        const heartRate = formatMetricValue(record.heartRate, 0);
+        const bpHigh = formatMetricValue(record.bloodPressureHigh, 0);
+        const bpLow = formatMetricValue(record.bloodPressureLow, 0);
+        const temperature = formatMetricValue(record.temperature, 1);
+        const bloodSugar = formatMetricValue(record.bloodSugar, 1);
+        const isAbnormal = evaluateMeasurementAbnormal(record);
+        aggregated.total += 1;
+        if (isAbnormal) {
+            aggregated.abnormal += 1;
+        } else {
+            aggregated.normal += 1;
+        }
+        return `
+            <tr>
+                <td>${measureTime}</td>
+                <td>${record.elderlyName || '-'}</td>
+                <td>${heartRate}</td>
+                <td>${bpHigh}</td>
+                <td>${bpLow}</td>
+                <td>${temperature}</td>
+                <td>${bloodSugar}</td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = rowsHtml;
+    aggregatedStatsSnapshot = aggregated;
+    renderStats(baseStatsSnapshot, aggregatedStatsSnapshot);
 }
 
 /**
@@ -344,6 +516,16 @@ function setTimeRange(range) {
 function toggleFullRangeFilters() {
     fullRangeVisible = !fullRangeVisible;
     applyFullRangeVisibility();
+
+    if (fullRangeVisible) {
+        if (currentRange === 'today') {
+            setTimeRange('7d');
+        }
+    } else {
+        if (currentRange !== 'today') {
+            setTimeRange('today');
+        }
+    }
 }
 
 function applyFullRangeVisibility() {
@@ -385,3 +567,30 @@ function highlightRangeButtons() {
 
 window.setTimeRange = setTimeRange;
 window.toggleFullRangeFilters = toggleFullRangeFilters;
+
+function evaluateMeasurementAbnormal(record) {
+    let abnormal = false;
+    if (record.heartRate != null) {
+        const hr = Number(record.heartRate);
+        if (!Number.isNaN(hr) && (hr < 60 || hr > 100)) {
+            abnormal = true;
+        }
+    }
+    if (record.bloodPressureHigh != null && record.bloodPressureLow != null) {
+        const high = Number(record.bloodPressureHigh);
+        const low = Number(record.bloodPressureLow);
+        if (
+            !Number.isNaN(high) && !Number.isNaN(low) &&
+            (high < 90 || high > 140 || low < 60 || low > 90)
+        ) {
+            abnormal = true;
+        }
+    }
+    if (record.temperature != null) {
+        const temp = Number(record.temperature);
+        if (!Number.isNaN(temp) && (temp < 36.0 || temp > 37.5)) {
+            abnormal = true;
+        }
+    }
+    return abnormal;
+}

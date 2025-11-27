@@ -8,7 +8,7 @@ let currentUser = null;
 let mobileListPreferred = true;
 
 // UI Elements
-let chatInput, sendBtn, fileBtn, fileInput, imageBtn, imageInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn, chatHeaderContent, chatContainer, chatBackBtn;
+let chatInput, sendBtn, fileBtn, fileInput, imageBtn, imageInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn, chatHeaderContent, chatContainer, chatBackBtn, toggleExtrasBtn, chatExtraPanel;
 
 // Voice Recording
 let mediaRecorder = null;
@@ -41,6 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatHeaderContent = document.getElementById('chatHeaderContent');
     chatContainer = document.querySelector('.chat-container');
     chatBackBtn = document.getElementById('chatBackBtn');
+    toggleExtrasBtn = document.getElementById('toggleExtrasBtn');
+    chatExtraPanel = document.getElementById('chatExtraPanel');
 
     if (chatBackBtn) {
         chatBackBtn.addEventListener('click', () => {
@@ -64,20 +66,54 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    fileBtn.addEventListener('click', () => fileInput.click());
+    if (fileBtn) {
+        fileBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (fileBtn.disabled) return;
+            closeExtraPanel();
+            fileInput.click();
+        });
+    }
     fileInput.addEventListener('change', uploadFile);
-    imageBtn.addEventListener('click', () => imageInput.click());
+    if (imageBtn) {
+        imageBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (imageBtn.disabled) return;
+            closeExtraPanel();
+            imageInput.click();
+        });
+    }
     imageInput.addEventListener('change', uploadImage);
     voiceBtn.addEventListener('click', function () {
         console.log('Voice button clicked, isRecording:', isRecording);
         toggleRecording();
     });
 
+    if (toggleExtrasBtn && chatExtraPanel) {
+        toggleExtrasBtn.addEventListener('click', (event) => {
+            if (toggleExtrasBtn.disabled) return;
+            event.stopPropagation();
+            const isOpening = !chatExtraPanel.classList.contains('active');
+            chatExtraPanel.classList.toggle('active', isOpening);
+            toggleExtrasBtn.classList.toggle('active', isOpening);
+            toggleExtrasBtn.setAttribute('aria-expanded', isOpening ? 'true' : 'false');
+        });
+    }
+
     // Context Menu Listeners
     chatMessages.addEventListener('contextmenu', showContextMenu);
-    document.addEventListener('click', () => {
-        contextMenu.style.display = 'none';
-        currentMessageElement = null;
+    document.addEventListener('click', (event) => {
+        if (contextMenu) {
+            contextMenu.style.display = 'none';
+            currentMessageElement = null;
+        }
+        if (chatExtraPanel && toggleExtrasBtn) {
+            const clickedInsidePanel = chatExtraPanel.contains(event.target);
+            const clickedToggle = toggleExtrasBtn.contains(event.target);
+            if (!clickedInsidePanel && !clickedToggle) {
+                closeExtraPanel();
+            }
+        }
     });
     deleteMessageBtn.addEventListener('click', deleteMessage);
 });
@@ -189,11 +225,9 @@ function appendMessage(msg) {
 
     switch (msg.messageType) {
         case 'VOICE':
-            // 兼容不同的数据格式
             let duration = msg.duration || 0;
             let audioUrl = msg.audioUrl || '';
-            
-            // 如果content是JSON字符串，尝试解析
+
             if (!audioUrl && msg.content && msg.content.startsWith('{')) {
                 try {
                     const contentData = JSON.parse(msg.content);
@@ -203,15 +237,21 @@ function appendMessage(msg) {
                     console.warn('解析语音消息content失败:', e);
                 }
             }
-            
+
             if (audioUrl) {
-                messageBubble = `<div class="bubble voice-bubble">
-                                    <i class="fas fa-play-circle"></i>
-                                    <audio controls src="${audioUrl}">
-                                        您的浏览器不支持音频播放
-                                    </audio>
-                                    ${duration ? `<span class="duration">${duration}"</span>` : ''}
-                                 </div>`;
+                messageBubble = `
+                    <div class="bubble voice-bubble">
+                        <button type="button" class="voice-play-btn" onclick="toggleVoicePlayback('${audioUrl}', this)">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <div class="voice-wave">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                        ${duration ? `<span class="duration">${duration}"</span>` : ''}
+                    </div>
+                `;
             } else {
                 messageBubble = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
             }
@@ -344,6 +384,7 @@ async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
     mobileListPreferred = false;
+    closeExtraPanel();
     
     // 尝试获取群组详细信息，包括成员列表
     try {
@@ -383,6 +424,9 @@ async function selectGroup(groupId, groupName) {
     fileBtn.disabled = false;
     imageBtn.disabled = false;
     voiceBtn.disabled = false;
+    if (toggleExtrasBtn) {
+        toggleExtrasBtn.disabled = false;
+    }
 
     document.querySelectorAll('.user-item').forEach(item => {
         item.classList.remove('active');
@@ -457,6 +501,7 @@ function sendTextMessage() {
     if (!content) return;
     sendMessage({ messageType: 'TEXT', content: content });
     chatInput.value = '';
+    closeExtraPanel();
 }
 
 // --- File and Voice Upload Functions ---
@@ -718,6 +763,16 @@ function handleResponsiveLayout() {
 
 // --- Utility Functions ---
 
+function closeExtraPanel() {
+    if (chatExtraPanel) {
+        chatExtraPanel.classList.remove('active');
+    }
+    if (toggleExtrasBtn) {
+        toggleExtrasBtn.classList.remove('active');
+        toggleExtrasBtn.setAttribute('aria-expanded', 'false');
+    }
+}
+
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>\"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[c]));
@@ -726,5 +781,65 @@ function escapeHtml(str) {
 function formatTime(t) {
     if (!t) return '';
     return t.replace('T', ' ').substring(5, 16);
+}
+
+let currentVoiceAudio = null;
+let currentVoiceButton = null;
+
+function toggleVoicePlayback(audioUrl, button) {
+    if (!audioUrl) {
+        alert('音频资源不存在');
+        return;
+    }
+    const isPlaying = button.dataset.playing === 'true';
+
+    if (isPlaying) {
+        if (currentVoiceAudio) {
+            currentVoiceAudio.pause();
+            currentVoiceAudio = null;
+        }
+        button.dataset.playing = 'false';
+        button.innerHTML = '<i class="fas fa-play"></i>';
+        currentVoiceButton = null;
+        return;
+    }
+
+    if (currentVoiceAudio && currentVoiceButton) {
+        currentVoiceAudio.pause();
+        currentVoiceButton.dataset.playing = 'false';
+        currentVoiceButton.innerHTML = '<i class="fas fa-play"></i>';
+    }
+
+    const audio = new Audio(audioUrl);
+    currentVoiceAudio = audio;
+    currentVoiceButton = button;
+    button.dataset.playing = 'true';
+    button.innerHTML = '<i class="fas fa-pause"></i>';
+
+    audio.onended = () => {
+        button.dataset.playing = 'false';
+        button.innerHTML = '<i class="fas fa-play"></i>';
+        if (currentVoiceAudio === audio) {
+            currentVoiceAudio = null;
+            currentVoiceButton = null;
+        }
+    };
+
+    audio.onerror = () => {
+        alert('语音播放失败');
+        button.dataset.playing = 'false';
+        button.innerHTML = '<i class="fas fa-play"></i>';
+        currentVoiceAudio = null;
+        currentVoiceButton = null;
+    };
+
+    audio.play().catch(error => {
+        console.error('播放语音失败:', error);
+        alert('语音播放失败');
+        button.dataset.playing = 'false';
+        button.innerHTML = '<i class="fas fa-play"></i>';
+        currentVoiceAudio = null;
+        currentVoiceButton = null;
+    });
 }
 

@@ -161,7 +161,7 @@
             padding: 12px 18px;
             border-radius: 18px;
             background: #fff;
-            color: #333;
+            color: #111;
             font-size: 15px;
             margin: 0 10px;
             word-break: break-all;
@@ -169,8 +169,8 @@
         }
 
         .message.me .bubble {
-            background: #667eea;
-            color: white;
+            background: #2fb86b;
+            color: #fff;
         }
 
         .message .meta {
@@ -180,41 +180,123 @@
         }
 
         .chat-input {
+            position: relative;
             display: flex;
-            align-items: center;
+            align-items: flex-end;
+            gap: 12px;
             padding: 18px 24px;
             border-top: 1px solid #e5e7eb;
             background: #fff;
         }
 
-        .chat-input textarea, .chat-input input[type="text"] {
+        .chat-input .input-box {
             flex: 1;
+        }
+
+        .chat-input input[type="text"] {
+            width: 100%;
             resize: none;
             border: 1px solid #e5e7eb;
-            border-radius: 8px;
+            border-radius: 10px;
             padding: 10px 14px;
             font-size: 15px;
-            min-height: 38px;
+            min-height: 40px;
             outline: none;
-            margin-right: 12px;
         }
 
         .chat-input button {
-            background: #667eea;
-            color: #fff;
             border: none;
-            border-radius: 8px;
-            padding: 0 24px;
+            border-radius: 10px;
             font-size: 15px;
             cursor: pointer;
             height: 40px;
         }
 
-        .chat-input .btn {
-            background: transparent;
-            color: #555;
-            padding: 0 8px;
-            font-size: 20px;
+        .chat-input .icon-btn,
+        .chat-input .toggle-extra-btn {
+            width: 42px;
+            min-width: 42px;
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-input .toggle-extra-btn.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: #fff;
+        }
+
+        .chat-input button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .chat-input #sendBtn {
+            background: #667eea;
+            color: #fff;
+            padding: 0 24px;
+        }
+
+        .chat-extra-panel {
+            position: absolute;
+            left: 24px;
+            right: 24px;
+            bottom: 78px;
+            background: #f7f8fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 18px 20px;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+            display: none;
+            z-index: 20;
+        }
+
+        .chat-extra-panel.active {
+            display: block;
+        }
+
+        .chat-extra-grid {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .chat-extra-grid .extra-item {
+            width: 86px;
+            height: 86px;
+            border-radius: 18px;
+            border: 1px solid #e5e7eb;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #374151;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .chat-extra-grid .extra-item i {
+            font-size: 22px;
+            color: #667eea;
+        }
+
+        .chat-extra-grid .extra-item:not(:disabled):hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(51, 65, 85, 0.12);
+        }
+
+        .chat-extra-grid .extra-item:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
         }
         
         #voice-btn.recording {
@@ -279,29 +361,91 @@
             text-decoration: underline;
         }
 
+        .message.me .file-bubble i {
+            color: rgba(255,255,255,0.9);
+        }
+
+        .message.me .file-bubble a {
+            color: rgba(255,255,255,0.95);
+        }
+
         /* 语音消息样式 - 简洁版 */
         .voice-bubble {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             min-width: 150px;
-            border: none;
+            padding: 10px 16px;
+            border-radius: 18px;
+            background: #fff;
+            color: #111;
             box-shadow: none;
         }
 
-        .voice-bubble i {
-            color: #576b95;
-            font-size: 16px;
+        .message.me .voice-bubble {
+            background: #2fb86b;
+            color: #fff;
         }
 
-        .voice-bubble audio {
+        .voice-play-btn {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(15, 23, 42, 0.08);
+            color: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .message.me .voice-play-btn {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        .voice-wave {
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
             flex: 1;
-            height: 30px;
+        }
+
+        .voice-wave span {
+            display: block;
+            width: 3px;
+            height: 12px;
+            background: rgba(15, 23, 42, 0.3);
+            border-radius: 2px;
+            animation: wave 1.2s infinite ease-in-out;
+        }
+
+        .message.me .voice-wave span {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .voice-wave span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .voice-wave span:nth-child(3) {
+            animation-delay: 0.4s;
         }
 
         .voice-bubble .duration {
             font-size: 12px;
-            color: #999;
+            color: inherit;
+        }
+
+        @keyframes wave {
+            0%, 100% {
+                height: 8px;
+            }
+            50% {
+                height: 16px;
+            }
         }
 
         /* 未读消息徽章 */
@@ -380,6 +524,12 @@
             .chat-messages {
                 padding: 16px;
             }
+
+            .chat-extra-panel {
+                left: 16px;
+                right: 16px;
+                bottom: 90px;
+            }
         }
     </style>
 </head>
@@ -446,13 +596,28 @@
                         <!-- 聊天消息 -->
                     </div>
                     <div class="chat-input">
-                        <button id="file-btn" class="btn" disabled title="发送文件"><i class="fas fa-paperclip"></i></button>
-                        <input type="file" id="file-input" style="display: none;">
-                        <button id="image-btn" class="btn" disabled title="发送图片"><i class="fas fa-image"></i></button>
-                        <input type="file" id="image-input" accept="image/*" style="display: none;">
-                        <button id="voice-btn" class="btn" disabled><i class="fas fa-microphone"></i></button>
-                        <input type="text" id="chatInput" placeholder="输入消息..." disabled>
+                        <button id="voice-btn" class="icon-btn" disabled title="语音消息"><i class="fas fa-microphone"></i></button>
+                        <div class="input-box">
+                            <input type="text" id="chatInput" placeholder="输入消息..." disabled>
+                        </div>
+                        <button id="toggleExtrasBtn" class="icon-btn toggle-extra-btn" disabled title="更多功能" aria-expanded="false">
+                            <i class="fas fa-plus"></i>
+                        </button>
                         <button id="sendBtn" disabled>发送</button>
+                        <div class="chat-extra-panel" id="chatExtraPanel">
+                            <div class="chat-extra-grid">
+                                <button id="image-btn" class="extra-item" disabled title="发送照片">
+                                    <i class="fas fa-image"></i>
+                                    <span>照片</span>
+                                </button>
+                                <button id="file-btn" class="extra-item" disabled title="发送文件">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>文件</span>
+                                </button>
+                            </div>
+                        </div>
+                        <input type="file" id="image-input" accept="image/*" style="display: none;">
+                        <input type="file" id="file-input" style="display: none;">
                     </div>
                 </div>
             </div>

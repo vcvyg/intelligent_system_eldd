@@ -14,6 +14,12 @@ const domCache = {
     chatHeader: null,
     userList: null,
     recordBtn: null,
+    toggleExtrasBtn: null,
+    chatExtraPanel: null,
+    imageBtn: null,
+    fileBtn: null,
+    imageInput: null,
+    fileInput: null,
     
     init() {
         this.welcomeText = document.getElementById('welcomeText');
@@ -23,6 +29,12 @@ const domCache = {
         this.chatHeader = document.getElementById('chatHeader');
         this.userList = document.getElementById('userList');
         this.recordBtn = document.getElementById('recordBtn');
+        this.toggleExtrasBtn = document.getElementById('toggleExtrasBtn');
+        this.chatExtraPanel = document.getElementById('chatExtraPanel');
+        this.imageBtn = document.getElementById('image-btn');
+        this.fileBtn = document.getElementById('file-btn');
+        this.imageInput = document.getElementById('imageInput');
+        this.fileInput = document.getElementById('fileInput');
     }
 };
 
@@ -98,6 +110,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('offline', function() {
         console.log('网络已断开');
         updateConnectionStatus('disconnected');
+    });
+    
+    if (domCache.imageBtn && domCache.imageInput) {
+        domCache.imageBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (domCache.imageBtn.disabled) return;
+            closeExtraPanel();
+            domCache.imageInput.click();
+        });
+    }
+    
+    if (domCache.fileBtn && domCache.fileInput) {
+        domCache.fileBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            if (domCache.fileBtn.disabled) return;
+            closeExtraPanel();
+            domCache.fileInput.click();
+        });
+    }
+    
+    if (domCache.toggleExtrasBtn && domCache.chatExtraPanel) {
+        domCache.toggleExtrasBtn.addEventListener('click', (event) => {
+            if (domCache.toggleExtrasBtn.disabled) return;
+            event.stopPropagation();
+            const isOpening = !domCache.chatExtraPanel.classList.contains('active');
+            domCache.chatExtraPanel.classList.toggle('active', isOpening);
+            domCache.toggleExtrasBtn.classList.toggle('active', isOpening);
+            domCache.toggleExtrasBtn.setAttribute('aria-expanded', isOpening ? 'true' : 'false');
+        });
+    }
+    
+    document.addEventListener('click', (event) => {
+        const insidePanel = domCache.chatExtraPanel && domCache.chatExtraPanel.contains(event.target);
+        const clickedToggle = domCache.toggleExtrasBtn && domCache.toggleExtrasBtn.contains(event.target);
+        if (!insidePanel && !clickedToggle) {
+            closeExtraPanel();
+        }
     });
 });
 
@@ -565,15 +614,23 @@ function appendMessage(msg) {
         
         console.log('语音消息 - URL:', audioUrl, 'Duration:', duration);
         
-        messageContent = `
-            <div class="bubble voice-bubble">
-                <i class="fas fa-play-circle"></i>
-                <audio controls src="${audioUrl}">
-                    您的浏览器不支持音频播放
-                </audio>
-                ${duration ? `<span class="duration">${duration}"</span>` : ''}
-            </div>
-        `;
+        if (audioUrl) {
+            messageContent = `
+                <div class="bubble voice-bubble">
+                    <button type="button" class="voice-play-btn" onclick="playAudio('${audioUrl}', this)">
+                        <i class="fas fa-play"></i>
+                    </button>
+                    <div class="voice-wave">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    ${duration ? `<span class="duration">${duration}"</span>` : ''}
+                </div>
+            `;
+        } else {
+            messageContent = `<div class="bubble">${escapeHtml(msg.content)}</div>`;
+        }
     } else if (messageType === 'image') {
         // 图片消息
         let imageUrl = msg.imageUrl || '';
@@ -777,6 +834,7 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
 async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
+    closeExtraPanel();
     
     try {
         const groupInfoRes = await get(`/medical/chat/group/${groupId}/info`);
@@ -805,8 +863,12 @@ async function selectGroup(groupId, groupName) {
         document.getElementById('chatHeader').textContent = `${groupName}`;
     }
     
-    document.getElementById('chatInput').disabled = false;
-    document.getElementById('sendBtn').disabled = false;
+    if (domCache.chatInput) domCache.chatInput.disabled = false;
+    if (domCache.sendBtn) domCache.sendBtn.disabled = false;
+    if (domCache.recordBtn) domCache.recordBtn.disabled = false;
+    if (domCache.toggleExtrasBtn) domCache.toggleExtrasBtn.disabled = false;
+    if (domCache.imageBtn) domCache.imageBtn.disabled = false;
+    if (domCache.fileBtn) domCache.fileBtn.disabled = false;
 
     document.querySelectorAll('.user-item').forEach(item => {
         item.classList.remove('active');
@@ -868,6 +930,7 @@ function sendMessage() {
     const input = document.getElementById('chatInput');
     const content = input.value.trim();
     if (!content) return;
+    closeExtraPanel();
     
     const messageObject = {
         messageType: 'TEXT',
@@ -1563,6 +1626,8 @@ async function sendMessageWithContent(messageObject) {
         return;
     }
     
+    closeExtraPanel();
+    
     try {
         // 生成唯一的临时ID
         const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -1718,5 +1783,15 @@ function formatTime(t) {
     } catch (error) {
         console.error('Error formatting time:', error, 'Input:', t);
         return '';
+    }
+}
+
+function closeExtraPanel() {
+    if (domCache.chatExtraPanel) {
+        domCache.chatExtraPanel.classList.remove('active');
+    }
+    if (domCache.toggleExtrasBtn) {
+        domCache.toggleExtrasBtn.classList.remove('active');
+        domCache.toggleExtrasBtn.setAttribute('aria-expanded', 'false');
     }
 }

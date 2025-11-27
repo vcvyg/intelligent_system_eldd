@@ -10,6 +10,32 @@ const TIME_RANGE_LABELS = {
 let currentRange = 'today';
 let fullRangeVisible = false;
 
+function formatGender(value) {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+    const normalized = String(value).trim();
+    if (!normalized) {
+        return '-';
+    }
+    const upper = normalized.toUpperCase();
+    if (upper === 'M' || normalized === '男' || upper === 'MALE' || upper === '1') {
+        return '男';
+    }
+    if (upper === 'F' || normalized === '女' || upper === 'FEMALE' || upper === '0') {
+        return '女';
+    }
+    return normalized;
+}
+
+function maskIdCard(idCard) {
+    if (!idCard || idCard.length < 8) {
+        return idCard || '-';
+    }
+    const middleLength = idCard.length - 8;
+    return `${idCard.slice(0, 6)}${'*'.repeat(middleLength)}${idCard.slice(-2)}`;
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     const userInfo = checkLogin();
     if (!userInfo || userInfo.role !== 'FAMILY') {
@@ -21,6 +47,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateRangeLabel();
     highlightRangeButtons();
     applyFullRangeVisibility();
+
+    const searchResults = document.getElementById('searchResults');
+    if (searchResults) {
+        searchResults.addEventListener('click', event => {
+            const bindBtn = event.target.closest('[data-bind-id]');
+            if (!bindBtn) {
+                return;
+            }
+            const { bindId, bindName, bindIdcard } = bindBtn.dataset;
+            if (bindId) {
+                bindElderly(bindId, bindName, bindIdcard || '');
+            }
+        });
+    }
+
     await loadDashboardData(currentRange);
 });
 
@@ -197,8 +238,9 @@ async function searchElderly() {
                     const elderlyId = elderly.id;
                     const name = elderly.name || '-';
                     const age = elderly.age != null ? elderly.age : '-';
-                    const gender = elderly.gender === 'M' ? '男' : elderly.gender === 'F' ? '女' : '-';
-                    const idCard = elderly.id_card || '-';
+                    const gender = formatGender(elderly.gender);
+                    const idCard = elderly.id_card || '';
+                    const maskedIdCard = maskIdCard(idCard) || '-';
                     
                     return `
                         <div style="border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 15px; margin-bottom: 10px; background: var(--color-bg-lighter);">
@@ -210,10 +252,10 @@ async function searchElderly() {
                                         <span style="margin-left: 15px;">性别：${gender}</span>
                                     </p>
                                     <p style="margin: 4px 0; color: var(--color-text-gray); font-size: 14px;">
-                                        身份证：${idCard}
+                                        身份证：${maskedIdCard}
                                     </p>
                                 </div>
-                                <button class="btn-primary btn-sm" onclick="bindElderly(${elderlyId}, '${name}')">绑定</button>
+                                <button class="btn-primary btn-sm" data-bind-id="${elderlyId}" data-bind-name="${name}" data-bind-idcard="${idCard}">绑定</button>
                             </div>
                         </div>
                     `;
@@ -231,7 +273,15 @@ async function searchElderly() {
 /**
  * 绑定老人
  */
-async function bindElderly(elderlyId, elderlyName) {
+async function bindElderly(elderlyId, elderlyName, elderlyIdCard = '') {
+    if (elderlyIdCard) {
+        const confirmIdCard = prompt(`为确保信息安全，请输入 ${elderlyName || '该老人'} 的完整身份证号码：`);
+        if (!confirmIdCard || confirmIdCard.trim() !== elderlyIdCard) {
+            alert('身份证号码不匹配，无法绑定');
+            return;
+        }
+    }
+
     // 弹出关系类型选择
     const relationType = prompt(`请输入与 ${elderlyName} 的关系（如：子女、配偶、其他亲属等）：`);
     if (!relationType || !relationType.trim()) {

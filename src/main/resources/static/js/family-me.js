@@ -3,6 +3,32 @@ const SYSTEM_STORAGE_KEY = 'familySystemSettings';
 
 let currentUserInfo = null;
 
+function formatGender(value) {
+    if (value === null || value === undefined) {
+        return '-';
+    }
+    const normalized = String(value).trim();
+    if (!normalized) {
+        return '-';
+    }
+    const upper = normalized.toUpperCase();
+    if (upper === 'M' || normalized === '男' || upper === 'MALE' || upper === '1') {
+        return '男';
+    }
+    if (upper === 'F' || normalized === '女' || upper === 'FEMALE' || upper === '0') {
+        return '女';
+    }
+    return normalized;
+}
+
+function maskIdCard(idCard) {
+    if (!idCard || idCard.length < 8) {
+        return idCard || '-';
+    }
+    const middleLength = idCard.length - 8;
+    return `${idCard.slice(0, 6)}${'*'.repeat(middleLength)}${idCard.slice(-2)}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     currentUserInfo = checkLogin();
     if (!currentUserInfo || currentUserInfo.role !== 'FAMILY') {
@@ -44,13 +70,13 @@ function initAccountForm() {
     const emergencyPhoneInput = document.getElementById('emergencyPhone');
 
     if (nicknameInput) {
-        nicknameInput.value = saved.nickname || currentUserInfo.realName || currentUserInfo.username || '';
+        nicknameInput.value = saved.nickname || currentUserInfo.username || currentUserInfo.realName || '';
     }
     if (phoneInput) {
-        phoneInput.value = saved.phone || '';
+        phoneInput.value = saved.phone || currentUserInfo.phone || '';
     }
     if (emailInput) {
-        emailInput.value = saved.email || '';
+        emailInput.value = saved.email || currentUserInfo.email || '';
     }
     if (emergencyContactInput) {
         emergencyContactInput.value = saved.emergencyContact || '';
@@ -143,8 +169,9 @@ function initBindSection() {
         }
         const elderlyId = bindBtn.dataset.bindId;
         const elderlyName = bindBtn.dataset.bindName;
+        const elderlyIdCard = bindBtn.dataset.bindIdcard || '';
         if (elderlyId) {
-            bindElderlyFromMePage(elderlyId, elderlyName);
+            bindElderlyFromMePage(elderlyId, elderlyName, elderlyIdCard);
         }
     });
 }
@@ -180,8 +207,9 @@ async function triggerBindSearch() {
         resultsContainer.innerHTML = list.map(elderly => {
             const name = elderly.name || '-';
             const age = elderly.age != null ? elderly.age : '-';
-            const gender = elderly.gender === 'M' ? '男' : elderly.gender === 'F' ? '女' : '-';
-            const idCard = elderly.id_card || '-';
+            const gender = formatGender(elderly.gender);
+            const idCard = elderly.id_card || '';
+            const maskedIdCard = maskIdCard(idCard) || '-';
             return `
                 <div class="bind-result">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
@@ -192,10 +220,10 @@ async function triggerBindSearch() {
                                 <span style="margin-left:12px;">性别：${gender}</span>
                             </p>
                             <p style="margin:4px 0;color:var(--color-text-gray);font-size:14px;">
-                                身份证：${idCard}
+                                身份证：${maskedIdCard}
                             </p>
                         </div>
-                        <button class="btn-primary btn-sm" data-bind-id="${elderly.id}" data-bind-name="${name}">绑定</button>
+                        <button class="btn-primary btn-sm" data-bind-id="${elderly.id}" data-bind-name="${name}" data-bind-idcard="${idCard}">绑定</button>
                     </div>
                 </div>
             `;
@@ -206,7 +234,14 @@ async function triggerBindSearch() {
     }
 }
 
-async function bindElderlyFromMePage(elderlyId, elderlyName) {
+async function bindElderlyFromMePage(elderlyId, elderlyName, elderlyIdCard = '') {
+    if (elderlyIdCard) {
+        const confirmIdCard = prompt(`为确保信息安全，请输入 ${elderlyName || '该老人'} 的完整身份证号码：`);
+        if (!confirmIdCard || confirmIdCard.trim() !== elderlyIdCard) {
+            alert('身份证号码不匹配，无法绑定');
+            return;
+        }
+    }
     const relationType = prompt(`请输入与 ${elderlyName || '该老人'} 的关系（如：子女、配偶等）：`);
     if (!relationType || !relationType.trim()) {
         alert('请输入关系类型');

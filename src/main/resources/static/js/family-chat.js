@@ -1,12 +1,14 @@
 // 子女端群聊脚本
 
+const MOBILE_BREAKPOINT = 900;
 let currentGroupId = null;
 let currentGroupName = '';
 let stompClient = null;
 let currentUser = null;
+let mobileListPreferred = true;
 
 // UI Elements
-let chatInput, sendBtn, fileBtn, fileInput, imageBtn, imageInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn;
+let chatInput, sendBtn, fileBtn, fileInput, imageBtn, imageInput, voiceBtn, chatMessages, contextMenu, deleteMessageBtn, chatHeaderContent, chatContainer, chatBackBtn;
 
 // Voice Recording
 let mediaRecorder = null;
@@ -36,6 +38,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     chatMessages = document.getElementById('chatMessages');
     contextMenu = document.getElementById('context-menu');
     deleteMessageBtn = document.getElementById('delete-message');
+    chatHeaderContent = document.getElementById('chatHeaderContent');
+    chatContainer = document.querySelector('.chat-container');
+    chatBackBtn = document.getElementById('chatBackBtn');
+
+    if (chatBackBtn) {
+        chatBackBtn.addEventListener('click', () => {
+            mobileListPreferred = true;
+            exitMobileChatView();
+        });
+    }
+
+    window.addEventListener('resize', handleResponsiveLayout);
+    handleResponsiveLayout();
 
     await loadGroupList();
     connectWebSocket();
@@ -328,6 +343,7 @@ function updateUnreadBadge(groupId, count, isAbsolute = false) {
 async function selectGroup(groupId, groupName) {
     currentGroupId = groupId;
     currentGroupName = groupName;
+    mobileListPreferred = false;
     
     // 尝试获取群组详细信息，包括成员列表
     try {
@@ -338,24 +354,27 @@ async function selectGroup(groupId, groupName) {
         const memberNames = groupInfo.members ? 
             groupInfo.members.map(m => m.realName || m.username).join('、') : '';
         
-        document.getElementById('chatHeader').innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <div style="flex: 1;">
-                    <div style="font-size: 16px; font-weight: 600; color: #333; margin-bottom: 4px;">与 ${groupInfo.groupName} 的家庭群聊</div>
-                    <div style="font-size: 12px; color: #666;">共${memberCount}人在群聊中</div>
+        if (chatHeaderContent) {
+            const displayTitle = (groupInfo.groupName || '')
+                .replace(/的沟通群$/, '老人的沟通群');
+            const memberNamesHtml = memberNames
+                ? `<span title="${memberNames}">${memberNames}</span>`
+                : '';
+            chatHeaderContent.innerHTML = `
+                <div class="chat-header-title">${displayTitle || `${groupInfo.groupName} 老人沟通群`}</div>
+                <div class="chat-header-meta">
+                    <span>共${memberCount}人</span>
+                    ${memberNamesHtml}
                 </div>
-                <div style="text-align: right; max-width: 250px;">
-                    <div style="font-size: 11px; color: #999; margin-bottom: 2px;">群成员</div>
-                    <div style="font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${memberNames}">
-                        ${memberNames}
-                    </div>
-                </div>
-            </div>
-        `;
+            `;
+        }
     } catch (error) {
         console.error("Failed to load group info:", error);
         // 如果获取群组信息失败，使用原来的简单显示方式
-        document.getElementById('chatHeader').textContent = `与 ${groupName} 的家庭群聊`;
+        if (chatHeaderContent) {
+            const fallbackTitle = (groupName || '').replace(/的沟通群$/, '老人的沟通群');
+            chatHeaderContent.textContent = fallbackTitle || `${groupName} 老人沟通群`;
+        }
     }
 
     // Enable inputs
@@ -385,6 +404,7 @@ async function selectGroup(groupId, groupName) {
     }
 
     await loadGroupMessages();
+    handleResponsiveLayout();
 }
 
 async function loadGroupMessages() {
@@ -659,6 +679,40 @@ async function sendImageMessage(imageFile) {
     }
 }
 
+function isMobileView() {
+    return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+function enterMobileChatView() {
+    if (!chatContainer || !isMobileView()) return;
+    chatContainer.classList.add('mobile-chat-active');
+    toggleChatBackBtn(true);
+}
+
+function exitMobileChatView() {
+    if (!chatContainer) return;
+    chatContainer.classList.remove('mobile-chat-active');
+    toggleChatBackBtn(false);
+}
+
+function toggleChatBackBtn(visible) {
+    if (!chatBackBtn) return;
+    chatBackBtn.style.display = visible ? 'inline-flex' : 'none';
+}
+
+function handleResponsiveLayout() {
+    if (!chatContainer) return;
+    if (isMobileView()) {
+        if (currentGroupId && !mobileListPreferred) {
+            enterMobileChatView();
+        } else {
+            exitMobileChatView();
+        }
+    } else {
+        chatContainer.classList.remove('mobile-chat-active');
+        toggleChatBackBtn(false);
+    }
+}
 
 
 

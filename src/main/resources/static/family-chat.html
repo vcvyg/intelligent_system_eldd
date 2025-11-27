@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/family-mobile.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <style>
         .chat-container {
@@ -80,10 +81,51 @@
         }
 
         .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
             padding: 18px 24px;
             border-bottom: 1px solid #e5e7eb;
-            font-size: 17px;
+        }
+
+        .chat-header-content {
+            flex: 1;
+        }
+
+        .chat-header-title {
+            font-size: 18px;
             font-weight: 600;
+            color: #111827;
+        }
+
+        .chat-header-meta {
+            margin-top: 4px;
+            font-size: 13px;
+            color: #6b7280;
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-back-btn {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: #f3f4f6;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            color: #4b5563;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .chat-back-btn:hover {
+            background: #e5e7eb;
         }
 
         .chat-messages {
@@ -304,10 +346,45 @@
         .context-menu li:hover {
             background-color: #f0f0f0;
         }
+
+        @media (max-width: 900px) {
+            .chat-container {
+                flex-direction: column;
+                height: calc(100vh - 160px);
+                max-height: none;
+            }
+
+            .chat-users {
+                width: 100%;
+                height: 100%;
+            }
+
+            .chat-main {
+                width: 100%;
+                height: 100%;
+                display: none;
+            }
+
+            .chat-container.mobile-chat-active .chat-main {
+                display: flex;
+            }
+
+            .chat-container.mobile-chat-active .chat-users {
+                display: none;
+            }
+
+            .chat-container.mobile-chat-active .chat-back-btn {
+                display: inline-flex;
+            }
+
+            .chat-messages {
+                padding: 16px;
+            }
+        }
     </style>
 </head>
 
-<body>
+<body data-family-nav="chat">
 <div class="admin-container">
     <!-- 侧边栏导航 -->
     <aside class="sidebar">
@@ -332,6 +409,10 @@
                 <span class="icon">🏥</span>
                 <span>医护服务</span>
             </a>
+            <a href="family-me.html" class="nav-item">
+                <span class="icon">👤</span>
+                <span>账号中心</span>
+            </a>
         </nav>
         <div class="sidebar-footer">
             <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -355,7 +436,12 @@
                     </div>
                 </div>
                 <div class="chat-main">
-                    <div class="chat-header" id="chatHeader">请选择一个群组开始聊天</div>
+                    <div class="chat-header" id="chatHeader">
+                        <button type="button" class="chat-back-btn" id="chatBackBtn" aria-label="返回群组" title="返回群组">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="chat-header-content" id="chatHeaderContent">请选择一个群组开始聊天</div>
+                    </div>
                     <div class="chat-messages" id="chatMessages">
                         <!-- 聊天消息 -->
                     </div>
@@ -372,13 +458,37 @@
             </div>
         </div>
     </main>
-    <div id="context-menu" class="context-menu">
+        <div id="context-menu" class="context-menu">
         <ul>
             <li id="delete-message">删除</li>
         </ul>
     </div>
+    <nav class="bottom-nav" aria-label="移动端主导航">
+        <a href="family-dashboard.html" class="bottom-nav-item" data-family-nav="dashboard">
+            <span class="icon">📊</span>
+            <span>总览</span>
+        </a>
+        <a href="family-chat.html" class="bottom-nav-item active" data-family-nav="chat">
+            <span class="icon">💬</span>
+            <span>沟通</span>
+        </a>
+        <a href="family-location.html" class="bottom-nav-item" data-family-nav="location">
+            <span class="icon">📍</span>
+            <span>定位</span>
+        </a>
+        <a href="family-services.html" class="bottom-nav-item" data-family-nav="services">
+            <span class="icon">🏥</span>
+            <span>服务</span>
+        </a>
+        <a href="family-me.html" class="bottom-nav-item" data-family-nav="me">
+            <span class="icon">👤</span>
+            <span>我</span>
+        </a>
+    </nav>
 </div>
+
 <script src="js/common.js"></script>
+<script src="js/family-mobile.js"></script>
 <script src="js/family-chat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>

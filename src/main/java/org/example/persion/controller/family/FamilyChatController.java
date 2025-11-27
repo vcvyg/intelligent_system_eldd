@@ -115,7 +115,7 @@ public class FamilyChatController {
     public Result<Page<MessageVO>> getGroupMessages(
             @PathVariable Long groupId,
             @RequestParam(defaultValue = "1") Integer current,
-            @RequestParam(defaultValue = "50") Integer size) {
+            @RequestParam(defaultValue = "20") Integer size) {
 
         Page<ChatMessage> page = new Page<>(current, size);
         LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();

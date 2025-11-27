@@ -253,9 +253,6 @@ async function payNow(id) {
     }
 }
 
-/**
- * 加载支付历史
- */
 async function loadPaymentHistory() {
     const tbody = document.getElementById('paymentHistoryBody');
     tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';

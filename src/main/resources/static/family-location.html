@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/family-mobile.css">
     <style>
         .location-container {
             padding: 30px;
@@ -163,7 +164,7 @@
         }
     </style>
 </head>
-<body>
+<body data-family-nav="location">
     <div class="admin-container">
         <!-- 侧边栏导航 -->
         <aside class="sidebar">
@@ -188,7 +189,10 @@
                     <span class="icon">🏥</span>
                     <span>医护服务</span>
                 </a>
-
+                <a href="family-me.html" class="nav-item">
+                    <span class="icon">👤</span>
+                    <span>账号中心</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -286,6 +290,28 @@
                 </div>
             </div>
         </main>
+        <nav class="bottom-nav" aria-label="移动端主导航">
+            <a href="family-dashboard.html" class="bottom-nav-item" data-family-nav="dashboard">
+                <span class="icon">📊</span>
+                <span>总览</span>
+            </a>
+            <a href="family-chat.html" class="bottom-nav-item" data-family-nav="chat">
+                <span class="icon">💬</span>
+                <span>沟通</span>
+            </a>
+            <a href="family-location.html" class="bottom-nav-item active" data-family-nav="location">
+                <span class="icon">📍</span>
+                <span>定位</span>
+            </a>
+            <a href="family-services.html" class="bottom-nav-item" data-family-nav="services">
+                <span class="icon">🏥</span>
+                <span>服务</span>
+            </a>
+            <a href="family-me.html" class="bottom-nav-item" data-family-nav="me">
+                <span class="icon">👤</span>
+                <span>我</span>
+            </a>
+        </nav>
     </div>
 
     <!-- 添加围栏模态框 -->
@@ -322,6 +348,7 @@
     </div>
 
     <script src="js/common.js"></script>
+    <script src="js/family-mobile.js"></script>
     <script src="js/family-location.js"></script>
 </body>
 </html>

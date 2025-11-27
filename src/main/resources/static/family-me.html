@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关于我 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/family-mobile.css">
+    <style>
+        .settings-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+            margin: 20px 30px 40px;
+        }
+
+        .settings-actions {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-border);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .settings-action {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 18px;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            text-align: left;
+            font-size: 15px;
+            cursor: pointer;
+            color: var(--color-text);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .settings-action + .settings-action {
+            margin-top: 4px;
+        }
+
+        .settings-action.active {
+            background: #f5f7ff;
+            color: var(--color-primary);
+        }
+
+        .settings-action span.arrow {
+            color: #c1c5d0;
+        }
+
+        .settings-action .label {
+            font-weight: 600;
+        }
+
+        .settings-action .hint {
+            display: block;
+            font-size: 12px;
+            color: var(--color-text-gray);
+            margin-top: 4px;
+        }
+
+        .settings-panels {
+            background: #fff;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--color-border);
+            padding: 24px 28px;
+        }
+
+        .settings-panel {
+            display: none;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .settings-panel h2 {
+            margin-top: 0;
+            margin-bottom: 18px;
+            font-size: 20px;
+        }
+
+        .settings-panel form label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .settings-panel input[type="text"],
+        .settings-panel input[type="email"],
+        .settings-panel input[type="tel"] {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+        }
+
+        .settings-panel .form-row {
+            margin-bottom: 16px;
+        }
+
+        .settings-panel .form-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .settings-panel .hint-text {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .system-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f3f5;
+        }
+
+        .system-toggle:last-child {
+            border-bottom: none;
+        }
+
+        .system-toggle label {
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .toggle-input {
+            width: 44px;
+            height: 24px;
+        }
+
+        .me-action-card {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            margin-bottom: 18px;
+            background: #f8fafc;
+        }
+
+        .bind-search {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .bind-search input {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .bind-result {
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-bottom: 12px;
+            background: #f9fafb;
+        }
+
+        .bind-result h4 {
+            margin: 0 0 6px;
+        }
+
+        .alert-box {
+            padding: 16px;
+            border-radius: var(--radius-md);
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+            font-size: 14px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 960px) {
+            .settings-layout {
+                grid-template-columns: 1fr;
+                margin: 16px 16px 30px;
+            }
+
+            .settings-actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+
+            .settings-action {
+                flex: 1 1 calc(50% - 8px);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .settings-action {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body data-family-nav="me">
+<div class="admin-container">
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>智慧养老系统</h2>
+            <p class="role-badge">子女端</p>
+        </div>
+        <nav class="nav-menu">
+            <a href="family-dashboard.html" class="nav-item">
+                <span class="icon">📊</span>
+                <span>家人数据总览</span>
+            </a>
+            <a href="family-chat.html" class="nav-item">
+                <span class="icon">💬</span>
+                <span>沟通通道</span>
+            </a>
+            <a href="family-location.html" class="nav-item">
+                <span class="icon">📍</span>
+                <span>GPS定位</span>
+            </a>
+            <a href="family-services.html" class="nav-item">
+                <span class="icon">🏥</span>
+                <span>医护服务</span>
+            </a>
+            <a href="family-me.html" class="nav-item active">
+                <span class="icon">👤</span>
+                <span>账号中心</span>
+            </a>
+        </nav>
+        <div class="sidebar-footer">
+            <button class="logout-btn" onclick="logout()">退出登录</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-bar">
+            <h1>关于我</h1>
+            <div class="user-info">
+                <span id="welcomeText">欢迎！</span>
+            </div>
+        </header>
+
+        <section class="settings-layout">
+            <div class="settings-actions" id="settingsActions">
+                <button class="settings-action active" data-panel="account">
+                    <div>
+                        <span class="label">账号设置</span>
+                        <span class="hint">更新昵称与联系方式</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+                <button class="settings-action" data-panel="system">
+                    <div>
+                        <span class="label">系统设置</span>
+                        <span class="hint">通知、偏好与界面</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+                <button class="settings-action" data-panel="bind">
+                    <div>
+                        <span class="label">绑定老人</span>
+                        <span class="hint">快速搜索并建立关系</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+                <button class="settings-action" data-panel="login">
+                    <div>
+                        <span class="label">登录</span>
+                        <span class="hint">返回登录页面</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+                <button class="settings-action" data-panel="logout">
+                    <div>
+                        <span class="label">退出登录</span>
+                        <span class="hint">安全退出当前账号</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+                <button class="settings-action" data-panel="reset">
+                    <div>
+                        <span class="label">找回密码</span>
+                        <span class="hint">重置登录密码</span>
+                    </div>
+                    <span class="arrow">›</span>
+                </button>
+            </div>
+
+            <div class="settings-panels">
+                <section class="settings-panel active" data-panel="account">
+                    <h2>账号设置</h2>
+                    <p class="hint-text">这些信息仅用于沟通提醒与账号展示，不会对外公开。</p>
+                    <form id="accountForm">
+                        <div class="form-row">
+                            <label for="accountNickname">昵称</label>
+                            <input type="text" id="accountNickname" placeholder="请输入昵称">
+                        </div>
+                        <div class="form-row">
+                            <label for="accountPhone">联系电话</label>
+                            <input type="tel" id="accountPhone" placeholder="用于医护通知">
+                        </div>
+                        <div class="form-row">
+                            <label for="accountEmail">通知邮箱</label>
+                            <input type="email" id="accountEmail" placeholder="用于接收报告">
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">保存账号信息</button>
+                            <span id="accountSaveHint" class="hint-text"></span>
+                        </div>
+                    </form>
+                </section>
+
+                <section class="settings-panel" data-panel="system">
+                    <h2>系统设置</h2>
+                    <p class="hint-text">偏好设置仅存储在您的浏览器中，可随时调整。</p>
+                    <div class="system-toggle">
+                        <label for="settingNotifications">开启推送通知</label>
+                        <input type="checkbox" id="settingNotifications" class="toggle-input">
+                    </div>
+                    <div class="system-toggle">
+                        <label for="settingSms">短信提醒异常</label>
+                        <input type="checkbox" id="settingSms" class="toggle-input">
+                    </div>
+                    <div class="system-toggle">
+                        <label for="settingDarkMode">夜间模式优先</label>
+                        <input type="checkbox" id="settingDarkMode" class="toggle-input">
+                    </div>
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button id="saveSystemSettings" class="btn-primary" type="button">保存偏好</button>
+                        <span id="systemSaveHint" class="hint-text"></span>
+                    </div>
+                    <div class="alert-box" style="margin-top: 18px;">
+                        注：部分系统通知需在浏览器或手机系统中授予权限，请确保允许“智慧养老系统”发送提醒。
+                    </div>
+                </section>
+
+                <section class="settings-panel" data-panel="bind">
+                    <h2>绑定老人</h2>
+                    <p class="hint-text">通过姓名或身份证号搜索，并直接在此页面完成绑定。</p>
+                    <div class="bind-search">
+                        <input type="text" id="bindSearchInput" class="form-input" placeholder="请输入老人姓名或身份证号">
+                        <button class="btn-primary" id="bindSearchBtn" type="button">搜索</button>
+                    </div>
+                    <div id="bindResultsPlaceholder" class="hint-text" style="padding: 18px 0;">
+                        请输入关键词开始查找。
+                    </div>
+                    <div id="bindSearchResults"></div>
+                </section>
+
+                <section class="settings-panel" data-panel="login">
+                    <h2>登录</h2>
+                    <div class="me-action-card">
+                        <p>如果需要切换账号或重新验证，可直接返回登录页。</p>
+                        <button id="goLoginBtn" class="btn-secondary" type="button">前往登录</button>
+                    </div>
+                </section>
+
+                <section class="settings-panel" data-panel="logout">
+                    <h2>退出登录</h2>
+                    <div class="me-action-card" style="border-color:#fecaca;background:#fef2f2;">
+                        <p>退出后将清除本地会话，需要重新登录才能访问家庭数据。</p>
+                        <button id="logoutNowBtn" class="btn-danger" type="button">立即退出</button>
+                    </div>
+                </section>
+
+                <section class="settings-panel" data-panel="reset">
+                    <h2>找回密码</h2>
+                    <div class="me-action-card">
+                        <p>通过预留手机号或邮箱验证后即可重置密码。</p>
+                        <button id="goResetBtn" class="btn-secondary" type="button">前往找回密码</button>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="移动端主导航">
+        <a href="family-dashboard.html" class="bottom-nav-item" data-family-nav="dashboard">
+            <span class="icon">📊</span>
+            <span>总览</span>
+        </a>
+        <a href="family-chat.html" class="bottom-nav-item" data-family-nav="chat">
+            <span class="icon">💬</span>
+            <span>沟通</span>
+        </a>
+        <a href="family-location.html" class="bottom-nav-item" data-family-nav="location">
+            <span class="icon">📍</span>
+            <span>定位</span>
+        </a>
+        <a href="family-services.html" class="bottom-nav-item" data-family-nav="services">
+            <span class="icon">🏥</span>
+            <span>服务</span>
+        </a>
+        <a href="family-me.html" class="bottom-nav-item active" data-family-nav="me">
+            <span class="icon">👤</span>
+            <span>我</span>
+        </a>
+    </nav>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/family-mobile.js"></script>
+<script src="js/family-me.js"></script>
+</body>
+</html>
+

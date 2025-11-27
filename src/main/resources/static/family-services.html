@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/family-mobile.css">
     <style>
         .services-container {
             padding: 30px;
@@ -160,9 +161,171 @@
             font-weight: bold;
             color: var(--color-primary);
         }
+
+        .bottom-nav {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            background: var(--color-bg-lighter);
+            border-top: 1px solid var(--color-border);
+            display: none;
+            justify-content: space-around;
+            padding: 6px 8px calc(6px + env(safe-area-inset-bottom, 0));
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+            z-index: 900;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--color-text-gray);
+            text-decoration: none;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        .bottom-nav-item .icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .bottom-nav-item.active,
+        .bottom-nav-item:focus,
+        .bottom-nav-item:hover {
+            color: var(--color-primary);
+        }
+
+        .bottom-nav-item--me {
+            color: var(--color-text-dark);
+            font-weight: 600;
+        }
+
+        .me-panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.25);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease;
+            z-index: 950;
+        }
+
+        .me-panel-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .me-panel {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--color-white);
+            border-radius: 16px 16px 0 0;
+            box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.15);
+            transform: translateY(100%);
+            transition: transform 0.25s ease;
+            padding: 20px 24px calc(20px + env(safe-area-inset-bottom, 0));
+            z-index: 960;
+        }
+
+        .me-panel.open {
+            transform: translateY(0);
+        }
+
+        .me-panel header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .me-panel h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--color-text-dark);
+        }
+
+        .me-panel-actions {
+            display: grid;
+            gap: 10px;
+        }
+
+        .me-panel-actions button {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            background: var(--color-bg-lighter);
+            text-align: left;
+            font-size: 14px;
+            color: var(--color-text-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .me-panel-actions button.destructive {
+            border-color: var(--color-danger);
+            color: var(--color-danger);
+        }
+
+        .me-panel-close {
+            border: none;
+            background: transparent;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--color-text-gray);
+        }
+
+        @media (max-width: 992px) {
+            .services-container {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                flex-direction: column;
+                min-height: 100vh;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .top-bar {
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }
+
+            .main-content {
+                padding-bottom: 90px;
+            }
+
+            .services-container {
+                padding: 16px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-nav {
+                display: flex;
+            }
+        }
     </style>
 </head>
-<body>
+<body data-family-nav="services">
     <div class="admin-container">
         <!-- 侧边栏导航 -->
         <aside class="sidebar">
@@ -187,6 +350,10 @@
                     <span class="icon">🏥</span>
                     <span>医护服务</span>
                 </a>
+            <a href="family-me.html" class="nav-item">
+                <span class="icon">👤</span>
+                <span>账号中心</span>
+            </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="logout-btn" onclick="logout()">退出登录</button>
@@ -339,9 +506,31 @@
                 </div>
             </div>
         </main>
+        <nav class="bottom-nav" aria-label="移动端主导航">
+            <a href="family-dashboard.html" class="bottom-nav-item" data-family-nav="dashboard">
+                <span class="icon">📊</span>
+                <span>总览</span>
+            </a>
+            <a href="family-chat.html" class="bottom-nav-item" data-family-nav="chat">
+                <span class="icon">💬</span>
+                <span>沟通</span>
+            </a>
+            <a href="family-location.html" class="bottom-nav-item" data-family-nav="location">
+                <span class="icon">📍</span>
+                <span>定位</span>
+            </a>
+            <a href="family-services.html" class="bottom-nav-item active" data-family-nav="services">
+                <span class="icon">🏥</span>
+                <span>服务</span>
+            </a>
+        <a href="family-me.html" class="bottom-nav-item" data-family-nav="me">
+                <span class="icon">👤</span>
+                <span>我</span>
+        </a>
+        </nav>
     </div>
-
     <script src="js/common.js"></script>
+    <script src="js/family-mobile.js"></script>
     <script src="js/family-services.js"></script>
 </body>
 </html>

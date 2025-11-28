@@ -67,17 +67,102 @@
                 </div>
             </header>
 
-            <!-- 内容区域 -->
-            <section>
-                <h2>告警列表</h2>
-                <div class="filter-bar">
-                    <!-- 筛选功能未来可添加 -->
+            <section class="alert-summary">
+                <div class="summary-card total">
+                    <p>全部告警</p>
+                    <h3 id="summaryTotal">0</h3>
                 </div>
-                <div id="alert-list-container" class="alert-list">
-                    <!-- 告警卡片将通过JS动态插入这里 -->
+                <div class="summary-card pending">
+                    <p>待处理</p>
+                    <h3 id="summaryPending">0</h3>
+                </div>
+                <div class="summary-card processing">
+                    <p>处理中</p>
+                    <h3 id="summaryProcessing">0</h3>
+                </div>
+                <div class="summary-card handled">
+                    <p>已处理/忽略</p>
+                    <h3 id="summaryHandled">0</h3>
                 </div>
             </section>
 
+            <section class="alert-controls">
+                <div class="status-tabs" id="statusTabs">
+                    <button class="status-tab" data-status="">全部</button>
+                    <button class="status-tab active" data-status="待处理">待处理</button>
+                    <button class="status-tab" data-status="处理中">处理中</button>
+                    <button class="status-tab" data-status="已处理">已处理</button>
+                    <button class="status-tab" data-status="已忽略">已忽略</button>
+                </div>
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label for="filterKeyword">老人姓名</label>
+                        <input type="text" id="filterKeyword" placeholder="输入姓名关键字">
+                    </div>
+                    <div class="filter-item">
+                        <label for="filterType">告警类型</label>
+                        <select id="filterType">
+                            <option value="">全部类型</option>
+                            <option value="心率异常">心率异常</option>
+                            <option value="血压异常">血压异常</option>
+                            <option value="血糖异常">血糖异常</option>
+                            <option value="体温异常">体温异常</option>
+                            <option value="跌倒">跌倒</option>
+                            <option value="离家">离家</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label for="filterLevel">告警等级</label>
+                        <select id="filterLevel">
+                            <option value="">全部等级</option>
+                            <option value="低">低</option>
+                            <option value="中">中</option>
+                            <option value="高">高</option>
+                            <option value="紧急">紧急</option>
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn-primary" id="filterApplyBtn">筛选</button>
+                        <button class="btn-secondary" id="filterResetBtn">重置</button>
+                        <button class="btn-outline" id="refreshBtn">刷新</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="table-section alert-table-section">
+                <div class="table-scroll">
+                    <table class="data-table alert-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>时间</th>
+                                <th>老人</th>
+                                <th>房间</th>
+                                <th>设备</th>
+                                <th>类型</th>
+                                <th>等级</th>
+                                <th>内容</th>
+                                <th>数值</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertTableBody">
+                            <tr>
+                                <td colspan="10" class="empty-tip">加载中...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer">
+                    <div class="record-info">共 <span id="recordTotal">0</span> 条记录</div>
+                    <div class="pagination">
+                        <button id="prevPageBtn">上一页</button>
+                        <span id="paginationInfo">第 1 / 1 页</span>
+                        <button id="nextPageBtn">下一页</button>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
@@ -85,41 +170,6 @@
     <script src="js/stomp.min.js"></script>
     <script src="js/common.js"></script>
     <script src="js/medical-alerts.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // 初始化DOM缓存
-            domCache.init();
-            
-            const userInfo = checkLogin();
-            if (!userInfo || userInfo.role !== 'MEDICAL') {
-                alert('权限不足');
-                logout();
-                return;
-            }
-            
-            if (domCache.welcomeText) {
-                domCache.welcomeText.textContent = `欢迎, ${userInfo.username}!`;
-            }
-
-            // 异步初始化告警页面，避免阻塞渲染
-            // 优先加载数据，WebSocket连接可以稍后
-            loadAlerts().then(() => {
-                // 数据加载完成后再连接WebSocket
-                connectWebSocket(userInfo.userId);
-            }).catch(error => {
-                console.error('初始化失败:', error);
-                // 即使数据加载失败，也尝试连接WebSocket
-                connectWebSocket(userInfo.userId);
-            });
-            
-            // 设置定时刷新（可选）
-            setInterval(() => {
-                if (document.visibilityState === 'visible') {
-                    loadAlerts(true); // 强制刷新
-                }
-            }, 60000); // 每分钟刷新一次
-        });
-    </script>
 </body>
 
 </html>

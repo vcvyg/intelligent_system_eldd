@@ -34,9 +34,10 @@ public class AdminAlertController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String alertType,
             @RequestParam(required = false) String alertLevel,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String elderlyName
     ) {
-        Page<AlertRecordVO> page = alertService.getAlertList(current, size, alertType, alertLevel, status);
+        Page<AlertRecordVO> page = alertService.getAlertList(current, size, alertType, alertLevel, status, elderlyName);
         return Result.success(page);
     }
 

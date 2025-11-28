@@ -17,9 +17,10 @@ public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
     /**
      * 查询预警列表(包含老人姓名、设备名称、医护人员姓名)
      */
-    @Select("SELECT a.*, e.name as elderly_name, d.device_name, u.real_name as medical_name " +
+    @Select("SELECT a.*, e.name as elderly_name, r.room_number AS room_name, d.device_name, u.real_name as medical_name " +
             "FROM alert_record a " +
             "LEFT JOIN elderly_info e ON a.elderly_id = e.id " +
+            "LEFT JOIN room r ON e.room_id = r.id " +
             "LEFT JOIN device_info d ON a.device_id = d.id " +
             "LEFT JOIN sys_user u ON a.assigned_medical_id = u.id " +
             "WHERE a.deleted = 0 " +
@@ -29,9 +30,10 @@ public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
     /**
      * 根据老人ID查询预警列表
      */
-    @Select("SELECT a.*, e.name as elderly_name, d.device_name, u.real_name as medical_name " +
+    @Select("SELECT a.*, e.name as elderly_name, r.room_number AS room_name, d.device_name, u.real_name as medical_name " +
             "FROM alert_record a " +
             "LEFT JOIN elderly_info e ON a.elderly_id = e.id " +
+            "LEFT JOIN room r ON e.room_id = r.id " +
             "LEFT JOIN device_info d ON a.device_id = d.id " +
             "LEFT JOIN sys_user u ON a.assigned_medical_id = u.id " +
             "WHERE a.elderly_id = #{elderlyId} AND a.deleted = 0 " +
@@ -41,9 +43,10 @@ public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
     /**
      * 查询医护人员待处理的告警(所有待处理的告警,不限制医护人员)
      */
-    @Select("SELECT a.*, e.name as elderly_name, d.device_name, u.real_name as medical_name " +
+    @Select("SELECT a.*, e.name as elderly_name, r.room_number AS room_name, d.device_name, u.real_name as medical_name " +
             "FROM alert_record a " +
             "LEFT JOIN elderly_info e ON a.elderly_id = e.id " +
+            "LEFT JOIN room r ON e.room_id = r.id " +
             "LEFT JOIN device_info d ON a.device_id = d.id " +
             "LEFT JOIN sys_user u ON a.assigned_medical_id = u.id " +
             "WHERE a.status = '待处理' AND a.deleted = 0 " +

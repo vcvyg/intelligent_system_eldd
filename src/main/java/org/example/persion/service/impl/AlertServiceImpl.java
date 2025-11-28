@@ -9,14 +9,12 @@ import org.example.persion.dto.AlertHandleDTO;
 import org.example.persion.entity.AlertRecord;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.Room;
-import org.example.persion.entity.User;
 import org.example.persion.repository.AlertRecordMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.RoomMapper;
 import org.example.persion.service.AlertService;
 import org.example.persion.vo.AlertRecordVO;
 import org.springframework.beans.BeanUtils;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,12 +36,28 @@ public class AlertServiceImpl implements AlertService {
     private final RoomMapper roomMapper;
 
     @Override
-    public Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status) {
+    public Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status, String elderlyName) {
         Page<AlertRecord> page = new Page<>(current, size);
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
 
         // 只查询未删除的记录
         wrapper.eq(AlertRecord::getDeleted, 0);
+
+        // 老人姓名筛选
+        if (elderlyName != null && !elderlyName.isEmpty()) {
+            List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(
+                    new LambdaQueryWrapper<ElderlyInfo>()
+                            .like(ElderlyInfo::getName, elderlyName)
+            );
+            Set<Long> elderlyIds = elderlyList.stream()
+                    .map(ElderlyInfo::getId)
+                    .collect(Collectors.toSet());
+            if (elderlyIds.isEmpty()) {
+                wrapper.eq(1, 0); // 无匹配数据，直接返回空
+            } else {
+                wrapper.in(AlertRecord::getElderlyId, elderlyIds);
+            }
+        }
 
         // 预警类型筛选
         if (alertType != null && !alertType.isEmpty()) {
@@ -123,6 +137,11 @@ public class AlertServiceImpl implements AlertService {
 
         voPage.setRecords(voList);
         return voPage;
+    }
+
+    @Override
+    public List<AlertRecordVO> getAllAlertsWithDetails() {
+        return alertRecordMapper.selectAlertListWithDetails();
     }
 
     @Override

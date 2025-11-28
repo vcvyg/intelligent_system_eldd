@@ -10,6 +10,8 @@ import org.example.persion.vo.AlertRecordVO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 医护端-预警管理控制器
  */
@@ -31,11 +33,19 @@ public class MedicalAlertController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String alertType,
             @RequestParam(required = false) String alertLevel,
-            @RequestParam(required = false) String status
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String elderlyName
     ) {
-        // 复用现有的服务方法，后续可根据业务调整为只看和自己相关的
-        Page<AlertRecordVO> page = alertService.getAlertList(current, size, alertType, alertLevel, status);
+        Page<AlertRecordVO> page = alertService.getAlertList(current, size, alertType, alertLevel, status, elderlyName);
         return Result.success(page);
+    }
+
+    /**
+     * 直接从数据库获取完整的预警列表（含老人、设备信息）
+     */
+    @GetMapping("/all")
+    public Result<List<AlertRecordVO>> getAllAlerts() {
+        return Result.success(alertService.getAllAlertsWithDetails());
     }
 
     /**

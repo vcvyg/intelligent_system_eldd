@@ -16,7 +16,12 @@ public interface AlertService {
     /**
      * 分页查询预警列表
      */
-    Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status);
+    Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status, String elderlyName);
+
+    /**
+     * 查询全部预警（包含老人、设备等详情）
+     */
+    List<AlertRecordVO> getAllAlertsWithDetails();
 
     /**
      * 根据ID查询预警详情

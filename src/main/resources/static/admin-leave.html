@@ -73,10 +73,10 @@
             <div class="content-wrapper" style="padding: 24px;">
                 <!-- 筛选标签 -->
                 <div style="margin-bottom: 20px; display: flex; gap: 12px;">
-                    <button class="btn-secondary active" onclick="filterByStatus('')">全部</button>
-                    <button class="btn-secondary" onclick="filterByStatus('待审批')">待审批</button>
-                    <button class="btn-secondary" onclick="filterByStatus('已同意')">已同意</button>
-                    <button class="btn-secondary" onclick="filterByStatus('已拒绝')">已拒绝</button>
+                    <button class="btn-secondary active" onclick="filterByStatus('', this)">全部</button>
+                    <button class="btn-secondary" onclick="filterByStatus('待审批', this)">待审批</button>
+                    <button class="btn-secondary" onclick="filterByStatus('已同意', this)">已同意</button>
+                    <button class="btn-secondary" onclick="filterByStatus('已拒绝', this)">已拒绝</button>
                 </div>
 
                 <!-- 申请列表 -->
@@ -135,6 +135,16 @@
     <script src="js/common.js"></script>
     <script>
         let currentStatus = '';
+        const STATUS_TEXT_MAP = {
+            'PENDING': '待审批',
+            'APPROVED': '已同意',
+            'REJECTED': '已拒绝'
+        };
+        const STATUS_VALUE_MAP = {
+            '待审批': 'PENDING',
+            '已同意': 'APPROVED',
+            '已拒绝': 'REJECTED'
+        };
 
         // 页面加载
         document.addEventListener('DOMContentLoaded', function () {
@@ -162,7 +172,6 @@
                         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
                     } else {
                         tbody.innerHTML = result.data.map(item => {
-                            // 请假类型映射
                             const leaveTypeMap = {
                                 'SICK_LEAVE': '病假',
                                 'PERSONAL_LEAVE': '事假',
@@ -170,14 +179,9 @@
                                 'ADJUSTMENT_LEAVE': '调休'
                             };
                             const leaveTypeText = leaveTypeMap[item.leave_type] || item.leave_type;
-
-                            // 状态映射
-                            const statusMap = {
-                                'PENDING': '待审批',
-                                'APPROVED': '已同意',
-                                'REJECTED': '已拒绝'
-                            };
-                            const statusText = statusMap[item.status] || item.status;
+                            const normalizedStatus = normalizeStatus(item.status);
+                            const statusText = getStatusText(item.status);
+                            const isPending = normalizedStatus === 'PENDING';
 
                             return `
                             <tr>
@@ -187,10 +191,10 @@
                                 <td>${item.end_date}</td>
                                 <td>${item.days}天</td>
                                 <td style="max-width: 200px;">${item.reason}</td>
-                                <td><span class="badge ${getBadgeClass(item.status)}">${statusText}</span></td>
+                                <td><span class="badge ${getBadgeClass(normalizedStatus)}">${statusText}</span></td>
                                 <td>${formatDateTime(item.create_time)}</td>
                                 <td>
-                                    ${item.status === 'PENDING' ?
+                                    ${isPending ?
                                     `<button class="btn-primary" onclick='showReviewModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>审批</button>` :
                                     item.review_remark || '-'}
                                 </td>
@@ -206,13 +210,14 @@
         }
 
         // 按状态筛选
-        function filterByStatus(status) {
-            currentStatus = status;
-            // 更新按钮样式
-            document.querySelectorAll('.btn-secondary').forEach(btn => {
-                btn.classList.remove('active');
+        function filterByStatus(status, btn) {
+            currentStatus = STATUS_VALUE_MAP[status] || status;
+            document.querySelectorAll('.btn-secondary').forEach(button => {
+                button.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (btn) {
+                btn.classList.add('active');
+            }
             loadLeaveRequests();
         }
 
@@ -249,11 +254,7 @@
             const remark = document.getElementById('reviewRemark').value;
 
             // 将中文状态转换为英文枚举
-            const statusMap = {
-                '已同意': 'APPROVED',
-                '已拒绝': 'REJECTED'
-            };
-            const statusEnum = statusMap[status] || status;
+            const statusEnum = STATUS_VALUE_MAP[status] || status;
 
             try {
                 const result = await put(`/admin/leave/review/${id}?status=${statusEnum}&remark=${encodeURIComponent(remark)}`, {});
@@ -273,9 +274,29 @@
 
         // 获取徽章样式
         function getBadgeClass(status) {
-            if (status === '已同意' || status === 'APPROVED') return 'badge-green';
-            if (status === '已拒绝' || status === 'REJECTED') return 'badge-red';
+            if (status === 'APPROVED') return 'badge-green';
+            if (status === 'REJECTED') return 'badge-red';
             return 'badge-yellow';
+        }
+
+        function normalizeStatus(status) {
+            if (!status) return '';
+            if (STATUS_TEXT_MAP[status]) {
+                return status;
+            }
+            return STATUS_VALUE_MAP[status] || status;
+        }
+
+        function getStatusText(status) {
+            if (!status) return '-';
+            if (STATUS_TEXT_MAP[status]) {
+                return STATUS_TEXT_MAP[status];
+            }
+            const normalized = STATUS_VALUE_MAP[status];
+            if (normalized && STATUS_TEXT_MAP[normalized]) {
+                return STATUS_TEXT_MAP[normalized];
+            }
+            return status;
         }
 
         // 格式化日期时间

@@ -100,19 +100,30 @@
 
                 <section class="table-section">
                     <h2>待处理告警</h2>
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>时间</th>
-                                <th>老人</th>
-                                <th>告警内容</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pendingAlertsBody">
-                            <!-- JS动态填充 -->
-                        </tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>时间</th>
+                                    <th>老人</th>
+                                    <th>告警内容</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingAlertsBody">
+                                <!-- JS动态填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="table-footer">
+                        <p id="pendingAlertsTip" class="table-tip">共 <span id="pendingAlertsTotal">0</span> 条待处理告警</p>
+                        <div class="pagination" id="pendingAlertsPagination" style="display:none;">
+                            <button id="pendingPrevBtn">上一页</button>
+                            <span id="pendingPageInfo">第 1 / 1 页</span>
+                            <button id="pendingNextBtn">下一页</button>
+                        </div>
+                    </div>
                 </section>
             </div>
         </main>

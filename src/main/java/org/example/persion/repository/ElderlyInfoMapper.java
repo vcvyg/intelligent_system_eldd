@@ -37,4 +37,11 @@ public interface ElderlyInfoMapper extends BaseMapper<ElderlyInfo> {
      * @return 老人信息列表
      */
     List<ElderlyInfo> selectElderlyListByFamilyUserId(@Param("familyUserId") Long familyUserId);
+
+    /**
+     * 查询所有老人信息并关联房间信息
+     * 
+     * @return 老人信息 VO 列表（包含房间号和房间类型）
+     */
+    List<ElderlyInfoVO> selectAllElderlyWithRoom();
 }

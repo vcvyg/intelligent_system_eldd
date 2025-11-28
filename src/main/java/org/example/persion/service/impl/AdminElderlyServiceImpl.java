@@ -53,6 +53,17 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
         voPage.setRecords(elderlyPage.getRecords().stream().map(elderly -> {
             ElderlyInfoVO vo = new ElderlyInfoVO();
             BeanUtils.copyProperties(elderly, vo);
+            // 房间号赋值优化：roomId不为空且>0时才查
+            if (elderly.getRoomId() != null && elderly.getRoomId() > 0) {
+                Room room = roomMapper.selectById(elderly.getRoomId());
+                if (room != null && room.getRoomNumber() != null && !room.getRoomNumber().isEmpty()) {
+                    vo.setRoomNumber(room.getRoomNumber());
+                } else {
+                    vo.setRoomNumber("-");
+                }
+            } else {
+                vo.setRoomNumber("-");
+            }
             return vo;
         }).toList());
 

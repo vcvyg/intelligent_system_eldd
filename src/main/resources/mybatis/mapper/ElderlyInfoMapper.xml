@@ -56,4 +56,29 @@
             ei.name ASC
     </select>
 
+    <!-- 查询所有老人信息并关联房间信息 -->
+    <select id="selectAllElderlyWithRoom" resultType="org.example.persion.vo.ElderlyInfoVO">
+        SELECT 
+            e.id,
+            e.name,
+            e.age,
+            e.gender,
+            e.birthday,
+            e.id_card,
+            e.address,
+            e.room_id,
+            r.room_number,
+            r.room_type,
+            e.emergency_contact,
+            e.emergency_phone,
+            e.medical_history,
+            e.allergy_history,
+            e.create_time,
+            e.update_time
+        FROM elderly_info e
+        LEFT JOIN room r ON e.room_id = r.id
+        WHERE e.deleted = 0
+        ORDER BY e.id ASC
+    </select>
+
 </mapper>

@@ -12,8 +12,11 @@ const appointmentStatusMap = {
 const serviceStatusMap = {
     PENDING: { text: '待执行', className: 'status-warning' },
     PROCESSING: { text: '进行中', className: 'status-info' },
-    COMPLETED: { text: '已完成', className: 'status-success' }
+    COMPLETED: { text: '已完成', className: 'status-success' },
+    CANCELLED: { text: '已取消', className: 'status-secondary' }
 };
+
+const serviceProgressCache = new Map();
 
 const paymentStatusMap = {
     PENDING: { text: '待支付', className: 'status-warning' },
@@ -304,7 +307,8 @@ async function loadServiceProgress(forceElderlyId) {
     if (select && !select.value) {
         select.value = elderlyId;
     }
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+    serviceProgressCache.clear();
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">加载中...</td></tr>';
     try {
         const result = await get(`/family/services/progress?elderlyId=${elderlyId}`);
         const records = result.data || [];
@@ -313,6 +317,7 @@ async function loadServiceProgress(forceElderlyId) {
             return;
         }
         tbody.innerHTML = records.map(record => {
+            serviceProgressCache.set(record.id, record);
             const statusInfo = serviceStatusMap[record.status] || serviceStatusMap.PENDING;
             return `
                 <tr>
@@ -321,6 +326,7 @@ async function loadServiceProgress(forceElderlyId) {
                     <td>${record.medicalStaff || '-'}</td>
                     <td>${record.description || '-'}</td>
                     <td><span class="status-badge ${statusInfo.className}">${statusInfo.text}</span></td>
+                    <td><button class="btn-secondary btn-sm" onclick="showFamilyServiceTimeline(${record.id})">查看</button></td>
                 </tr>
             `;
         }).join('');
@@ -333,6 +339,42 @@ async function loadServiceProgress(forceElderlyId) {
 function setProgressPlaceholder(text) {
     const tbody = document.getElementById('serviceProgressBody');
     if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--color-text-gray);">${text}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--color-text-gray);">${text}</td></tr>`;
+}
+
+function showFamilyServiceTimeline(recordId) {
+    const record = serviceProgressCache.get(recordId);
+    const timeline = record?.statusTimeline || [];
+    if (!timeline.length) {
+        showModal({
+            title: '状态记录',
+            content: '<p style="margin:0;">暂无状态记录</p>',
+            confirmText: '关闭',
+            showCancel: false
+        });
+        return;
+    }
+    const list = document.createElement('ul');
+    list.className = 'status-timeline';
+    list.innerHTML = timeline.map(item => {
+        const fromText = item.fromStatus ? (serviceStatusMap[item.fromStatus]?.text || item.fromStatus) : '初始';
+        const toText = serviceStatusMap[item.toStatus]?.text || item.toStatus;
+        const time = item.changeTime ? formatDateTime(item.changeTime) : '';
+        const changer = item.changedByName || '医护';
+        const remark = item.remark ? `（${item.remark}）` : '';
+        return `
+            <li>
+                <div class="status-timeline__time">${time} · ${changer}</div>
+                <div class="status-timeline__text">状态由 <strong>${fromText}</strong> 变为 <strong>${toText}</strong>${remark}</div>
+            </li>
+        `;
+    }).join('');
+    showModal({
+        title: '状态记录',
+        content: list,
+        confirmText: '关闭',
+        showCancel: false,
+        onConfirm: () => {}
+    });
 }
 

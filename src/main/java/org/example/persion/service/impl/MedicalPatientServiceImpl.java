@@ -31,18 +31,8 @@ public class MedicalPatientServiceImpl implements MedicalPatientService {
      */
     @Override
     public List<ElderlyInfoVO> getAllPatients() {
-        // 查询所有未删除的老人信息
-        LambdaQueryWrapper<ElderlyInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(ElderlyInfo::getDeleted, 0);
-        wrapper.orderByAsc(ElderlyInfo::getName);
-        
-        List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(wrapper);
-
-        return elderlyList.stream().map(elderly -> {
-            ElderlyInfoVO vo = new ElderlyInfoVO();
-            BeanUtils.copyProperties(elderly, vo);
-            return vo;
-        }).collect(Collectors.toList());
+        // 查询所有未删除的老人信息并关联房间信息
+        return elderlyInfoMapper.selectAllElderlyWithRoom();
     }
 
     /**

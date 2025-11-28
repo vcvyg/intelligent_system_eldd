@@ -319,8 +319,8 @@ async function viewAlert(id) {
 
         const result = await response.json();
         if (result.code === 200) {
-            const alert = result.data;
-            alert(`预警详情:\n类型: ${alert.alertType}\n等级: ${alert.alertLevel}\n内容: ${alert.alertContent}\n状态: ${alert.status}\n处理结果: ${alert.handleResult || '无'}`);
+            const alertData = result.data; // Renamed variable to avoid conflict with alert function
+            alert(`预警详情:\n类型: ${alertData.alertType}\n等级: ${alertData.alertLevel}\n内容: ${alertData.alertContent}\n状态: ${alertData.status}\n处理结果: ${alertData.handleResult || '无'}`);
         } else {
             showError(result.message);
         }

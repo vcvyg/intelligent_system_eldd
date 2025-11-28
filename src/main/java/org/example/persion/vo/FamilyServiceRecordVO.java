@@ -5,6 +5,7 @@ import org.example.persion.enums.ServiceProgressStatus;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 public class FamilyServiceRecordVO {
@@ -17,5 +18,6 @@ public class FamilyServiceRecordVO {
     private String medicalStaff;
     private ServiceProgressStatus status;
     private String description;
+    private List<ServiceStatusHistoryVO> statusTimeline;
 }
 

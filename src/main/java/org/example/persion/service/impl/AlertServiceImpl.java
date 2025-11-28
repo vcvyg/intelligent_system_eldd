@@ -53,7 +53,7 @@ public class AlertServiceImpl implements AlertService {
                     .map(ElderlyInfo::getId)
                     .collect(Collectors.toSet());
             if (elderlyIds.isEmpty()) {
-                wrapper.eq(1, 0); // 无匹配数据，直接返回空
+                wrapper.apply("1 = 0"); // 无匹配数据，直接返回空
             } else {
                 wrapper.in(AlertRecord::getElderlyId, elderlyIds);
             }

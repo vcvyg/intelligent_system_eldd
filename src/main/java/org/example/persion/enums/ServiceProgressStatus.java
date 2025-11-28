@@ -6,6 +6,7 @@ package org.example.persion.enums;
 public enum ServiceProgressStatus {
     PENDING,
     PROCESSING,
-    COMPLETED
+    COMPLETED,
+    CANCELLED
 }
 

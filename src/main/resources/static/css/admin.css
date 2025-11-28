@@ -604,6 +604,113 @@
     color: var(--color-text-light);
 }
 
+body.modal-open {
+    overflow: hidden;
+}
+
+.app-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.app-modal-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.app-modal {
+    width: min(560px, 92vw);
+    background: var(--color-bg-lighter);
+    border-radius: 16px;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+    animation: modalPop 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+}
+
+@keyframes modalPop {
+    from {
+        transform: translateY(10px) scale(0.98);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.app-modal__header,
+.app-modal__footer {
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.app-modal__footer {
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    border-bottom: none;
+    justify-content: flex-end;
+}
+
+.app-modal__body {
+    padding: 20px 22px;
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+.app-modal__title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--color-text-dark);
+}
+
+.app-modal__close {
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+    color: var(--color-text-light);
+}
+
+.status-timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-timeline li {
+    padding: 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.status-timeline__time {
+    font-size: 12px;
+    color: var(--color-text-light);
+}
+
+.status-timeline__text {
+    font-size: 14px;
+    color: var(--color-text);
+    margin-top: 4px;
+}
+
 /* 分页 */
 .pagination {
     display: flex;

@@ -9,6 +9,7 @@ import org.example.persion.entity.ElderlyFamilyRelation;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.FamilyPaymentRecord;
 import org.example.persion.entity.FamilyServiceRecord;
+import org.example.persion.entity.FamilyServiceStatusHistory;
 import org.example.persion.entity.VisitAppointment;
 import org.example.persion.enums.PaymentStatus;
 import org.example.persion.enums.ServiceProgressStatus;
@@ -17,11 +18,13 @@ import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.FamilyPaymentRecordMapper;
 import org.example.persion.repository.FamilyServiceRecordMapper;
+import org.example.persion.repository.FamilyServiceStatusHistoryMapper;
 import org.example.persion.repository.VisitAppointmentMapper;
 import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.FamilyServicesService;
 import org.example.persion.vo.FamilyPaymentRecordVO;
 import org.example.persion.vo.FamilyServiceRecordVO;
+import org.example.persion.vo.ServiceStatusHistoryVO;
 import org.example.persion.vo.VisitAppointmentVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -39,6 +43,7 @@ public class FamilyServicesServiceImpl implements FamilyServicesService {
     private final FamilyServiceRecordMapper serviceRecordMapper;
     private final VisitAppointmentMapper visitAppointmentMapper;
     private final FamilyPaymentRecordMapper paymentRecordMapper;
+    private final FamilyServiceStatusHistoryMapper serviceStatusHistoryMapper;
     private final ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
     private final ElderlyInfoMapper elderlyInfoMapper;
 
@@ -55,8 +60,9 @@ public class FamilyServicesServiceImpl implements FamilyServicesService {
                         .orderByDesc(FamilyServiceRecord::getServiceDate)
                         .orderByDesc(FamilyServiceRecord::getServiceTime)
         );
+        Map<Long, List<ServiceStatusHistoryVO>> historyMap = loadTimeline(records);
         return records.stream()
-                .map(record -> toServiceVO(record, elderlyInfo))
+                .map(record -> toServiceVO(record, elderlyInfo, historyMap.getOrDefault(record.getId(), List.of())))
                 .collect(Collectors.toList());
     }
 
@@ -205,7 +211,41 @@ public class FamilyServicesServiceImpl implements FamilyServicesService {
                 .collect(Collectors.toMap(ElderlyInfo::getId, Function.identity()));
     }
 
-    private FamilyServiceRecordVO toServiceVO(FamilyServiceRecord record, ElderlyInfo elderlyInfo) {
+    private Map<Long, List<ServiceStatusHistoryVO>> loadTimeline(List<FamilyServiceRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = records.stream()
+                .map(FamilyServiceRecord::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        List<FamilyServiceStatusHistory> histories = serviceStatusHistoryMapper.selectList(
+                new LambdaQueryWrapper<FamilyServiceStatusHistory>()
+                        .in(FamilyServiceStatusHistory::getServiceRecordId, ids)
+                        .orderByAsc(FamilyServiceStatusHistory::getChangeTime)
+                        .orderByAsc(FamilyServiceStatusHistory::getId)
+        );
+        return histories.stream()
+                .collect(Collectors.groupingBy(FamilyServiceStatusHistory::getServiceRecordId,
+                        Collectors.mapping(this::toHistoryVO, Collectors.toList())));
+    }
+
+    private ServiceStatusHistoryVO toHistoryVO(FamilyServiceStatusHistory history) {
+        ServiceStatusHistoryVO vo = new ServiceStatusHistoryVO();
+        vo.setFromStatus(history.getOldStatus());
+        vo.setToStatus(history.getNewStatus());
+        vo.setChangedBy(history.getChangedBy());
+        vo.setChangedByName(history.getChangedByName());
+        vo.setRemark(history.getRemark());
+        vo.setChangeTime(history.getChangeTime());
+        return vo;
+    }
+
+    private FamilyServiceRecordVO toServiceVO(FamilyServiceRecord record, ElderlyInfo elderlyInfo,
+                                              List<ServiceStatusHistoryVO> timeline) {
         FamilyServiceRecordVO vo = new FamilyServiceRecordVO();
         vo.setId(record.getId());
         vo.setElderlyId(record.getElderlyId());
@@ -216,6 +256,7 @@ public class FamilyServicesServiceImpl implements FamilyServicesService {
         vo.setMedicalStaff(record.getMedicalStaff());
         vo.setStatus(record.getStatus() == null ? ServiceProgressStatus.COMPLETED : record.getStatus());
         vo.setDescription(record.getDescription());
+        vo.setStatusTimeline(timeline);
         return vo;
     }
 

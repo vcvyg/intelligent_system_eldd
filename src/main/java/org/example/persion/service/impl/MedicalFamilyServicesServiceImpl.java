@@ -5,10 +5,12 @@ import lombok.RequiredArgsConstructor;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalPaymentRecordRequestDTO;
 import org.example.persion.dto.MedicalServiceRecordRequestDTO;
+import org.example.persion.dto.MedicalServiceStatusUpdateDTO;
 import org.example.persion.entity.ElderlyFamilyRelation;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.FamilyPaymentRecord;
 import org.example.persion.entity.FamilyServiceRecord;
+import org.example.persion.entity.FamilyServiceStatusHistory;
 import org.example.persion.entity.User;
 import org.example.persion.enums.PaymentStatus;
 import org.example.persion.enums.ServiceProgressStatus;
@@ -16,6 +18,7 @@ import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.FamilyPaymentRecordMapper;
 import org.example.persion.repository.FamilyServiceRecordMapper;
+import org.example.persion.repository.FamilyServiceStatusHistoryMapper;
 import org.example.persion.repository.UserMapper;
 import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.MedicalFamilyServicesService;
@@ -23,6 +26,7 @@ import org.example.persion.vo.FamilyContactVO;
 import org.example.persion.vo.FamilyPaymentRecordVO;
 import org.example.persion.vo.FamilyServiceRecordVO;
 import org.example.persion.vo.MedicalFamilyServiceSummaryVO;
+import org.example.persion.vo.ServiceStatusHistoryVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +48,7 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
 
     private final FamilyServiceRecordMapper familyServiceRecordMapper;
     private final FamilyPaymentRecordMapper familyPaymentRecordMapper;
+    private final FamilyServiceStatusHistoryMapper serviceStatusHistoryMapper;
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
     private final UserMapper userMapper;
@@ -68,7 +73,35 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
         record.setDescription(request.getDescription());
 
         familyServiceRecordMapper.insert(record);
-        return toServiceRecordVO(record, elderlyInfo);
+        recordStatusHistory(record.getId(), null, record.getStatus(), "创建记录", medicalUser);
+        return toServiceRecordVO(record, elderlyInfo, getStatusTimeline(record.getId()));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FamilyServiceRecordVO updateServiceRecordStatus(Long recordId, MedicalServiceStatusUpdateDTO request) {
+        if (recordId == null) {
+            throw new BusinessException("缺少服务记录ID");
+        }
+        if (request == null || request.getStatus() == null) {
+            throw new BusinessException("请选择要更新的状态");
+        }
+        FamilyServiceRecord record = familyServiceRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException("服务记录不存在");
+        }
+        ServiceProgressStatus oldStatus = record.getStatus();
+        if (Objects.equals(oldStatus, request.getStatus())) {
+            throw new BusinessException("状态未发生变化");
+        }
+        record.setStatus(request.getStatus());
+        familyServiceRecordMapper.updateById(record);
+
+        User operator = getCurrentUser();
+        recordStatusHistory(recordId, oldStatus, request.getStatus(), request.getRemark(), operator);
+
+        ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(record.getElderlyId());
+        return toServiceRecordVO(record, elderlyInfo, getStatusTimeline(recordId));
     }
 
     @Override
@@ -86,8 +119,9 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
                         .orderByDesc(FamilyServiceRecord::getServiceDate)
                         .orderByDesc(FamilyServiceRecord::getServiceTime)
         );
+        Map<Long, List<ServiceStatusHistoryVO>> historyMap = loadStatusTimeline(records);
         return records.stream()
-                .map(record -> toServiceRecordVO(record, elderlyInfo))
+                .map(record -> toServiceRecordVO(record, elderlyInfo, historyMap.getOrDefault(record.getId(), List.of())))
                 .collect(Collectors.toList());
     }
 
@@ -244,11 +278,77 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
         return user;
     }
 
-    private FamilyServiceRecordVO toServiceRecordVO(FamilyServiceRecord record, ElderlyInfo elderlyInfo) {
+    private void recordStatusHistory(Long recordId, ServiceProgressStatus oldStatus,
+                                     ServiceProgressStatus newStatus, String remark, User operator) {
+        FamilyServiceStatusHistory history = new FamilyServiceStatusHistory();
+        history.setServiceRecordId(recordId);
+        history.setOldStatus(oldStatus);
+        history.setNewStatus(newStatus);
+        if (operator == null) {
+            operator = getCurrentUser();
+        }
+        history.setChangedBy(operator.getId());
+        history.setChangedByName(operator.getRealName() != null ? operator.getRealName() : operator.getUsername());
+        history.setRemark(remark);
+        history.setChangeTime(LocalDateTime.now());
+        serviceStatusHistoryMapper.insert(history);
+    }
+
+    private Map<Long, List<ServiceStatusHistoryVO>> loadStatusTimeline(List<FamilyServiceRecord> records) {
+        if (records == null || records.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = records.stream()
+                .map(FamilyServiceRecord::getId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        List<FamilyServiceStatusHistory> histories = serviceStatusHistoryMapper.selectList(
+                new LambdaQueryWrapper<FamilyServiceStatusHistory>()
+                        .in(FamilyServiceStatusHistory::getServiceRecordId, ids)
+                        .orderByAsc(FamilyServiceStatusHistory::getChangeTime)
+                        .orderByAsc(FamilyServiceStatusHistory::getId)
+        );
+        return histories.stream()
+                .collect(Collectors.groupingBy(FamilyServiceStatusHistory::getServiceRecordId,
+                        Collectors.mapping(this::toHistoryVO, Collectors.toList())));
+    }
+
+    private List<ServiceStatusHistoryVO> getStatusTimeline(Long recordId) {
+        if (recordId == null) {
+            return List.of();
+        }
+        List<FamilyServiceStatusHistory> histories = serviceStatusHistoryMapper.selectList(
+                new LambdaQueryWrapper<FamilyServiceStatusHistory>()
+                        .eq(FamilyServiceStatusHistory::getServiceRecordId, recordId)
+                        .orderByAsc(FamilyServiceStatusHistory::getChangeTime)
+                        .orderByAsc(FamilyServiceStatusHistory::getId)
+        );
+        return histories.stream()
+                .map(this::toHistoryVO)
+                .collect(Collectors.toList());
+    }
+
+    private ServiceStatusHistoryVO toHistoryVO(FamilyServiceStatusHistory history) {
+        ServiceStatusHistoryVO vo = new ServiceStatusHistoryVO();
+        vo.setFromStatus(history.getOldStatus());
+        vo.setToStatus(history.getNewStatus());
+        vo.setChangedBy(history.getChangedBy());
+        vo.setChangedByName(history.getChangedByName());
+        vo.setRemark(history.getRemark());
+        vo.setChangeTime(history.getChangeTime());
+        return vo;
+    }
+
+    private FamilyServiceRecordVO toServiceRecordVO(FamilyServiceRecord record, ElderlyInfo elderlyInfo,
+                                                    List<ServiceStatusHistoryVO> timeline) {
         FamilyServiceRecordVO vo = new FamilyServiceRecordVO();
         Objects.requireNonNull(record, "record不能为空");
         BeanUtils.copyProperties(record, vo);
         vo.setElderlyName(elderlyInfo != null ? elderlyInfo.getName() : "-");
+        vo.setStatusTimeline(timeline);
         return vo;
     }
 

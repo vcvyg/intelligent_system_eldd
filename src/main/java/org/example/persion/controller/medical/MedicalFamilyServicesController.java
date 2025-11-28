@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
 import org.example.persion.dto.MedicalPaymentRecordRequestDTO;
 import org.example.persion.dto.MedicalServiceRecordRequestDTO;
+import org.example.persion.dto.MedicalServiceStatusUpdateDTO;
 import org.example.persion.service.MedicalFamilyServicesService;
 import org.example.persion.vo.FamilyContactVO;
 import org.example.persion.vo.FamilyPaymentRecordVO;
@@ -23,6 +24,12 @@ public class MedicalFamilyServicesController {
     @PostMapping("/service-records")
     public Result<FamilyServiceRecordVO> createServiceRecord(@RequestBody MedicalServiceRecordRequestDTO request) {
         return Result.success(medicalFamilyServicesService.createServiceRecord(request));
+    }
+
+    @PutMapping("/service-records/{id}/status")
+    public Result<FamilyServiceRecordVO> updateServiceStatus(@PathVariable Long id,
+                                                             @RequestBody MedicalServiceStatusUpdateDTO request) {
+        return Result.success(medicalFamilyServicesService.updateServiceRecordStatus(id, request));
     }
 
     @GetMapping("/elderly/{elderlyId}/service-records")

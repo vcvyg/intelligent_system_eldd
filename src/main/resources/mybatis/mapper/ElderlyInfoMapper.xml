@@ -81,4 +81,36 @@
         ORDER BY e.id ASC
     </select>
 
+    <!-- 分页查询老人信息并关联房间信息 -->
+    <select id="selectElderlyPageWithRoom" resultType="org.example.persion.vo.ElderlyInfoVO">
+        SELECT 
+            e.id,
+            e.name,
+            e.age,
+            e.gender,
+            e.birthday,
+            e.id_card,
+            e.address,
+            e.room_id,
+            ISNULL(r.room_number, '-') as room_number,
+            r.room_type,
+            e.emergency_contact,
+            e.emergency_phone,
+            e.medical_history,
+            e.allergy_history,
+            e.create_time,
+            e.update_time
+        FROM elderly_info e
+        LEFT JOIN room r ON e.room_id = r.id
+        WHERE e.deleted = 0
+        <if test="keyword != null and keyword != ''">
+            AND (
+                e.name LIKE CONCAT('%', #{keyword}, '%')
+                OR e.id_card LIKE CONCAT('%', #{keyword}, '%')
+                OR e.emergency_contact LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        ORDER BY e.create_time DESC
+    </select>
+
 </mapper>

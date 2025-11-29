@@ -44,4 +44,12 @@ public interface ElderlyInfoMapper extends BaseMapper<ElderlyInfo> {
      * @return 老人信息 VO 列表（包含房间号和房间类型）
      */
     List<ElderlyInfoVO> selectAllElderlyWithRoom();
+
+    /**
+     * 分页查询老人信息并关联房间信息
+     * 
+     * @param keyword 搜索关键词
+     * @return 老人信息 VO 列表（包含房间号和房间类型）
+     */
+    List<ElderlyInfoVO> selectElderlyPageWithRoom(@Param("keyword") String keyword);
 }

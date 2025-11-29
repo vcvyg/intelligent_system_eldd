@@ -8,7 +8,7 @@ import org.example.persion.dto.AdminElderlyCreateDTO;
 import org.example.persion.dto.AdminElderlyUpdateDTO;
 import org.example.persion.entity.ElderlyInfo;
 import org.example.persion.entity.Room;
-import org.example.persion.entity.User;
+
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.RoomMapper;
 import org.example.persion.repository.UserMapper;
@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -48,14 +49,28 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
 
         Page<ElderlyInfo> elderlyPage = elderlyInfoMapper.selectPage(page, wrapper);
 
+        // 批量查询房间信息，避免N+1查询问题
+        java.util.Set<Long> roomIds = elderlyPage.getRecords().stream()
+                .map(ElderlyInfo::getRoomId)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+        
+        final java.util.Map<Long, Room> roomMap;
+        if (!roomIds.isEmpty()) {
+            List<Room> rooms = roomMapper.selectBatchIds(roomIds);
+            roomMap = rooms.stream().collect(java.util.stream.Collectors.toMap(Room::getId, room -> room));
+        } else {
+            roomMap = new java.util.HashMap<>();
+        }
+
         // 转换为VO
         Page<ElderlyInfoVO> voPage = new Page<>(elderlyPage.getCurrent(), elderlyPage.getSize(), elderlyPage.getTotal());
         voPage.setRecords(elderlyPage.getRecords().stream().map(elderly -> {
             ElderlyInfoVO vo = new ElderlyInfoVO();
             BeanUtils.copyProperties(elderly, vo);
-            // 房间号赋值优化：roomId不为空且>0时才查
+            // 使用批量查询的房间信息
             if (elderly.getRoomId() != null && elderly.getRoomId() > 0) {
-                Room room = roomMapper.selectById(elderly.getRoomId());
+                Room room = roomMap.get(elderly.getRoomId());
                 if (room != null && room.getRoomNumber() != null && !room.getRoomNumber().isEmpty()) {
                     vo.setRoomNumber(room.getRoomNumber());
                 } else {
@@ -200,6 +215,22 @@ public class AdminElderlyServiceImpl implements AdminElderlyService {
 
         ElderlyInfoVO vo = new ElderlyInfoVO();
         BeanUtils.copyProperties(elderlyInfo, vo);
+        
+        // 设置房间信息
+        if (elderlyInfo.getRoomId() != null && elderlyInfo.getRoomId() > 0) {
+            Room room = roomMapper.selectById(elderlyInfo.getRoomId());
+            if (room != null) {
+                vo.setRoomNumber(room.getRoomNumber());
+                vo.setRoomType(room.getRoomType());
+            } else {
+                vo.setRoomNumber("-");
+                vo.setRoomType("-");
+            }
+        } else {
+            vo.setRoomNumber("-");
+            vo.setRoomType("-");
+        }
+        
         return vo;
     }
 

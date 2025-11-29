@@ -187,3 +187,6 @@ try {
 }
 
 Write-Output "MVN_CMD=$MAVEN_HOME/bin/$MVN_CMD"
+
+# 添加JVM参数以强制使用UTF-8编码
+JAVA_OPTS="-Dfile.encoding=UTF-8"

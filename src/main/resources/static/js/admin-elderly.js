@@ -27,8 +27,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     setupAgeBirthdaySync();
 
-    // 先加载房间列表，等待完成后再加载老人列表
-    await loadRooms();
+    // 优化：只加载老人列表，房间列表延迟到需要时再加载
     await loadElderly();
 });
 
@@ -123,6 +122,10 @@ async function loadRooms() {
 // 加载老人列表
 async function loadElderly() {
     const keyword = document.getElementById('searchInput').value.trim();
+    const tbody = document.getElementById('elderlyTableBody');
+    
+    // 显示加载状态
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">加载中...</td></tr>';
 
     try {
         let url = `/admin/elderly/list?current=${currentPage}&size=${pageSize}`;
@@ -152,6 +155,7 @@ async function loadElderly() {
         }
     } catch (error) {
         console.error('加载老人列表失败:', error);
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:red;">加载失败，请重试</td></tr>';
     }
 }
 
@@ -170,9 +174,8 @@ function renderElderlyTable(elderlyList) {
     }
 
     tbody.innerHTML = elderlyList.map(elderly => {
-        // 获取房间号
-        const room = elderly.roomId ? roomMap.get(elderly.roomId) : null;
-        const roomNumber = room ? room.roomNumber : '-';
+        // 直接使用后端返回的房间号
+        const roomNumber = elderly.roomNumber || '-';
 
         return `
         <tr>
@@ -232,11 +235,16 @@ function nextPage() {
 }
 
 // 显示新增老人信息模态框
-function showCreateElderlyModal() {
+async function showCreateElderlyModal() {
     document.getElementById('modalTitle').textContent = '新增老人信息';
     document.getElementById('elderlyForm').reset();
     document.getElementById('elderlyId').value = '';
 
+    // 延迟加载房间列表，只在需要时加载
+    if (roomList.length === 0) {
+        await loadRooms();
+    }
+    
     // 填充房间下拉列表
     populateRoomSelect();
 
@@ -272,9 +280,10 @@ async function viewElderlyDetail(id) {
         if (response && response.data) {
             const elderly = response.data;
 
-            // 获取房间信息
-            const room = elderly.roomId ? roomMap.get(elderly.roomId) : null;
-            const roomInfo = room ? `${room.roomNumber} (${room.roomType})` : '未分配';
+            // 使用后端返回的房间信息
+            const roomInfo = elderly.roomNumber && elderly.roomNumber !== '-' 
+                ? `${elderly.roomNumber} (${elderly.roomType || '未知类型'})` 
+                : '未分配';
 
             const detailHTML = `
                 <div class="detail-grid">
@@ -320,6 +329,11 @@ async function editElderly(id) {
             document.getElementById('medicalHistory').value = elderly.medicalHistory || '';
             document.getElementById('allergyHistory').value = elderly.allergyHistory || '';
 
+            // 延迟加载房间列表，只在需要时加载
+            if (roomList.length === 0) {
+                await loadRooms();
+            }
+            
             // 填充房间下拉列表并选中当前房间
             populateRoomSelect(elderly.roomId);
 

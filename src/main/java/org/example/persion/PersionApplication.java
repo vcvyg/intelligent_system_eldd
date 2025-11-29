@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @MapperScan("org.example.persion.repository")
 @EnableScheduling
 @EnableAsync  // 启用异步支持
+@org.springframework.cache.annotation.EnableCaching  // 启用缓存支持
 public class PersionApplication {
 
     public static void main(String[] args) {

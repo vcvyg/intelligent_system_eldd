@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>位置测试工具 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            background: var(--color-bg-lighter);
+            padding: 20px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: var(--radius-sm);
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 位置测试工具</h1>
+        <p>用于测试和调试位置功能，可以手动上传位置数据或测试API</p>
+
+        <!-- API监控 -->
+        <div class="test-section">
+            <h3>1. API调用监控</h3>
+            <p>查看当前API调用统计，避免超限</p>
+            <div class="btn-group">
+                <button class="btn-primary" onclick="checkApiStats()">📊 查看API统计</button>
+                <button class="btn-secondary" onclick="testAmapApi()">🔍 测试API配置</button>
+            </div>
+            <div id="apiStatsResult" class="result-area" style="display: none;"></div>
+            <div id="apiTestResult" class="result-area" style="display: none;"></div>
+        </div>
+
+        <!-- 手动上传位置 -->
+        <div class="test-section">
+            <h3>2. 手动上传位置数据</h3>
+            <p>为指定老人手动设置位置信息（用于测试）</p>
+            
+            <div class="form-group">
+                <label>老人ID</label>
+                <input type="number" id="elderlyId" placeholder="请输入老人ID（如：1）" value="1">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>纬度 (Latitude)</label>
+                    <input type="number" id="latitude" placeholder="例如：39.916527" step="0.000001" value="39.916527">
+                </div>
+                <div class="form-group">
+                    <label>经度 (Longitude)</label>
+                    <input type="number" id="longitude" placeholder="例如：116.397128" step="0.000001" value="116.397128">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>地址</label>
+                <input type="text" id="address" placeholder="例如：北京市东城区天安门广场" value="北京市东城区天安门广场">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>设备类型</label>
+                    <select id="deviceType">
+                        <option value="定位手环">定位手环</option>
+                        <option value="智能手表">智能手表</option>
+                        <option value="手机APP">手机APP</option>
+                        <option value="定位设备">定位设备</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>设备状态</label>
+                    <select id="deviceStatus">
+                        <option value="在线">在线</option>
+                        <option value="离线">离线</option>
+                        <option value="低电量">低电量</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn-primary" onclick="uploadLocation()">📍 上传位置</button>
+                <button class="btn-secondary" onclick="fillBeijingLocation()">🏛️ 填入北京位置</button>
+                <button class="btn-secondary" onclick="fillShangHaiLocation()">🏙️ 填入上海位置</button>
+            </div>
+            
+            <div id="uploadResult" class="result-area" style="display: none;"></div>
+        </div>
+
+        <!-- 批量更新位置 -->
+        <div class="test-section">
+            <h3>3. 批量更新所有老人位置</h3>
+            <p>使用高德地图API为所有绑定设备的老人更新位置</p>
+            <button class="btn-primary" onclick="updateAllLocations()">🔄 批量更新位置</button>
+            <div id="batchUpdateResult" class="result-area" style="display: none;"></div>
+        </div>
+
+        <!-- 单个老人位置更新 -->
+        <div class="test-section">
+            <h3>4. 单个老人位置更新</h3>
+            <p>使用高德地图API为指定老人更新位置</p>
+            <div class="form-group">
+                <label>老人ID</label>
+                <input type="number" id="singleElderlyId" placeholder="请输入老人ID" value="1">
+            </div>
+            <button class="btn-primary" onclick="updateSingleLocation()">🎯 更新指定老人位置</button>
+            <div id="singleUpdateResult" class="result-area" style="display: none;"></div>
+        </div>
+
+        <!-- 返回链接 -->
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="family-location.html" class="btn-secondary">← 返回位置页面</a>
+        </div>
+    </div>
+
+    <script src="js/common.js"></script>
+    <script>
+        // 查看API调用统计
+        async function checkApiStats() {
+            const resultDiv = document.getElementById('apiStatsResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="info">正在获取API统计...</span>';
+            
+            try {
+                const result = await get('/family/location/api/stats');
+                if (result.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">📊 API调用统计</span>\n\n${result.data}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 获取统计失败</span>\n\n错误信息：${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+
+        // 测试高德地图API配置
+        async function testAmapApi() {
+            const resultDiv = document.getElementById('apiTestResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="info">正在测试API配置...</span>';
+            
+            try {
+                const result = await get('/family/location/test/api');
+                if (result.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">✅ API配置正常！</span>\n\n${result.data}`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ API测试失败</span>\n\n错误信息：${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+
+        // 上传位置数据
+        async function uploadLocation() {
+            const elderlyId = document.getElementById('elderlyId').value;
+            const latitude = document.getElementById('latitude').value;
+            const longitude = document.getElementById('longitude').value;
+            const address = document.getElementById('address').value;
+            const deviceType = document.getElementById('deviceType').value;
+            const deviceStatus = document.getElementById('deviceStatus').value;
+
+            if (!elderlyId || !latitude || !longitude) {
+                alert('请填写老人ID、纬度和经度');
+                return;
+            }
+
+            const resultDiv = document.getElementById('uploadResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="info">正在上传位置数据...</span>';
+
+            try {
+                const data = {
+                    elderlyId: parseInt(elderlyId),
+                    latitude: parseFloat(latitude),
+                    longitude: parseFloat(longitude),
+                    address: address,
+                    deviceType: deviceType,
+                    deviceStatus: deviceStatus,
+                    locationTime: new Date().toISOString()
+                };
+
+                const result = await post('/family/location/test/upload', data);
+                if (result.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">✅ 位置上传成功！</span>\n\n老人ID: ${elderlyId}\n纬度: ${latitude}\n经度: ${longitude}\n地址: ${address}\n设备类型: ${deviceType}\n设备状态: ${deviceStatus}\n\n现在可以去位置页面查看效果了！`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 上传失败</span>\n\n错误信息：${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+
+        // 批量更新所有老人位置
+        async function updateAllLocations() {
+            const resultDiv = document.getElementById('batchUpdateResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="info">正在批量更新位置...</span>';
+
+            try {
+                const result = await post('/family/location/update/all', {});
+                if (result.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">✅ 批量更新完成！</span>\n\n成功更新 ${result.data} 个老人的位置信息`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 批量更新失败</span>\n\n错误信息：${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+
+        // 更新单个老人位置
+        async function updateSingleLocation() {
+            const elderlyId = document.getElementById('singleElderlyId').value;
+            if (!elderlyId) {
+                alert('请输入老人ID');
+                return;
+            }
+
+            const resultDiv = document.getElementById('singleUpdateResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span class="info">正在更新位置...</span>';
+
+            try {
+                const result = await post(`/family/location/update/${elderlyId}`, {});
+                if (result.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">✅ 位置更新成功！</span>\n\n老人ID ${elderlyId} 的位置已更新`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ 位置更新失败</span>\n\n错误信息：${result.message}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败</span>\n\n${error.message}`;
+            }
+        }
+
+        // 快速填入北京位置
+        function fillBeijingLocation() {
+            document.getElementById('latitude').value = '39.916527';
+            document.getElementById('longitude').value = '116.397128';
+            document.getElementById('address').value = '北京市东城区天安门广场';
+        }
+
+        // 快速填入上海位置
+        function fillShangHaiLocation() {
+            document.getElementById('latitude').value = '31.230416';
+            document.getElementById('longitude').value = '121.473701';
+            document.getElementById('address').value = '上海市黄浦区外滩';
+        }
+    </script>
+</body>
+</html>

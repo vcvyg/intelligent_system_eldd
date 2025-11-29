@@ -167,7 +167,6 @@ function renderTable() {
                 <div class="text-muted">${alert.medicalName ? `责任人：${alert.medicalName}` : ''}</div>
             </td>
             <td>${alert.roomName || '-'}</td>
-            <td>${alert.deviceName || '-'}</td>
             <td>${alert.alertType || '-'}</td>
             <td><span class="level-badge ${getLevelClass(alert.alertLevel)}">${alert.alertLevel || '-'}</span></td>
             <td>${alert.alertContent || '-'}</td>
@@ -183,7 +182,7 @@ function renderTable() {
 function setTableMessage(message) {
     document.getElementById('alertTableBody').innerHTML = `
         <tr>
-            <td colspan="10" class="empty-tip">${message}</td>
+            <td colspan="9" class="empty-tip">${message}</td>
         </tr>
     `;
     document.getElementById('recordTotal').textContent = 0;

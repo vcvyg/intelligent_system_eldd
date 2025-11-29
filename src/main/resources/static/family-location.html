@@ -164,6 +164,7 @@
         }
     </style>
 </head>
+
 <body data-family-nav="location">
     <div class="admin-container">
         <!-- 侧边栏导航 -->
@@ -222,7 +223,8 @@
                 <!-- 地图容器 -->
                 <div class="map-container" id="mapContainer">
                     <div id="map" style="width: 100%; height: 100%;"></div>
-                    <div class="map-placeholder" id="mapPlaceholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg-light); z-index: 1;">
+                    <div class="map-placeholder" id="mapPlaceholder"
+                        style="display: flex; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--color-bg-light); z-index: 1;">
                         <p style="font-size: 18px; margin-bottom: 10px;">🗺️ 地图区域</p>
                         <p style="font-size: 14px;">请选择老人查看位置信息</p>
                     </div>
@@ -268,7 +270,8 @@
 
                 <!-- 电子围栏设置 -->
                 <div class="geofence-section">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h3>电子围栏</h3>
                         <button class="btn-primary" onclick="showAddGeofenceModal()">添加围栏</button>
                     </div>
@@ -332,8 +335,10 @@
                         <input type="number" id="geofenceLat" placeholder="纬度" step="0.000001">
                         <input type="number" id="geofenceLng" placeholder="经度" step="0.000001">
                     </div>
-                    <button type="button" class="btn-secondary" style="width: 100%;" onclick="selectLocationOnMap()">在地图上选择位置</button>
-                    <p style="font-size: 12px; color: var(--color-text-gray); margin-top: 5px;">提示：点击按钮后，在地图上点击选择围栏中心位置</p>
+                    <button type="button" class="btn-secondary" style="width: 100%;"
+                        onclick="selectLocationOnMap()">在地图上选择位置</button>
+                    <p style="font-size: 12px; color: var(--color-text-gray); margin-top: 5px;">提示：点击按钮后，在地图上点击选择围栏中心位置
+                    </p>
                 </div>
                 <div class="form-group">
                     <label>围栏半径（米）</label>
@@ -351,5 +356,5 @@
     <script src="js/family-mobile.js"></script>
     <script src="js/family-location.js"></script>
 </body>
-</html>
 
+</html>

@@ -30,6 +30,7 @@ public class LocationServiceImpl implements LocationService {
     private final LocationDataMapper locationDataMapper;
     private final DeviceInfoMapper deviceInfoMapper;
     private final RestTemplate restTemplate;
+    private final org.example.persion.service.ApiCallLimitService apiCallLimitService;
 
     @Value("${amap.api.key:}")
     private String amapApiKey;
@@ -69,6 +70,16 @@ public class LocationServiceImpl implements LocationService {
             }
         }
         
+        // 检查API调用限制
+        if (!apiCallLimitService.canCallApi()) {
+            log.warn("⚠️ API调用已达到限制，使用缓存数据或返回null");
+            if (cachedLocation != null) {
+                log.info("返回过期的缓存数据以避免API超限");
+                return createCachedLocationCopy(cachedLocation);
+            }
+            return null;
+        }
+        
         // 记录API Key的前几位（用于调试，不暴露完整key）
         String keyPrefix = amapApiKey.length() > 8 ? amapApiKey.substring(0, 8) + "..." : "***";
         log.debug("使用高德地图API Key: {}", keyPrefix);
@@ -76,9 +87,11 @@ public class LocationServiceImpl implements LocationService {
         // 记录API调用
         apiCallCount++;
         lastApiCallTime = LocalDateTime.now();
+        apiCallLimitService.recordApiCall();
         log.info("调用高德地图API（第{}次调用，上次调用: {}）", 
             apiCallCount, 
             lastApiCallTime != null ? lastApiCallTime.format(java.time.format.DateTimeFormatter.ISO_LOCAL_TIME) : "首次");
+        log.info("📊 {}", apiCallLimitService.getCallStats());
 
         try {
             // 使用高德地图IP定位API

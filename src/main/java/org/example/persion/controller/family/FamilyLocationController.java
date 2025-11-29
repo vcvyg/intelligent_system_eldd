@@ -34,6 +34,7 @@ public class FamilyLocationController {
     private final GeofenceAlertMapper geofenceAlertMapper;
     private final org.example.persion.service.LocationService locationService;
     private final DeviceInfoMapper deviceInfoMapper;
+    private final org.example.persion.service.ApiCallLimitService apiCallLimitService;
 
     /**
      * 获取指定老人的当前位置
@@ -320,6 +321,24 @@ public class FamilyLocationController {
             }
         } catch (Exception e) {
             return Result.error("测试失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取API调用统计信息
+     */
+    @GetMapping("/api/stats")
+    public Result<String> getApiStats() {
+        try {
+            String stats = apiCallLimitService.getCallStats();
+            int remainingDaily = apiCallLimitService.getRemainingDailyCalls();
+            int remainingHourly = apiCallLimitService.getRemainingHourlyCalls();
+            
+            String result = String.format("%s\n剩余调用次数 - 今日：%d, 本小时：%d", 
+                stats, remainingDaily, remainingHourly);
+            return Result.success(result);
+        } catch (Exception e) {
+            return Result.error("获取统计信息失败: " + e.getMessage());
         }
     }
 

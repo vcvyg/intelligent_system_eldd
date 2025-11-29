@@ -382,12 +382,43 @@ function clearMapMarkers() {
 /**
  * 刷新位置
  */
-function refreshLocation() {
+async function refreshLocation() {
     if (!currentElderlyId) {
         alert('请先选择老人');
         return;
     }
-    loadLocationData();
+    
+    const refreshBtn = document.querySelector('button[onclick="refreshLocation()"]');
+    const originalText = refreshBtn.textContent;
+    
+    try {
+        // 更新按钮状态
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = '⏳ 刷新中...';
+        
+        // 先尝试触发位置更新
+        const updateResult = await post(`/family/location/update/${currentElderlyId}`, {});
+        if (updateResult.code === 200) {
+            // 等待1秒后重新加载数据
+            setTimeout(() => {
+                loadLocationData();
+            }, 1000);
+        } else {
+            // 即使更新失败，也尝试重新加载现有数据
+            console.warn('位置更新失败，但仍尝试加载现有数据:', updateResult.message);
+            loadLocationData();
+        }
+    } catch (error) {
+        console.error('刷新位置失败:', error);
+        // 即使出错，也尝试重新加载现有数据
+        loadLocationData();
+    } finally {
+        // 恢复按钮状态
+        setTimeout(() => {
+            refreshBtn.disabled = false;
+            refreshBtn.textContent = originalText;
+        }, 2000);
+    }
 }
 
 /**

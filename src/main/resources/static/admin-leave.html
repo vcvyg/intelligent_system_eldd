@@ -8,6 +8,195 @@
     <link rel="stylesheet" href="css/pension-variables.css">
     <link rel="stylesheet" href="css/penou-base.css">
     <link rel="stylesheet" href="css/admin.css">
+    <style>
+        /* 徽章样式增强 */
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 12px;
+            text-align: center;
+            white-space: nowrap;
+        }
+        
+        .badge-info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        .badge-green {
+            background-color: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        
+        .badge-yellow {
+            background-color: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffcc02;
+        }
+        
+        .badge-red {
+            background-color: #ffebee;
+            color: #d32f2f;
+            border: 1px solid #ffcdd2;
+        }
+
+        /* 表格行悬停效果增强 */
+        .data-table tr:hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+        }
+
+        /* 统计卡片动画 */
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        /* 搜索框样式增强 */
+        .search-box input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 0 3px rgba(106, 142, 173, 0.1);
+        }
+
+        /* 分页按钮样式 */
+        .pagination button:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* 加载动画 */
+        .loading {
+            position: relative;
+        }
+        
+        .loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid var(--color-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 按钮样式增强 */
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+            transform: translateY(-1px);
+        }
+
+        /* 模态框样式增强 */
+        .modal-content {
+            border: none;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--color-primary), #5a9fd4);
+            color: white;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .modal-header h2 {
+            color: white;
+        }
+        
+        .modal-header .close {
+            color: white;
+            opacity: 0.8;
+        }
+        
+        .modal-header .close:hover {
+            opacity: 1;
+        }
+
+        /* 审批信息样式 */
+        #reviewInfo {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-left: 4px solid var(--color-primary);
+        }
+        
+        #reviewInfo p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        #reviewInfo strong {
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+
+        /* 响应式优化 */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
+            }
+            
+            .toolbar {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .filter-box {
+                flex-direction: column;
+            }
+            
+            .data-table th:nth-child(6),
+            .data-table td:nth-child(6) {
+                display: none; /* 隐藏申请原因列 */
+            }
+            
+            .pagination {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+            }
+            
+            .modal-body {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -71,16 +260,64 @@
             </header>
 
             <div class="content-wrapper" style="padding: 24px;">
-                <!-- 筛选标签 -->
-                <div style="margin-bottom: 20px; display: flex; gap: 12px;">
-                    <button class="btn-secondary active" onclick="filterByStatus('', this)">全部</button>
-                    <button class="btn-secondary" onclick="filterByStatus('待审批', this)">待审批</button>
-                    <button class="btn-secondary" onclick="filterByStatus('已同意', this)">已同意</button>
-                    <button class="btn-secondary" onclick="filterByStatus('已拒绝', this)">已拒绝</button>
+                <!-- 工具栏 -->
+                <div class="toolbar">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="搜索申请人姓名..." onkeyup="handleSearch(event)">
+                        <button onclick="searchLeaveRequests()">搜索</button>
+                        <button class="btn-secondary" onclick="resetFilters()">重置</button>
+                    </div>
+                    <div class="filter-box">
+                        <select id="statusFilter" onchange="filterByStatus(this.value)">
+                            <option value="">全部状态</option>
+                            <option value="待审批">待审批</option>
+                            <option value="已同意">已同意</option>
+                            <option value="已拒绝">已拒绝</option>
+                        </select>
+                        <select id="typeFilter" onchange="filterByType(this.value)">
+                            <option value="">全部类型</option>
+                            <option value="病假">病假</option>
+                            <option value="事假">事假</option>
+                            <option value="年假">年假</option>
+                            <option value="调休">调休</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 统计信息 -->
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon users">📝</div>
+                        <div class="stat-info">
+                            <h3>总申请数</h3>
+                            <p class="stat-value" id="totalCount">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon warning">⏳</div>
+                        <div class="stat-info">
+                            <h3>待审批</h3>
+                            <p class="stat-value" id="pendingCount">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon active">✅</div>
+                        <div class="stat-info">
+                            <h3>已同意</h3>
+                            <p class="stat-value" id="approvedCount">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon health">❌</div>
+                        <div class="stat-info">
+                            <h3>已拒绝</h3>
+                            <p class="stat-value" id="rejectedCount">0</p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 申请列表 -->
-                <div class="card">
+                <div class="table-section">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -101,6 +338,20 @@
                             </tr>
                         </tbody>
                     </table>
+                    
+                    <!-- 分页 -->
+                    <div class="pagination" id="pagination" style="display: none;">
+                        <button id="prevBtn" onclick="changePage(-1)" disabled>上一页</button>
+                        <span id="pageInfo">第 1 页，共 1 页</span>
+                        <button id="nextBtn" onclick="changePage(1)" disabled>下一页</button>
+                        <div style="margin-left: 20px;">
+                            <select id="pageSizeSelect" onchange="changePageSize(this.value)">
+                                <option value="10">每页 10 条</option>
+                                <option value="20" selected>每页 20 条</option>
+                                <option value="50">每页 50 条</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -134,16 +385,37 @@
 
     <script src="js/common.js"></script>
     <script>
+        // 分页和筛选参数
+        let currentPage = 1;
+        let pageSize = 20;
+        let totalPages = 1;
+        let totalCount = 0;
         let currentStatus = '';
-        const STATUS_TEXT_MAP = {
-            'PENDING': '待审批',
-            'APPROVED': '已同意',
-            'REJECTED': '已拒绝'
-        };
-        const STATUS_VALUE_MAP = {
+        let currentType = '';
+        let searchKeyword = '';
+        let allData = []; // 存储所有数据用于前端分页
+
+        // 全部使用中文 - 简化映射关系
+        const STATUS_TO_ENUM_MAP = {
             '待审批': 'PENDING',
             '已同意': 'APPROVED',
             '已拒绝': 'REJECTED'
+        };
+        
+        // 请假类型映射 - 英文到中文
+        const LEAVE_TYPE_MAP = {
+            'SICK_LEAVE': '病假',
+            'PERSONAL_LEAVE': '事假',
+            'ANNUAL_LEAVE': '年假',
+            'ADJUSTMENT_LEAVE': '调休'
+        };
+        
+        // 中文请假类型到英文的映射（如果需要发送给后端）
+        const LEAVE_TYPE_TO_ENUM_MAP = {
+            '病假': 'SICK_LEAVE',
+            '事假': 'PERSONAL_LEAVE',
+            '年假': 'ANNUAL_LEAVE',
+            '调休': 'ADJUSTMENT_LEAVE'
         };
 
         // 页面加载
@@ -164,44 +436,21 @@
             tbody.innerHTML = '<tr><td colspan="9" class="loading">加载中...</td></tr>';
 
             try {
-                const url = currentStatus ? `/admin/leave/list/${currentStatus}` : '/admin/leave/list';
-                const result = await get(url);
+                // 总是获取所有数据，然后在前端进行筛选
+                const result = await get('/admin/leave/list');
 
                 if (result.code === 200 && result.data) {
-                    if (result.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
-                    } else {
-                        tbody.innerHTML = result.data.map(item => {
-                            const leaveTypeMap = {
-                                'SICK_LEAVE': '病假',
-                                'PERSONAL_LEAVE': '事假',
-                                'ANNUAL_LEAVE': '年假',
-                                'ADJUSTMENT_LEAVE': '调休'
-                            };
-                            const leaveTypeText = leaveTypeMap[item.leave_type] || item.leave_type;
-                            const normalizedStatus = normalizeStatus(item.status);
-                            const statusText = getStatusText(item.status);
-                            const isPending = normalizedStatus === 'PENDING';
-
-                            return `
-                            <tr>
-                                <td>${item.real_name || item.username}</td>
-                                <td>${leaveTypeText}</td>
-                                <td>${item.start_date}</td>
-                                <td>${item.end_date}</td>
-                                <td>${item.days}天</td>
-                                <td style="max-width: 200px;">${item.reason}</td>
-                                <td><span class="badge ${getBadgeClass(normalizedStatus)}">${statusText}</span></td>
-                                <td>${formatDateTime(item.create_time)}</td>
-                                <td>
-                                    ${isPending ?
-                                    `<button class="btn-primary" onclick='showReviewModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>审批</button>` :
-                                    item.review_remark || '-'}
-                                </td>
-                            </tr>
-                            `;
-                        }).join('');
+                    allData = result.data;
+                    // 调试：打印第一条数据的格式
+                    if (allData.length > 0) {
+                        console.log('数据样例:', allData[0]);
+                        console.log('状态字段值:', allData[0].status, '类型:', typeof allData[0].status);
+                        console.log('请假类型字段值:', allData[0].leave_type, '类型:', typeof allData[0].leave_type);
                     }
+                    updateStatistics();
+                    applyFiltersAndPagination();
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:red;">加载失败</td></tr>';
                 }
             } catch (error) {
                 console.error('加载失败:', error);
@@ -209,28 +458,176 @@
             }
         }
 
-        // 按状态筛选
-        function filterByStatus(status, btn) {
-            currentStatus = STATUS_VALUE_MAP[status] || status;
-            document.querySelectorAll('.btn-secondary').forEach(button => {
-                button.classList.remove('active');
-            });
-            if (btn) {
-                btn.classList.add('active');
+        // 更新统计信息
+        function updateStatistics() {
+            const total = allData.length;
+            // 数据库存储中文，直接匹配中文状态
+            const pending = allData.filter(item => item.status === '待审批').length;
+            const approved = allData.filter(item => item.status === '已同意').length;
+            const rejected = allData.filter(item => item.status === '已拒绝').length;
+
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('pendingCount').textContent = pending;
+            document.getElementById('approvedCount').textContent = approved;
+            document.getElementById('rejectedCount').textContent = rejected;
+        }
+
+        // 应用筛选和分页
+        function applyFiltersAndPagination() {
+            let filteredData = [...allData];
+            
+            // 调试信息（可在浏览器控制台查看）
+            if (allData.length > 0 && (currentStatus || currentType || searchKeyword)) {
+                console.log('筛选条件 - 状态:', currentStatus, '类型:', currentType, '搜索:', searchKeyword);
             }
-            loadLeaveRequests();
+
+            // 应用状态筛选 - 直接匹配中文
+            if (currentStatus) {
+                filteredData = filteredData.filter(item => {
+                    return item.status === currentStatus;
+                });
+            }
+
+            // 应用类型筛选 - 直接匹配中文
+            if (currentType) {
+                filteredData = filteredData.filter(item => {
+                    // 如果数据库存的是英文枚举，需要转换
+                    const itemTypeText = LEAVE_TYPE_MAP[item.leave_type] || item.leave_type;
+                    return itemTypeText === currentType;
+                });
+            }
+
+            // 应用搜索筛选
+            if (searchKeyword) {
+                filteredData = filteredData.filter(item => 
+                    (item.real_name && item.real_name.toLowerCase().includes(searchKeyword.toLowerCase())) ||
+                    (item.username && item.username.toLowerCase().includes(searchKeyword.toLowerCase()))
+                );
+            }
+
+            if (currentStatus || currentType || searchKeyword) {
+                console.log('筛选结果:', filteredData.length, '条记录');
+            }
+
+            // 计算分页
+            totalCount = filteredData.length;
+            totalPages = Math.ceil(totalCount / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = 1;
+
+            // 获取当前页数据
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = startIndex + pageSize;
+            const pageData = filteredData.slice(startIndex, endIndex);
+
+            // 渲染表格
+            renderTable(pageData);
+            updatePagination();
+        }
+
+        // 渲染表格
+        function renderTable(data) {
+            const tbody = document.getElementById('leaveTableBody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;">暂无申请记录</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(item => {
+                // 使用全局定义的映射
+                const leaveTypeText = LEAVE_TYPE_MAP[item.leave_type] || item.leave_type;
+                const statusText = item.status; // 直接显示中文状态
+                const isPending = item.status === '待审批';
+
+                return `
+                <tr>
+                    <td><strong>${item.real_name || item.username}</strong></td>
+                    <td><span class="badge badge-info">${leaveTypeText}</span></td>
+                    <td>${item.start_date}</td>
+                    <td>${item.end_date}</td>
+                    <td><strong>${item.days}天</strong></td>
+                    <td style="max-width: 200px; word-break: break-word;">${item.reason}</td>
+                    <td><span class="badge ${getBadgeClass(item.status)}">${statusText}</span></td>
+                    <td>${formatDateTime(item.create_time)}</td>
+                    <td>
+                        ${isPending ?
+                        `<button class="btn-primary btn-sm" onclick='showReviewModal(${JSON.stringify(item).replace(/'/g, "&#39;")})'>审批</button>` :
+                        `<span style="color: #666; font-size: 12px;">${item.review_remark || '无备注'}</span>`}
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        // 更新分页控件
+        function updatePagination() {
+            const pagination = document.getElementById('pagination');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const pageInfo = document.getElementById('pageInfo');
+
+            if (totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+            
+            const startItem = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+            const endItem = Math.min(currentPage * pageSize, totalCount);
+            pageInfo.textContent = `第 ${currentPage} 页，共 ${totalPages} 页 (显示 ${startItem}-${endItem} 条，共 ${totalCount} 条)`;
+        }
+
+        // 翻页
+        function changePage(direction) {
+            const newPage = currentPage + direction;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                applyFiltersAndPagination();
+            }
+        }
+
+        // 改变每页大小
+        function changePageSize(newSize) {
+            pageSize = parseInt(newSize);
+            currentPage = 1;
+            applyFiltersAndPagination();
+        }
+
+        // 按状态筛选
+        function filterByStatus(status) {
+            currentStatus = status;
+            currentPage = 1;
+            applyFiltersAndPagination();
+        }
+
+        // 按类型筛选
+        function filterByType(type) {
+            currentType = type;
+            currentPage = 1;
+            applyFiltersAndPagination();
+        }
+
+        // 搜索
+        function searchLeaveRequests() {
+            searchKeyword = document.getElementById('searchInput').value.trim();
+            currentPage = 1;
+            applyFiltersAndPagination();
+        }
+
+        // 处理搜索框回车事件
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                searchLeaveRequests();
+            }
         }
 
         // 显示审批模态框
         function showReviewModal(item) {
-            // 请假类型映射
-            const leaveTypeMap = {
-                'SICK_LEAVE': '病假',
-                'PERSONAL_LEAVE': '事假',
-                'ANNUAL_LEAVE': '年假',
-                'ADJUSTMENT_LEAVE': '调休'
-            };
-            const leaveTypeText = leaveTypeMap[item.leave_type] || item.leave_type;
+            // 使用全局定义的类型映射
+            const leaveTypeText = LEAVE_TYPE_MAP[item.leave_type] || item.leave_type;
 
             document.getElementById('reviewId').value = item.id;
             document.getElementById('reviewRemark').value = '';
@@ -253,8 +650,8 @@
             const id = document.getElementById('reviewId').value;
             const remark = document.getElementById('reviewRemark').value;
 
-            // 将中文状态转换为英文枚举
-            const statusEnum = STATUS_VALUE_MAP[status] || status;
+            // 将中文状态转换为英文枚举（后端期望接收英文枚举值）
+            const statusEnum = STATUS_TO_ENUM_MAP[status] || status;
 
             try {
                 const result = await put(`/admin/leave/review/${id}?status=${statusEnum}&remark=${encodeURIComponent(remark)}`, {});
@@ -274,35 +671,37 @@
 
         // 获取徽章样式
         function getBadgeClass(status) {
-            if (status === 'APPROVED') return 'badge-green';
-            if (status === 'REJECTED') return 'badge-red';
-            return 'badge-yellow';
+            if (status === '已同意') return 'badge-green';
+            if (status === '已拒绝') return 'badge-red';
+            return 'badge-yellow'; // 待审批
         }
 
         function normalizeStatus(status) {
-            if (!status) return '';
-            if (STATUS_TEXT_MAP[status]) {
-                return status;
-            }
-            return STATUS_VALUE_MAP[status] || status;
+            // 数据库存的是中文，直接返回
+            return status || '';
         }
 
         function getStatusText(status) {
-            if (!status) return '-';
-            if (STATUS_TEXT_MAP[status]) {
-                return STATUS_TEXT_MAP[status];
-            }
-            const normalized = STATUS_VALUE_MAP[status];
-            if (normalized && STATUS_TEXT_MAP[normalized]) {
-                return STATUS_TEXT_MAP[normalized];
-            }
-            return status;
+            // 数据库存储中文，直接返回
+            return status || '-';
         }
 
         // 格式化日期时间
         function formatDateTime(dateTime) {
             if (!dateTime) return '-';
             return dateTime.substring(0, 16).replace('T', ' ');
+        }
+
+        // 重置所有筛选条件
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            searchKeyword = '';
+            currentStatus = '';
+            currentType = '';
+            currentPage = 1;
+            applyFiltersAndPagination();
         }
 
         // 点击模态框外部关闭

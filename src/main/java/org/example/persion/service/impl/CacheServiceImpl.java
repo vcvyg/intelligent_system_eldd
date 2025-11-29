@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 public class CacheServiceImpl implements CacheService {
     
     private final RoomMapper roomMapper;
+    private final org.example.persion.repository.UserMapper userMapper;
     
     @Override
     @Cacheable(value = "rooms", key = "'available'")
@@ -49,5 +50,24 @@ public class CacheServiceImpl implements CacheService {
     public void refreshRoomCache() {
         log.debug("刷新房间缓存");
         // 缓存会在下次访问时自动重新加载
+    }
+    
+    @Override
+    @Cacheable(value = "users", key = "'medical'")
+    public List<org.example.persion.entity.User> getMedicalUsers() {
+        log.debug("从数据库加载医护人员列表");
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<org.example.persion.entity.User> wrapper = 
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(org.example.persion.entity.User::getRole, "MEDICAL")
+               .eq(org.example.persion.entity.User::getStatus, 1)
+               .orderByAsc(org.example.persion.entity.User::getRealName);
+        
+        return userMapper.selectList(wrapper);
+    }
+    
+    @Override
+    @CacheEvict(value = "users", allEntries = true)
+    public void clearUserCache() {
+        log.debug("清除用户缓存");
     }
 }

@@ -28,4 +28,14 @@ public interface CacheService {
      * 刷新房间缓存
      */
     void refreshRoomCache();
+    
+    /**
+     * 获取医护人员列表（带缓存）
+     */
+    List<org.example.persion.entity.User> getMedicalUsers();
+    
+    /**
+     * 清除用户缓存
+     */
+    void clearUserCache();
 }

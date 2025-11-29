@@ -28,9 +28,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     // 显示欢迎信息
     document.getElementById('welcomeText').textContent = `欢迎,${userInfo.username}!`;
 
-    // 先加载医护人员列表和房间列表(等待完成)
+    // 优化：只加载医护人员列表，房间列表延迟到需要时再加载
     await loadMedicalUsers();
-    await loadRooms();
 
     // 初始化当前周并加载数据
     goToCurrentWeek();
@@ -104,9 +103,14 @@ function updateWeekDisplay() {
 
 // 加载医护人员列表
 async function loadMedicalUsers() {
+    // 如果已经加载过，直接返回
+    if (medicalUsers.length > 0) {
+        return;
+    }
+    
     try {
         // 使用正确的API路径(common.js已经加了/api前缀)
-        const result = await get('/admin/user/list?role=MEDICAL&size=1000');
+        const result = await get('/admin/user/list?role=MEDICAL&size=200'); // 减少查询数量
         if (result.code === 200 && result.data && result.data.records) {
             medicalUsers = result.data.records;
 
@@ -116,14 +120,21 @@ async function loadMedicalUsers() {
             });
 
             // 更新下拉列表
-            const select = document.getElementById('medicalUserId');
-            select.innerHTML = '<option value="">请选择医护人员</option>' +
-                medicalUsers.map(user =>
-                    `<option value="${user.id}">${user.realName || user.username}</option>`
-                ).join('');
+            updateMedicalUserSelect();
         }
     } catch (error) {
         console.error('加载医护人员列表失败:', error);
+    }
+}
+
+// 更新医护人员下拉列表
+function updateMedicalUserSelect() {
+    const select = document.getElementById('medicalUserId');
+    if (select) {
+        select.innerHTML = '<option value="">请选择医护人员</option>' +
+            medicalUsers.map(user =>
+                `<option value="${user.id}">${user.realName || user.username}</option>`
+            ).join('');
     }
 }
 
@@ -163,6 +174,10 @@ function populateRoomSelect(selectedRoomId = null) {
 // 加载本周排班数据
 async function loadWeekSchedules() {
     try {
+        // 显示加载状态
+        const grid = document.getElementById('weekScheduleGrid');
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #6b7280;">加载中...</div>';
+
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6);
 
@@ -203,6 +218,8 @@ async function loadWeekSchedules() {
         }
     } catch (error) {
         console.error('加载排班数据失败:', error);
+        const grid = document.getElementById('weekScheduleGrid');
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #ef4444;">加载失败，请重试</div>';
     }
 }
 
@@ -257,9 +274,8 @@ function renderWeekView() {
                     const colorClass = `color-${userColorMap[schedule.medicalUserId] || 1}`;
                     const name = schedule.medicalUserName || '未知';
 
-                    // 获取房间号
-                    const room = schedule.roomId ? roomMap.get(schedule.roomId) : null;
-                    const roomNumber = room ? room.roomNumber : '';
+                    // 直接使用后端返回的房间号
+                    const roomNumber = schedule.roomNumber || '';
 
                     html += `
                         <div class="schedule-card ${colorClass}" onclick="event.stopPropagation(); editSchedule(${schedule.id})">
@@ -278,7 +294,7 @@ function renderWeekView() {
 }
 
 // 打开单元格添加排班
-function openScheduleCell(date, timeSlot) {
+async function openScheduleCell(date, timeSlot) {
     document.getElementById('modalTitle').textContent = '添加排班';
     document.getElementById('scheduleForm').reset();
     document.getElementById('scheduleId').value = '';
@@ -303,6 +319,11 @@ function openScheduleCell(date, timeSlot) {
     // 设置默认状态
     document.getElementById('status').value = '正常';
 
+    // 延迟加载房间列表，只在需要时加载
+    if (roomList.length === 0) {
+        await loadRooms();
+    }
+    
     // 填充房间下拉列表
     populateRoomSelect();
 
@@ -331,6 +352,11 @@ async function editSchedule(id) {
         document.getElementById('status').value = schedule.status || '正常';
         document.getElementById('remark').value = schedule.remark || '';
 
+        // 延迟加载房间列表，只在需要时加载
+        if (roomList.length === 0) {
+            await loadRooms();
+        }
+        
         // 填充房间下拉列表并选中当前房间
         populateRoomSelect(schedule.roomId);
 

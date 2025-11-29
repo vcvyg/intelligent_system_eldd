@@ -21,7 +21,7 @@ public class CacheConfig {
     public CacheManager cacheManager() {
         ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
         // 预定义缓存名称
-        cacheManager.setCacheNames(java.util.Arrays.asList("rooms", "elderly"));
+        cacheManager.setCacheNames(java.util.Arrays.asList("rooms", "elderly", "users", "schedules"));
         return cacheManager;
     }
 }

@@ -24,6 +24,11 @@ public interface AlertService {
     List<AlertRecordVO> getAllAlertsWithDetails();
 
     /**
+     * 查询当前医护人员的可接单和处理中告警任务。
+     */
+    List<AlertRecordVO> getMyAlertTasks();
+
+    /**
      * 根据ID查询预警详情
      */
     AlertRecordVO getAlertById(Long id);

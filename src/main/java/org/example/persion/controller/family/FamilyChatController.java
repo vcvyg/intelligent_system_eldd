@@ -77,6 +77,10 @@ public class FamilyChatController {
     @GetMapping("/group/{groupId}/info")
     public Result<GroupDetailVO> getGroupInfo(@PathVariable Long groupId) {
         try {
+            if (!canAccessGroup(groupId)) {
+                return Result.error(403, "无权访问该聊天群组");
+            }
+
             // 获取老人信息
             ElderlyInfo elderly = elderlyInfoMapper.selectById(groupId);
             if (elderly == null) {
@@ -117,6 +121,10 @@ public class FamilyChatController {
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "20") Integer size) {
 
+        if (!canAccessGroup(groupId)) {
+            return Result.error(403, "无权访问该聊天群组");
+        }
+
         Page<ChatMessage> page = new Page<>(current, size);
         LambdaQueryWrapper<ChatMessage> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ChatMessage::getGroupId, groupId);
@@ -156,6 +164,15 @@ public class FamilyChatController {
 
         voPage.setRecords(vos);
         return Result.success(voPage);
+    }
+
+    private boolean canAccessGroup(Long groupId) {
+        Long familyUserId = SecurityUtil.getUserId();
+        if (familyUserId == null) {
+            return false;
+        }
+        return elderlyInfoMapper.selectElderlyListByFamilyUserId(familyUserId).stream()
+                .anyMatch(elderly -> groupId.equals(elderly.getId()));
     }
 
     @Data

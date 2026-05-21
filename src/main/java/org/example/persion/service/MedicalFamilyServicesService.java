@@ -20,6 +20,8 @@ public interface MedicalFamilyServicesService {
 
     FamilyPaymentRecordVO createPaymentRecord(MedicalPaymentRecordRequestDTO request);
 
+    FamilyPaymentRecordVO cancelPaymentRecord(Long recordId);
+
     List<FamilyPaymentRecordVO> listPaymentRecords(Long elderlyId);
 
     List<FamilyContactVO> listFamilyContacts(Long elderlyId);

@@ -52,4 +52,20 @@ public interface AlertRecordMapper extends BaseMapper<AlertRecord> {
             "WHERE a.status = '待处理' AND a.deleted = 0 " +
             "ORDER BY a.alert_time DESC")
     List<AlertRecordVO> findPendingAlertsByMedicalUser(Long medicalUserId);
+
+    /**
+     * 查询当前医护人员可接单或正在处理的告警任务。
+     */
+    @Select("SELECT a.*, e.name as elderly_name, r.room_number AS room_name, d.device_name, u.real_name as medical_name " +
+            "FROM alert_record a " +
+            "LEFT JOIN elderly_info e ON a.elderly_id = e.id " +
+            "LEFT JOIN room r ON e.room_id = r.id " +
+            "LEFT JOIN device_info d ON a.device_id = d.id " +
+            "LEFT JOIN sys_user u ON a.assigned_medical_id = u.id " +
+            "WHERE a.deleted = 0 AND (" +
+            "((a.status = '待处理' OR a.status = '未处理') AND (a.assigned_medical_id IS NULL OR a.assigned_medical_id = #{medicalUserId})) " +
+            "OR (a.status = '处理中' AND a.assigned_medical_id = #{medicalUserId})" +
+            ") " +
+            "ORDER BY a.alert_time DESC")
+    List<AlertRecordVO> selectTaskListForMedicalUser(Long medicalUserId);
 }

@@ -42,6 +42,11 @@ public class MedicalFamilyServicesController {
         return Result.success(medicalFamilyServicesService.createPaymentRecord(request));
     }
 
+    @PutMapping("/payment-records/{id}/cancel")
+    public Result<FamilyPaymentRecordVO> cancelPaymentRecord(@PathVariable Long id) {
+        return Result.success(medicalFamilyServicesService.cancelPaymentRecord(id));
+    }
+
     @GetMapping("/elderly/{elderlyId}/payment-records")
     public Result<List<FamilyPaymentRecordVO>> listPaymentRecords(@PathVariable Long elderlyId) {
         return Result.success(medicalFamilyServicesService.listPaymentRecords(elderlyId));

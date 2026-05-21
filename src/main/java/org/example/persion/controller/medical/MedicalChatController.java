@@ -85,6 +85,10 @@ public class MedicalChatController {
     @GetMapping("/group/{groupId}/info")
     public Result<GroupDetailVO> getGroupInfo(@PathVariable Long groupId) {
         try {
+            if (!canAccessGroup(groupId)) {
+                return Result.error(403, "无权访问该聊天群组");
+            }
+
             // 获取老人信息
             ElderlyInfo elderly = elderlyInfoMapper.selectById(groupId);
             if (elderly == null) {
@@ -136,6 +140,9 @@ public class MedicalChatController {
             if (currentUserId == null) {
                 System.err.println("MedicalChatController - 用户未登录或认证失败");
                 return Result.error("用户未登录");
+            }
+            if (!canAccessGroup(groupId)) {
+                return Result.error(403, "无权访问该聊天群组");
             }
 
             Page<ChatMessage> page = new Page<>(current, size);
@@ -228,6 +235,9 @@ public class MedicalChatController {
             Long senderId = SecurityUtil.getUserId();
             if (senderId == null) {
                 return Result.error("用户未登录");
+            }
+            if (!canAccessGroup(groupId)) {
+                return Result.error(403, "无权访问该聊天群组");
             }
             
             User sender = userMapper.selectById(senderId);
@@ -367,6 +377,15 @@ public class MedicalChatController {
             vo.setMe(currentUserId.equals(chatMessage.getSenderId()));
         }
         return vo;
+    }
+
+    private boolean canAccessGroup(Long groupId) {
+        Long medicalUserId = SecurityUtil.getUserId();
+        if (medicalUserId == null) {
+            return false;
+        }
+        return elderlyInfoMapper.selectElderlyListByMedicalUserId(medicalUserId).stream()
+                .anyMatch(elderly -> groupId.equals(elderly.getId()));
     }
 
     @Data

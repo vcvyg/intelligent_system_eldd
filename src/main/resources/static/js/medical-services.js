@@ -181,7 +181,7 @@ async function reloadRecords(forceElderlyId) {
     const elderlyId = forceElderlyId || select.value;
     if (!elderlyId) {
         setTablePlaceholder('serviceRecordBody', 6, '请选择老人');
-        setTablePlaceholder('paymentRecordBody', 4, '请选择老人');
+        setTablePlaceholder('paymentRecordBody', 5, '请选择老人');
         if (select && forceElderlyId) {
             select.value = elderlyId;
         }
@@ -232,12 +232,12 @@ async function loadServiceRecords(elderlyId) {
 
 async function loadPaymentRecords(elderlyId) {
     const tbody = document.getElementById('paymentRecordBody');
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">加载中...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">加载中...</td></tr>';
     try {
         const result = await get(`/medical/family-services/elderly/${elderlyId}/payment-records`);
         const records = result.data || [];
         if (records.length === 0) {
-            setTablePlaceholder('paymentRecordBody', 4, '暂无记录');
+            setTablePlaceholder('paymentRecordBody', 5, '暂无记录');
             return;
         }
         tbody.innerHTML = records.map(record => {
@@ -248,12 +248,13 @@ async function loadPaymentRecords(elderlyId) {
                     <td>¥${formatAmount(record.amount)}</td>
                     <td><span class="status-badge ${statusInfo.className}">${statusInfo.text}</span></td>
                     <td>${record.dueDate || '-'}</td>
+                    <td><div class="action-btns">${renderPaymentActions(record)}</div></td>
                 </tr>
             `;
         }).join('');
     } catch (error) {
         console.error('加载缴费记录失败:', error);
-        setTablePlaceholder('paymentRecordBody', 4, '加载失败');
+        setTablePlaceholder('paymentRecordBody', 5, '加载失败');
     }
 }
 
@@ -281,6 +282,7 @@ window.loadFamilyContacts = loadFamilyContacts;
 window.reloadRecords = reloadRecords;
 window.openServiceStatusModal = openServiceStatusModal;
 window.showServiceTimeline = showServiceTimeline;
+window.cancelPaymentRecord = cancelPaymentRecord;
 
 function renderServiceStatusActions(record) {
     if (!record || !record.id) return '';
@@ -292,6 +294,28 @@ function renderServiceStatusActions(record) {
         actions.push(`<button class="btn-primary btn-sm" onclick="openServiceStatusModal(${record.id}, 'COMPLETED')">标记完成</button>`);
     }
     return actions.join('');
+}
+
+function renderPaymentActions(record) {
+    if (!record || !record.id || record.status !== 'PENDING') {
+        return '-';
+    }
+    return `<button class="btn-ignore btn-sm" onclick="cancelPaymentRecord(${record.id})">撤销通知</button>`;
+}
+
+async function cancelPaymentRecord(recordId) {
+    const confirmed = confirm('确认撤销这条待支付缴费通知吗？');
+    if (!confirmed) {
+        return;
+    }
+    try {
+        await put(`/medical/family-services/payment-records/${recordId}/cancel`, {});
+        notify('缴费通知已撤销', 'success');
+        await Promise.all([reloadRecords(currentServiceRecordElderlyId), loadSummaryStats()]);
+    } catch (error) {
+        console.error('撤销缴费通知失败:', error);
+        notify(error.message || '撤销失败，请稍后再试', 'error');
+    }
 }
 
 function openServiceStatusModal(recordId, targetStatus) {

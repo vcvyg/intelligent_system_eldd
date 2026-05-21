@@ -49,6 +49,14 @@ public class MedicalAlertController {
     }
 
     /**
+     * 查询当前医护人员可接单和正在处理的告警任务。
+     */
+    @GetMapping("/tasks/my")
+    public Result<List<AlertRecordVO>> getMyTasks() {
+        return Result.success(alertService.getMyAlertTasks());
+    }
+
+    /**
      * 开始处理告警
      */
     @PutMapping("/{id}/process")

@@ -12,6 +12,7 @@ import org.example.persion.entity.Room;
 import org.example.persion.repository.AlertRecordMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.RoomMapper;
+import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.AlertService;
 import org.example.persion.vo.AlertRecordVO;
 import org.springframework.beans.BeanUtils;
@@ -145,6 +146,15 @@ public class AlertServiceImpl implements AlertService {
     }
 
     @Override
+    public List<AlertRecordVO> getMyAlertTasks() {
+        Long medicalUserId = SecurityUtil.getUserId();
+        if (medicalUserId == null) {
+            throw new BusinessException(401, "登录已失效，请重新登录");
+        }
+        return alertRecordMapper.selectTaskListForMedicalUser(medicalUserId);
+    }
+
+    @Override
     public AlertRecordVO getAlertById(Long id) {
         AlertRecord alert = alertRecordMapper.selectById(id);
         if (alert == null) {
@@ -199,6 +209,7 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
+        rejectClosedAlert(alert);
 
         alert.setAssignedMedicalId(medicalId);
         alert.setStatus("处理中");
@@ -212,9 +223,15 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
+        rejectClosedAlert(alert);
 
         if (dto.getAssignedMedicalId() != null) {
             alert.setAssignedMedicalId(dto.getAssignedMedicalId());
+        } else if (alert.getAssignedMedicalId() == null) {
+            Long operatorId = SecurityUtil.getUserId();
+            if (operatorId != null) {
+                alert.setAssignedMedicalId(operatorId);
+            }
         }
 
         alert.setHandleResult(dto.getHandleResult());
@@ -231,6 +248,7 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
+        rejectClosedAlert(alert);
 
         alert.setStatus("已忽略");
         alert.setHandleTime(LocalDateTime.now());
@@ -324,5 +342,11 @@ public class AlertServiceImpl implements AlertService {
             BeanUtils.copyProperties(alert, vo);
             return vo;
         }).toList();
+    }
+
+    private void rejectClosedAlert(AlertRecord alert) {
+        if ("已处理".equals(alert.getStatus()) || "已忽略".equals(alert.getStatus())) {
+            throw new BusinessException("该告警任务已关闭，不能重复处理");
+        }
     }
 }

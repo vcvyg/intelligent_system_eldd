@@ -150,6 +150,27 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public FamilyPaymentRecordVO cancelPaymentRecord(Long recordId) {
+        if (recordId == null) {
+            throw new BusinessException("缺少缴费记录ID");
+        }
+        FamilyPaymentRecord record = familyPaymentRecordMapper.selectById(recordId);
+        if (record == null) {
+            throw new BusinessException("缴费记录不存在");
+        }
+        if (record.getStatus() != PaymentStatus.PENDING) {
+            throw new BusinessException("仅待支付缴费通知可撤销");
+        }
+
+        record.setStatus(PaymentStatus.CANCELLED);
+        familyPaymentRecordMapper.updateById(record);
+
+        ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(record.getElderlyId());
+        return toPaymentRecordVO(record, elderlyInfo);
+    }
+
+    @Override
     public List<FamilyPaymentRecordVO> listPaymentRecords(Long elderlyId) {
         if (elderlyId == null) {
             throw new BusinessException("请选择老人");

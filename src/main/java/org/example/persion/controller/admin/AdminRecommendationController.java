@@ -2,11 +2,13 @@ package org.example.persion.controller.admin;
 
 import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
+import org.example.persion.common.exception.BusinessException;
 import org.example.persion.service.RecommendationService;
 import org.example.persion.service.RecommendationTriggerService;
 import org.example.persion.vo.RecommendationItemVO;
 import org.example.persion.vo.RecommendationTriggerVO;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,8 +40,28 @@ public class AdminRecommendationController {
         return Result.success(triggerService.pending(elderlyId));
     }
 
+    @PostMapping("/triggers/{triggerId}/approve")
+    public Result<RecommendationTriggerVO> approveTrigger(
+            @AuthenticationPrincipal Long adminUserId,
+            @PathVariable Long triggerId,
+            @RequestParam(required = false) String reason) {
+        return Result.success(triggerService.approve(triggerId, adminUserId, reason), "复核已通过");
+    }
+
+    @PostMapping("/triggers/{triggerId}/reject")
+    public Result<RecommendationTriggerVO> rejectTrigger(
+            @AuthenticationPrincipal Long adminUserId,
+            @PathVariable Long triggerId,
+            @RequestParam(required = false) String reason) {
+        return Result.success(triggerService.reject(triggerId, adminUserId, reason), "复核已拒绝");
+    }
+
     @PostMapping("/deliver/{elderlyId}")
     public Result<Integer> deliver(@PathVariable Long elderlyId) {
+        if (triggerService.hasPending(elderlyId) && !triggerService.hasApproved(elderlyId)) {
+            throw new BusinessException("当前存在待复核事件，请先通过至少一条关怀触发事件再投放");
+        }
+
         int count = recommendationService.deliver(elderlyId);
         if (count > 0) {
             triggerService.markDelivered(elderlyId);

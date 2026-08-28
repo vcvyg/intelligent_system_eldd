@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class MedicalAiPlannerEvaluationTest {
 
@@ -19,7 +19,7 @@ class MedicalAiPlannerEvaluationTest {
     void frozenPlannerDatasetKeepsExactToolSelection() throws Exception {
         List<EvaluationCase> cases;
         try (InputStream input = getClass().getResourceAsStream("/medical-ai-evaluation-cases.json")) {
-            assertFalse(input == null, "evaluation dataset must exist");
+            assertNotNull(input, "evaluation dataset must exist");
             cases = objectMapper.readValue(input, new TypeReference<List<EvaluationCase>>() {});
         }
 
@@ -39,8 +39,8 @@ class MedicalAiPlannerEvaluationTest {
             }
         }
 
-        assertEquals(cases.size(), passed,
-                () -> "planner exact-match accuracy=" + passed + "/" + cases.size() + "; " + failures);
+        String report = "planner exact-match accuracy=" + passed + "/" + cases.size() + "; " + failures;
+        assertEquals(cases.size(), passed, report);
     }
 
     private record EvaluationCase(String id, String question, List<String> expectedTools) {

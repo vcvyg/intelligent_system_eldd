@@ -1,0 +1,37 @@
+name: Core CI
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  security-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Guard tracked secrets and runtime artifacts
+        run: python3 scripts/security_guard.py
+
+      - name: Compile application
+        run: |
+          chmod +x mvnw
+          ./mvnw -q -DskipTests package
+
+      - name: Run focused regression tests
+        run: >-
+          ./mvnw -q
+          -Dtest=FileSecurityControllerTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
+          test
+
+      - name: Check medical assistant JavaScript syntax
+        run: node --check src/main/resources/static/js/medical-ai-assistant.js

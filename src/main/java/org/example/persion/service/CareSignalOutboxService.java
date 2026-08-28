@@ -29,6 +29,7 @@ public class CareSignalOutboxService {
     static final String PROCESSED = "PROCESSED";
     static final String DEAD_LETTER = "DEAD_LETTER";
     private static final int MAX_RETRY = 5;
+    private static final int CLAIM_LEASE_MINUTES = 2;
 
     private final CareSignalOutboxMapper outboxMapper;
 
@@ -58,12 +59,15 @@ public class CareSignalOutboxService {
 
     /**
      * Claims a small ordered batch. Conditional updates make duplicate worker execution harmless
-     * when multiple application instances poll the same table.
+     * when multiple application instances poll the same table. PROCESSING rows whose worker died
+     * are returned to RETRY after a short lease instead of remaining stuck forever.
      */
     @Transactional
     public List<CareSignalOutbox> claimBatch(int requestedLimit) {
         int limit = Math.max(1, Math.min(requestedLimit, 100));
         LocalDateTime now = LocalDateTime.now();
+        recoverAbandonedClaims(now);
+
         List<CareSignalOutbox> candidates = outboxMapper.selectList(
                 new LambdaQueryWrapper<CareSignalOutbox>()
                         .in(CareSignalOutbox::getStatus, PENDING, RETRY)
@@ -83,9 +87,11 @@ public class CareSignalOutboxService {
                             .eq(CareSignalOutbox::getId, candidate.getId())
                             .in(CareSignalOutbox::getStatus, PENDING, RETRY)
                             .set(CareSignalOutbox::getStatus, PROCESSING)
+                            .set(CareSignalOutbox::getNextRetryAt, now.plusMinutes(CLAIM_LEASE_MINUTES))
                             .set(CareSignalOutbox::getUpdateTime, now));
             if (updated > 0) {
                 candidate.setStatus(PROCESSING);
+                candidate.setNextRetryAt(now.plusMinutes(CLAIM_LEASE_MINUTES));
                 claimed.add(candidate);
             }
         }
@@ -126,6 +132,16 @@ public class CareSignalOutboxService {
                 .set(CareSignalOutbox::getRetryCount, retryCount)
                 .set(CareSignalOutbox::getNextRetryAt, exhausted ? null : now.plusSeconds(delaySeconds))
                 .set(CareSignalOutbox::getLastErrorType, errorType)
+                .set(CareSignalOutbox::getUpdateTime, now));
+    }
+
+    private void recoverAbandonedClaims(LocalDateTime now) {
+        outboxMapper.update(null, new LambdaUpdateWrapper<CareSignalOutbox>()
+                .eq(CareSignalOutbox::getStatus, PROCESSING)
+                .le(CareSignalOutbox::getNextRetryAt, now)
+                .set(CareSignalOutbox::getStatus, RETRY)
+                .set(CareSignalOutbox::getNextRetryAt, now)
+                .set(CareSignalOutbox::getLastErrorType, "AbandonedClaim")
                 .set(CareSignalOutbox::getUpdateTime, now));
     }
 }

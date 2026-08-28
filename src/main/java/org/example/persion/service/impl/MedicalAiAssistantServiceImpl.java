@@ -2,6 +2,10 @@ package org.example.persion.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.example.persion.ai.tool.MedicalAiTool;
+import org.example.persion.ai.tool.MedicalAiToolContext;
+import org.example.persion.ai.tool.MedicalAiToolRegistry;
+import org.example.persion.ai.tool.MedicalAiToolResult;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.entity.ElderlyInfo;
@@ -54,6 +58,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
     private final HealthDataMapper healthDataMapper;
     private final AlertRecordMapper alertRecordMapper;
     private final FamilyServiceRecordMapper familyServiceRecordMapper;
+    private final MedicalAiToolRegistry medicalAiToolRegistry;
 
     private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
 
@@ -147,7 +152,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             appendProfile(target, question, answer, result, sources);
         }
         if (intents.contains(Intent.HEALTH)) {
-            appendHealth(target, answer, result, sources);
+            appendHealth(target, question, answer, result, sources);
         }
         if (intents.contains(Intent.ALERT)) {
             appendAlerts(target, answer, result, sources);
@@ -210,50 +215,20 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
     }
 
     private void appendHealth(ElderlyInfo target,
+                              String question,
                               StringBuilder answer,
                               MedicalAiAnswerVO result,
                               Set<String> sources) {
-        LocalDateTime now = LocalDateTime.now();
-        List<HealthData> records = healthDataMapper.findByDateTimeRange(now.minusDays(7), now, target.getId());
-        records = records == null ? List.of() : records;
-
-        if (records.isEmpty()) {
-            section(answer, "近7天健康记录", "系统没有查到可用的健康测量记录。");
-            result.getTools().add(new MedicalAiAnswerVO.ToolTrace("health_recent", "empty", "近7天无记录"));
-            sources.add("health_data / 近7天健康记录");
-            return;
-        }
-
-        HealthData latest = records.stream()
-                .filter(item -> item.getMeasureTime() != null)
-                .max(Comparator.comparing(HealthData::getMeasureTime))
-                .orElse(records.get(records.size() - 1));
-
-        List<String> latestFacts = new ArrayList<>();
-        if (latest.getHeartRate() != null) latestFacts.add("心率 " + number(latest.getHeartRate()) + " bpm");
-        if (latest.getBloodPressureHigh() != null && latest.getBloodPressureLow() != null) {
-            latestFacts.add("血压 " + number(latest.getBloodPressureHigh()) + "/" + number(latest.getBloodPressureLow()) + " mmHg");
-        }
-        if (latest.getTemperature() != null) latestFacts.add("体温 " + number(latest.getTemperature()) + "℃");
-        if (latest.getBloodSugar() != null) latestFacts.add("血糖 " + number(latest.getBloodSugar()));
-        if (latest.getSleepDuration() != null) latestFacts.add("睡眠 " + latest.getSleepDuration() + " 分钟");
-        if (latest.getSteps() != null) latestFacts.add("步数 " + latest.getSteps());
-
-        StringBuilder healthText = new StringBuilder();
-        healthText.append("共查到 ").append(records.size()).append(" 条记录。最新一条");
-        if (latest.getMeasureTime() != null) {
-            healthText.append("（").append(TIME_FORMAT.format(latest.getMeasureTime())).append("）");
-        }
-        healthText.append("：").append(latestFacts.isEmpty() ? "有记录但主要指标为空" : String.join("，", latestFacts)).append("。");
-
-        average(records, HealthData::getHeartRate).ifPresent(avg -> healthText.append(" 近7天已记录心率均值约 ").append(avg).append(" bpm。"));
-        healthText.append(" 以上仅是系统记录汇总，不据此自动下诊断结论。");
-
-        section(answer, "近7天健康记录", healthText.toString());
-        result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                "health_recent", "ok", "读取近7天 " + records.size() + " 条健康测量"
+        MedicalAiTool tool = medicalAiToolRegistry.require("health_recent");
+        MedicalAiToolResult toolResult = tool.execute(new MedicalAiToolContext(
+                target.getId(), safeName(target), question
         ));
-        sources.add("health_data / 近7天健康记录");
+
+        section(answer, toolResult.sectionTitle(), toolResult.body());
+        result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
+                tool.name(), toolResult.status(), toolResult.summary()
+        ));
+        sources.addAll(toolResult.sources());
     }
 
     private void appendAlerts(ElderlyInfo target,

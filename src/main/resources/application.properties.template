@@ -35,11 +35,14 @@ admin.invitation-code=CHANGE_ME_LOCAL_INVITATION_CODE
 amap.api.key=YOUR_AMAP_API_KEY
 location.task.enabled=false
 
-# Optional medical AI model; disabled by default.
+# Optional medical AI model; both capabilities are disabled by default.
+# Fact rewriting and semantic planning can be enabled independently.
 medical.ai.enabled=false
+medical.ai.planner-enabled=false
 medical.ai.base-url=
 medical.ai.api-key=
 medical.ai.model=
+medical.ai.timeout-ms=5000
 
 # Uploads
 file.upload.path=./uploads

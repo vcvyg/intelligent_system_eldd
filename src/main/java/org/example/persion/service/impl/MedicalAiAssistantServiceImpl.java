@@ -129,7 +129,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             return result;
         }
 
-        // 每轮再次校验作用域，避免会话上下文绕过权限。
         assertAssigned(target.getId(), assigned);
         result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
                 "patient_access", "ok", "已校验当前医护与" + safeName(target) + "的负责关系"
@@ -152,10 +151,10 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             appendProfile(target, question, answer, result, sources);
         }
         if (intents.contains(Intent.HEALTH)) {
-            appendHealth(target, question, answer, result, sources);
+            appendRegisteredTool("health_recent", target, question, answer, result, sources);
         }
         if (intents.contains(Intent.ALERT)) {
-            appendAlerts(target, answer, result, sources);
+            appendRegisteredTool("alerts_recent", target, question, answer, result, sources);
         }
         if (intents.contains(Intent.CARE)) {
             appendCarePlan(target, answer, result, sources);
@@ -214,12 +213,13 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         sources.add("老人档案");
     }
 
-    private void appendHealth(ElderlyInfo target,
-                              String question,
-                              StringBuilder answer,
-                              MedicalAiAnswerVO result,
-                              Set<String> sources) {
-        MedicalAiTool tool = medicalAiToolRegistry.require("health_recent");
+    private void appendRegisteredTool(String toolName,
+                                      ElderlyInfo target,
+                                      String question,
+                                      StringBuilder answer,
+                                      MedicalAiAnswerVO result,
+                                      Set<String> sources) {
+        MedicalAiTool tool = medicalAiToolRegistry.require(toolName);
         MedicalAiToolResult toolResult = tool.execute(new MedicalAiToolContext(
                 target.getId(), safeName(target), question
         ));
@@ -229,33 +229,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                 tool.name(), toolResult.status(), toolResult.summary()
         ));
         sources.addAll(toolResult.sources());
-    }
-
-    private void appendAlerts(ElderlyInfo target,
-                              StringBuilder answer,
-                              MedicalAiAnswerVO result,
-                              Set<String> sources) {
-        List<AlertRecordVO> alerts = alertRecordMapper.selectByElderlyId(target.getId());
-        alerts = alerts == null ? List.of() : alerts;
-        List<AlertRecordVO> recent = alerts.stream().limit(5).toList();
-        long openCount = alerts.stream().filter(this::isOpenAlert).count();
-
-        if (recent.isEmpty()) {
-            section(answer, "告警", "当前没有查到告警记录。");
-            result.getTools().add(new MedicalAiAnswerVO.ToolTrace("alerts_recent", "empty", "无告警记录"));
-        } else {
-            String detail = recent.stream().map(item -> {
-                String time = item.getAlertTime() == null ? "时间未知" : TIME_FORMAT.format(item.getAlertTime());
-                String status = emptyAs(item.getStatus(), "状态未知");
-                return time + " " + emptyAs(item.getAlertType(), "告警") + "（" + status + "）"
-                        + (item.getAlertContent() == null ? "" : "：" + item.getAlertContent());
-            }).collect(Collectors.joining("；"));
-            section(answer, "告警", "共查到 " + alerts.size() + " 条，当前未闭环/待处理约 " + openCount + " 条。最近记录：" + detail + "。");
-            result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                    "alerts_recent", "ok", "读取告警 " + alerts.size() + " 条，未闭环约 " + openCount + " 条"
-            ));
-        }
-        sources.add("alert_record / 告警记录");
     }
 
     private void appendCarePlan(ElderlyInfo target,

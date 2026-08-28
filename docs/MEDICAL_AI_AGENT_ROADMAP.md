@@ -1,8 +1,8 @@
-# 医护 AI Agent 演进路线
+# 医护 AI Agent：最终落地架构
 
-## 当前已落地架构
+## 项目定位
 
-当前助手采用“事实优先、模型可选”的 Java Agent 架构：
+这不是一个脱离业务系统的聊天 Demo，而是一套嵌入 Spring Boot 养老业务流程的 Java AI Application。AI 负责理解查询、规划只读 Tool、解释业务事实与生成可审计操作提案；权限、安全、写操作确认、事件可靠投递和最终业务状态仍由 Java 服务端控制。
 
 ```text
 Medical User Request
@@ -17,8 +17,6 @@ Hybrid MedicalAiPlanner
         ↓
 Read-only Tool Policy Gate
         ↓
-MedicalAiPlan
-        ↓
 MedicalAiExecutor
         ↓
 MedicalAiToolRegistry
@@ -30,19 +28,23 @@ Grounded Fact Answer + Sources + Tool Trace
 Optional LLM Rewriter + Grounding Gate
 ```
 
-核心原则：
+写操作与上面的自动只读 Planner 分离：
 
-- Planner 只规划业务 Tool，不负责产生医疗事实；
-- 确定性规则始终保留为稳定基线，模型 Planner 只能补充白名单内的只读 Tool；
-- 模型 Planner 默认关闭，超时、JSON 非法或返回越权 Tool 时自动回退规则规划；
-- 进入 Planner 前会把已解析到的老人姓名替换为“该老人”，降低可选语义规划调用携带的身份信息；
-- Executor 按计划执行 Tool，单个 Tool 失败时继续执行剩余步骤并返回部分结果；
-- Tool Trace 记录状态和单 Tool 耗时；
-- `traceId` 贯穿一轮请求，日志只记录 plan、tool status、耗时等非医疗正文信息；
-- 外部模型默认关闭，只允许重写已查询事实，失败或越过 grounding gate 自动回退；
-- 会话上下文只保存当前老人 ID，不保存完整问题、回答或医疗事实。
+```text
+Operational Action Request
+        ↓
+Permission + Current-State Check
+        ↓
+Short-lived Action Proposal
+        ↓
+Human Explicit Confirmation
+        ↓
+Permission + State Recheck
+        ↓
+One-time Write Execution + Audit Log
+```
 
-## 已完成：Hybrid Planner + Tool Registry + Resilient Executor
+## 1. Hybrid Planner + Resilient Executor
 
 已注册只读 Tool：
 
@@ -53,146 +55,176 @@ Optional LLM Rewriter + Grounding Gate
 - `care_schedule`
 - `recommendation_preview`
 
-Planner 当前采用 Hybrid 策略：
+Planner 采用 Hybrid 策略：
 
-- deterministic rule planner 保证已知表达稳定命中；
+- deterministic rule planner 始终保留为稳定基线；
 - `medical.ai.planner-enabled=true` 时可启用 OpenAI-compatible semantic planner；
 - 模型只能从中央只读 Tool allowlist 选择，最多补充 4 个 Tool；
-- 规则命中的 Tool 不会被模型替换或删除，模型只能补充规则未覆盖的语义；
-- 模型返回写 Tool、未知 Tool、非法 JSON、超时或异常时直接回退规则结果；
-- Planner 和回答润色分别独立开关，不要求启用模型才能运行完整 Agent。
+- 规则已经命中的 Tool 不允许被模型删除或替换；
+- 模型返回未知/写 Tool、非法 JSON、超时或异常时直接回退规则规划；
+- 已解析到的老人姓名在发送给可选 semantic planner 前替换成“该老人”；
+- 模型 Planner 和答案润色是两个独立开关，默认都关闭。
 
-执行层已经从 Service 条件分支迁移为独立 `MedicalAiExecutor`：
+Executor 独立于 Service：
 
-- 保持 Planner 给出的执行顺序；
+- 保持 Plan 顺序执行；
 - 单 Tool 异常隔离；
 - 支持 partial result；
-- 不向前端泄露底层异常内容；
-- 单 Tool 记录 `elapsedMs`；
-- 全部 Tool 失败时返回明确 fallback，不生成未经系统验证的事实。
+- Tool Trace 记录状态和 `elapsedMs`；
+- 全部 Tool 失败时返回明确 fallback，不编造业务/医疗事实。
 
-## 已完成：事件驱动主动关怀推荐闭环
+## 2. Grounding、权限与医疗安全
+
+- 每轮重新校验当前医护与目标老人负责关系；
+- Redis Session 只保存当前老人 ID，TTL 2 小时，Redis 故障时降级 JVM 最小缓存；
+- 诊断、处方、停药/换药、剂量调整与治疗方案在 Planner 前拦截；
+- 可选模型只允许重写已经由 Tool 查询到的事实；
+- Grounding Gate 拒绝模型新增数字事实或医疗决策措辞；
+- 模型失败/越界自动回退 deterministic answer；
+- `traceId`、Plan、Tool status、Tool latency、总耗时和 sources 可追踪；
+- privacy-safe 日志不记录用户问题、老人姓名、健康正文或最终回答。
+
+## 3. 多领域事件驱动主动关怀
+
+真实接入三个稳定业务写入点：
 
 ```text
-AlertService.createAlert
-        ↓
-CareSignalEvent
-        ↓
-AFTER_COMMIT Listener
+HealthData saved ─────────────→ HEALTH_RECORDED
+Alert created ────────────────→ ALERT_RAISED
+Pending/Processing service ───→ SERVICE_SCHEDULED
+                                      ↓
+                               CareSignalEvent
+```
+
+事件只包含：
+
+- 老人 ID；
+- signal type；
+- 业务 reference ID；
+- occurredAt。
+
+不复制健康测量值、告警正文、聊天内容或模型文本。
+
+## 4. Transactional Outbox + Retry
+
+领域事件不再依赖“事务提交后尽力写一条 Trigger”。现在采用 SQL Server Transactional Outbox：
+
+```text
+Business Transaction
+    ├─ write business row
+    └─ care_signal_outbox / PENDING
+              ↓ commit together
+Scheduled Outbox Worker
+              ↓ claim
+         PROCESSING
+          ↙       ↘
+   PROCESSED      RETRY
+                    ↓ bounded exponential backoff
+               DEAD_LETTER (5 failures)
+```
+
+实现特性：
+
+- `event_key` 唯一约束 + Service 幂等检查；
+- worker 条件更新抢占，降低多实例重复消费；
+- 最大 5 次重试；
+- 有界指数退避；
+- 只记录异常类型，不写异常业务正文；
+- 不引入没有实际吞吐需求的 Kafka，保持单体部署可运行。
+
+数据库升级脚本：`sql/add_recommendation_center.sql`。
+
+## 5. Recommendation Human-in-the-loop
+
+事件到达后只进入人工复核队列，不自动触达家属：
+
+```text
+Outbox PROCESSED
         ↓
 recommendation_trigger / PENDING_REVIEW
         ↓
-B 端人工复核 + Top K 预览
-        ↓
-人工确认站内投放
-        ↓
-C 端家属反馈
-        ↓
-下一轮排序偏好更新
+Admin Review
+   ├─ APPROVED ──→ Top K preview ──→ Human delivery ──→ DELIVERED
+   └─ REJECTED
 ```
 
-当前实现：
+Trigger 记录：
 
-- 告警创建统一发布最小化 `ALERT_RAISED` 事件；
-- Event 不携带告警正文、健康测量值等敏感医疗内容；
-- 事务提交后写入持久化 `recommendation_trigger` 人工复核队列；
-- 同一业务引用做 Trigger 幂等；
-- B 端显示待复核事件，但事件不会自动向家属投放；
-- 真正创建新投放后才把当前老人待复核 Trigger 标记为 `DELIVERED`；
-- 近 7 天健康记录稀疏、未闭环告警、待执行服务作为排序信号；
-- `USEFUL` 提升同内容和同类别权重；
-- `NOT_INTERESTED` 隐藏当前内容并降低同类别偏好；
-- 同一 delivery 的反馈采用更新语义，避免重复点击无限累加反馈权重；
-- 同一老人 / 家属 / 内容按日避免重复投放；
-- Agent 的 `recommendation_preview` 只做预览，不绕过人工投放环节。
+- `reviewerId`
+- `reviewedAt`
+- `decisionReason`
+- `deliveredAt`
 
-## 已完成：Agent Evaluation 基线
+当存在事件驱动的 `PENDING_REVIEW` 且没有任何已批准事件时，投放接口会拒绝直接投放。只有真实创建新 Delivery 后，已批准 Trigger 才进入 `DELIVERED`。
 
-固定评测数据集：
+推荐排序继续使用健康记录稀疏、未闭环告警、待执行服务和家属反馈；`USEFUL / NOT_INTERESTED / CLICK` 使用更新语义，避免重复反馈无限叠权。
+
+## 6. Controlled Agent Write Action
+
+只读 Tool 仍是自动 Planner 的唯一可执行 Tool。写操作采用完全独立的确认链路，首个落地动作是“开始处理告警”：
+
+1. 医护发起 action proposal；
+2. Java 后端校验告警状态及医护-老人负责关系；
+3. 创建 10 分钟有效的一次性 proposal token；
+4. proposal 阶段不修改任何业务状态；
+5. 用户再次显式确认；
+6. 后端重新校验权限、老人 ID、告警当前状态；
+7. one-time token 消费成功后才调用 `AlertService.processAlert`；
+8. 记录 privacy-safe propose / confirm audit log。
+
+API：
+
+```http
+POST /api/medical/ai-assistant/actions/alerts/{alertId}/proposals
+POST /api/medical/ai-assistant/actions/proposals/{proposalId}/confirm
+DELETE /api/medical/ai-assistant/actions/proposals/{proposalId}
+```
+
+这让 Agent 具备“可行动”能力，同时避免模型直接获得无确认的数据库写权限。
+
+## 7. Agent Evaluation + CI Artifact
+
+冻结数据集：
 
 `src/test/resources/medical-ai-evaluation-cases.json`
 
-CI 中执行：
+CI 会真实执行并生成：
 
-- deterministic Planner Tool exact-match；
-- Hybrid Planner 规则基线 + 模型补充；
-- 模型 Planner JSON / Tool allowlist policy gate；
-- 复合问题多 Tool 顺序；
-- Profile / Care 等迁移回归；
-- 综合问题展开；
+- Planner exact-match；
+- micro precision；
+- micro recall；
+- micro F1；
+- 每条 case 的 expected / actual Tool。
+
+输出：
+
+- `target/medical-ai-evaluation-report.json`
+- `target/medical-ai-evaluation-report.md`
+- GitHub Actions artifact：`medical-ai-evaluation-report`
+
+同时核心回归覆盖：
+
+- Hybrid Planner policy gate；
 - Executor partial result；
-- 越权老人访问拦截；
-- 医疗决策请求在 Planner 前拦截；
-- 模型 grounding gate；
-- 推荐排序、反馈幂等与事件 Trigger 回归。
+- Redis Session fallback；
+- Safety Guard；
+- 权限越权；
+- Grounding Gate；
+- Outbox 幂等；
+- Health / Service / Alert domain signal；
+- Recommendation review state machine；
+- 家属反馈排序；
+- Human-confirmed write action。
 
-评测集作为冻结回归集：新增 Planner 语义或 Tool 时必须同步增加样例，避免“加一个关键词、坏掉另一类问题”。
+## 8. 收尾边界
 
-## 已完成：Redis Session + 降级
+当前版本已经形成完整的 Java AI Application 主链路。后续不再为了技术名词继续堆 RAG、向量库、MCP、Kafka 或更多 Agent 框架。
 
-Agent 会话上下文已从 Service JVM Map 抽离：
+只有出现真实需求时再演进：
 
-- Redis key：`medical-ai:session:{medicalUserId}:{sessionId}`；
-- TTL：2 小时；
-- Value 仅保存当前老人 ID；
-- Redis 临时不可用时退化到 JVM 最小上下文缓存；
-- Reset 同时清理 Redis / fallback；
-- 每轮仍重新校验当前医护是否继续拥有该老人权限，因此 Session 不能绕过权限变化。
+- 自然语言覆盖率不足：扩展 semantic planner / structured output；
+- 跨服务、高吞吐事件：Outbox 下游迁移 MQ；
+- 需要更多写操作：复用 proposal-confirm-audit 框架逐个加入白名单；
+- 需要线上 SLO：将现有 trace/latency 接入 Micrometer dashboard。
 
-## 已完成：可观测 Trace
-
-当前每轮回答返回：
-
-- `traceId`
-- `plan`
-- `planReason`
-- Tool status
-- Tool `elapsedMs`
-- End-to-end `elapsedMs`
-- sources
-- modelEnhanced
-
-同时输出 privacy-safe 执行日志，只记录 Trace、Plan、Tool 状态和耗时，不记录用户问题、医疗事实、老人姓名或回答正文。
-
-## 下一阶段：生产化增量
-
-### 1. 扩展领域事件来源
-
-事件接口和持久化复核队列已存在，下一步在稳定业务写入点继续发布：
-
-- `HEALTH_RECORDED`
-- `SERVICE_SCHEDULED`
-- 其他明确、低歧义的养老业务事件
-
-### 2. Outbox + Retry
-
-当前 AFTER_COMMIT 监听器异常时只记录日志。下一步用轻量 Transactional Outbox 保证事件可靠投递：
-
-- 业务事务内写 outbox；
-- Quartz worker 批量消费；
-- 幂等处理；
-- 指数/固定退避重试；
-- `PENDING / PROCESSED / FAILED` 状态与重试次数。
-
-不为了架构标签直接引入 Kafka；只有跨服务吞吐成为真实需求时再升级 MQ。
-
-### 3. Evaluation Report
-
-在现有 CI 回归基础上增加可机器读取的评测报告：
-
-- Tool selection exact-match / precision / recall；
-- safety block rate；
-- permission block rate；
-- partial-result rate；
-- P50 / P95 Tool latency；
-- model fallback rate。
-
-### 4. 写 Tool 的人工确认机制
-
-若未来增加“处理告警、创建服务记录”等写 Tool，必须先增加：
-
-- Human-in-the-loop confirmation；
-- 幂等键；
-- 操作审计；
-- 明确可回滚边界；
-- 写 Tool 白名单。
+当前代码优先保证：**业务事实可追溯、AI 行为受策略约束、写操作有人确认、事件不会静默丢失、模型失败可降级、测试结果可复现。**

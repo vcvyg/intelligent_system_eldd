@@ -1,22 +1,76 @@
 package org.example.persion.ai.agent;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 /**
- * 医护 Agent 规划器。
+ * 医护 Agent 混合规划器。
  *
- * <p>当前使用确定性规则生成计划，为未来接入模型 Planner 保留接口。</p>
+ * <p>确定性规则始终作为稳定基线；可选模型 Planner 只允许补充白名单内的只读 Tool。
+ * 模型关闭、超时、返回非法 Tool 或 JSON 解析失败时直接回退规则规划。</p>
  */
 @Component
 public class MedicalAiPlanner {
 
+    private final MedicalAiPlanningModel planningModel;
+
+    /**
+     * 供纯规则单测和离线评测使用，不触发任何模型调用。
+     */
+    public MedicalAiPlanner() {
+        this.planningModel = null;
+    }
+
+    @Autowired
+    public MedicalAiPlanner(MedicalAiPlanningModel planningModel) {
+        this.planningModel = planningModel;
+    }
+
     public MedicalAiPlan plan(String question) {
+        MedicalAiPlan rulePlan = deterministicPlan(question);
+        if (planningModel == null) return rulePlan;
+
+        Optional<MedicalAiPlan> modelCandidate = planningModel.plan(question);
+        if (modelCandidate.isEmpty()) return rulePlan;
+
+        MedicalAiPlan modelPlan = modelCandidate.get();
+        List<String> modelTools = MedicalAiToolPolicy.sanitizeModelTools(modelPlan.toolNames());
+        if (modelPlan.toolNames() != null && !modelPlan.toolNames().isEmpty() && modelTools.isEmpty()) {
+            return rulePlan;
+        }
+
+        if (rulePlan.toolNames().isEmpty()) {
+            if (modelTools.isEmpty()) return rulePlan;
+            return new MedicalAiPlan(
+                    modelTools,
+                    "模型 Planner 补充规则未覆盖语义：" + safeReason(modelPlan.reason())
+            );
+        }
+
+        LinkedHashSet<String> merged = new LinkedHashSet<>(rulePlan.toolNames());
+        merged.addAll(modelTools);
+        List<String> mergedTools = new ArrayList<>(merged);
+        if (mergedTools.equals(rulePlan.toolNames())) {
+            return new MedicalAiPlan(
+                    rulePlan.toolNames(),
+                    rulePlan.reason() + "；模型规划与规则基线一致"
+            );
+        }
+
+        return new MedicalAiPlan(
+                mergedTools,
+                rulePlan.reason() + "；模型补充只读 Tool：" + String.join(" -> ", modelTools)
+        );
+    }
+
+    MedicalAiPlan deterministicPlan(String question) {
         String q = question == null ? "" : question.toLowerCase(Locale.ROOT);
         Set<String> tools = new LinkedHashSet<>();
 
@@ -51,6 +105,12 @@ public class MedicalAiPlanner {
                 : "根据问题语义生成只读业务工具执行计划：" + String.join(" -> ", orderedTools);
 
         return new MedicalAiPlan(orderedTools, reason);
+    }
+
+    private String safeReason(String reason) {
+        if (reason == null || reason.isBlank()) return "识别到可映射的只读业务查询";
+        String normalized = reason.trim().replace('\n', ' ').replace('\r', ' ');
+        return normalized.length() <= 120 ? normalized : normalized.substring(0, 120);
     }
 
     private boolean contains(String text, String... keywords) {

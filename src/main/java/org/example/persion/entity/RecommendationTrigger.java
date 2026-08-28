@@ -16,4 +16,8 @@ public class RecommendationTrigger extends BaseEntity {
     private Long referenceId;
     private String status;
     private LocalDateTime triggerTime;
+    private Long reviewerId;
+    private LocalDateTime reviewedAt;
+    private String decisionReason;
+    private LocalDateTime deliveredAt;
 }

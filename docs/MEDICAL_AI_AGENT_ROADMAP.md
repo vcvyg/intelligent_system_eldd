@@ -55,16 +55,20 @@ Optional LLM Rewriter + Grounding Gate
 - 单 Tool 记录 `elapsedMs`；
 - 全部 Tool 失败时返回明确 fallback，不生成未经系统验证的事实。
 
-## 已完成：主动关怀推荐闭环
+## 已完成：事件驱动主动关怀推荐闭环
 
 ```text
-健康 / 告警 / 服务信号
+AlertService.createAlert
         ↓
-规则召回 + 特征评分
+CareSignalEvent
         ↓
-类别多样性 Top K
+AFTER_COMMIT Listener
         ↓
-B 端人工预览 / 站内投放
+recommendation_trigger / PENDING_REVIEW
+        ↓
+B 端人工复核 + Top K 预览
+        ↓
+人工确认站内投放
         ↓
 C 端家属反馈
         ↓
@@ -73,6 +77,12 @@ C 端家属反馈
 
 当前实现：
 
+- 告警创建统一发布最小化 `ALERT_RAISED` 事件；
+- Event 不携带告警正文、健康测量值等敏感医疗内容；
+- 事务提交后写入持久化 `recommendation_trigger` 人工复核队列；
+- 同一业务引用做 Trigger 幂等；
+- B 端显示待复核事件，但事件不会自动向家属投放；
+- 真正创建新投放后才把当前老人待复核 Trigger 标记为 `DELIVERED`；
 - 近 7 天健康记录稀疏、未闭环告警、待执行服务作为排序信号；
 - `USEFUL` 提升同内容和同类别权重；
 - `NOT_INTERESTED` 隐藏当前内容并降低同类别偏好；
@@ -96,7 +106,7 @@ CI 中执行：
 - 越权老人访问拦截；
 - 医疗决策请求在 Planner 前拦截；
 - 模型 grounding gate；
-- 推荐排序与反馈回归。
+- 推荐排序、反馈幂等与事件 Trigger 回归。
 
 评测集作为冻结回归集：新增 Planner 语义或 Tool 时必须同步增加样例，避免“加一个关键词、坏掉另一类问题”。
 
@@ -126,25 +136,17 @@ Agent 会话上下文已从 Service JVM Map 抽离：
 
 同时输出 privacy-safe 执行日志，只记录 Trace、Plan、Tool 状态和耗时，不记录用户问题、医疗事实、老人姓名或回答正文。
 
-## 下一阶段：真正值得继续做的生产化能力
+## 下一阶段：生产化增量
 
-### 1. 事件驱动主动关怀
+### 1. 扩展领域事件来源
 
-把当前“请求时读取健康 / 告警 / 服务信号”进一步演进为领域事件：
+事件接口和持久化复核队列已存在，后续可以在稳定业务写入点继续发布：
 
-```text
-HealthRecorded / AlertRaised / ServiceScheduled
-        ↓
-CareEvent
-        ↓
-Recommendation Trigger
-        ↓
-Candidate Ranking
-        ↓
-Human Review / Delivery
-```
+- `HEALTH_RECORDED`
+- `SERVICE_SCHEDULED`
+- 其他明确、低歧义的养老业务事件
 
-优先使用现有业务事件，不为了简历额外引入无必要的消息中间件。
+不为了“事件驱动”标签额外引入消息中间件；当吞吐、跨服务或可靠投递真的成为需求时，再引入 Outbox / MQ。
 
 ### 2. Evaluation Report
 

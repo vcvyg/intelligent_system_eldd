@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>关怀推荐 - 家属端</title>
+  <link rel="stylesheet" href="css/pension-variables.css">
+  <link rel="stylesheet" href="css/penou-base.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/family-mobile.css">
+  <link rel="stylesheet" href="css/recommendation-center.css">
+</head>
+<body data-family-nav="recommendations">
+<div class="admin-container">
+  <aside class="sidebar">
+    <div class="logo"><h2>智慧养老系统</h2><p class="role-badge">子女端</p></div>
+    <nav class="nav-menu">
+      <a href="family-dashboard.html" class="nav-item"><span class="icon">📊</span><span>家人数据总览</span></a>
+      <a href="family-recommendations.html" class="nav-item active"><span class="icon">✨</span><span>关怀推荐</span></a>
+      <a href="family-chat.html" class="nav-item"><span class="icon">💬</span><span>沟通通道</span></a>
+      <a href="family-services.html" class="nav-item"><span class="icon">🏥</span><span>医护服务</span></a>
+      <a href="family-me.html" class="nav-item"><span class="icon">👤</span><span>账号中心</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="logout-btn" onclick="logout()">退出登录</button></div>
+  </aside>
+  <main class="main-content">
+    <header class="top-bar"><h1>关怀推荐</h1><div class="user-info"><span id="welcomeText">欢迎！</span></div></header>
+    <div class="recommend-shell">
+      <a class="recommend-back" href="family-dashboard.html">← 返回家人数据总览</a>
+      <section class="recommend-hero">
+        <div>
+          <h2>为家人准备的关怀内容</h2>
+          <p>这些内容来自系统的站内投放。你的“有用”或“不感兴趣”会真实写入反馈，并影响下一轮推荐。</p>
+        </div>
+        <div class="recommend-toolbar">
+          <select id="elderlySelect" class="recommend-select"><option value="">选择家人</option></select>
+          <button id="refreshBtn" class="recommend-btn secondary">刷新推荐</button>
+        </div>
+      </section>
+      <div id="statusBar" class="recommend-status"></div>
+      <section class="recommend-info">
+        <div class="recommend-info-card"><small>当前家人</small><strong id="selectedName">未选择</strong></div>
+        <div class="recommend-info-card"><small>反馈方式</small><strong>有用 / 不感兴趣</strong></div>
+        <div class="recommend-info-card"><small>推荐原则</small><strong>事实驱动，不做诊断</strong></div>
+      </section>
+      <section id="recommendationFeed" class="recommend-feed"><div class="recommend-empty">请选择家人查看已投放内容。</div></section>
+    </div>
+  </main>
+</div>
+<script src="js/common.js"></script>
+<script src="js/family-recommendations.js"></script>
+</body>
+</html>

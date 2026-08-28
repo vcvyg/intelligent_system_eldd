@@ -33,5 +33,8 @@ jobs:
           -Dtest=FileSecurityControllerTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,MedicalAiModelEnhancerTest,RecommendationServiceImplTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
           test
 
-      - name: Check medical assistant JavaScript syntax
-        run: node --check src/main/resources/static/js/medical-ai-assistant.js
+      - name: Check interactive JavaScript syntax
+        run: |
+          node --check src/main/resources/static/js/medical-ai-assistant.js
+          node --check src/main/resources/static/js/admin-recommendations.js
+          node --check src/main/resources/static/js/family-recommendations.js

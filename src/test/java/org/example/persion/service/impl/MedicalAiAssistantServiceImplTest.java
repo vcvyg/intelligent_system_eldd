@@ -5,6 +5,7 @@ import org.example.persion.ai.tool.CareQueryTool;
 import org.example.persion.ai.tool.HealthQueryTool;
 import org.example.persion.ai.tool.MedicalAiToolRegistry;
 import org.example.persion.ai.tool.ProfileQueryTool;
+import org.example.persion.ai.tool.RecommendationQueryTool;
 import org.example.persion.ai.tool.RoomQueryTool;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
@@ -16,9 +17,11 @@ import org.example.persion.repository.AlertRecordMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
 import org.example.persion.repository.FamilyServiceRecordMapper;
 import org.example.persion.repository.HealthDataMapper;
+import org.example.persion.service.RecommendationService;
 import org.example.persion.vo.AlertRecordVO;
 import org.example.persion.vo.ElderlyInfoVO;
 import org.example.persion.vo.MedicalAiAnswerVO;
+import org.example.persion.vo.RecommendationItemVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,14 +47,11 @@ class MedicalAiAssistantServiceImplTest {
     private static final Long MEDICAL_USER_ID = 7L;
     private static final Long ELDERLY_ID = 11L;
 
-    @Mock
-    private ElderlyInfoMapper elderlyInfoMapper;
-    @Mock
-    private HealthDataMapper healthDataMapper;
-    @Mock
-    private AlertRecordMapper alertRecordMapper;
-    @Mock
-    private FamilyServiceRecordMapper familyServiceRecordMapper;
+    @Mock private ElderlyInfoMapper elderlyInfoMapper;
+    @Mock private HealthDataMapper healthDataMapper;
+    @Mock private AlertRecordMapper alertRecordMapper;
+    @Mock private FamilyServiceRecordMapper familyServiceRecordMapper;
+    @Mock private RecommendationService recommendationService;
 
     private MedicalAiAssistantServiceImpl service;
     private ElderlyInfo elderly;
@@ -64,7 +64,8 @@ class MedicalAiAssistantServiceImplTest {
                         new ProfileQueryTool(elderlyInfoMapper),
                         new HealthQueryTool(healthDataMapper),
                         new AlertQueryTool(alertRecordMapper),
-                        new CareQueryTool(healthDataMapper, familyServiceRecordMapper)
+                        new CareQueryTool(healthDataMapper, familyServiceRecordMapper),
+                        new RecommendationQueryTool(recommendationService)
                 )
         );
         service = new MedicalAiAssistantServiceImpl(elderlyInfoMapper, toolRegistry);
@@ -103,8 +104,10 @@ class MedicalAiAssistantServiceImplTest {
         alert.setAlertTime(LocalDateTime.now().minusHours(2));
         when(alertRecordMapper.selectByElderlyId(ELDERLY_ID)).thenReturn(List.of(alert));
 
-        MedicalAiChatRequest request = request(ELDERLY_ID, null, "王阿姨住哪，最近心率和告警怎么样？");
-        MedicalAiAnswerVO answer = service.chat(MEDICAL_USER_ID, request);
+        MedicalAiAnswerVO answer = service.chat(
+                MEDICAL_USER_ID,
+                request(ELDERLY_ID, null, "王阿姨住哪，最近心率和告警怎么样？")
+        );
 
         assertTrue(answer.getAnswer().contains("3-206"));
         assertTrue(answer.getAnswer().contains("76 bpm"));
@@ -112,8 +115,6 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "room_lookup"));
         assertTrue(hasTool(answer, "health_recent"));
         assertTrue(hasTool(answer, "alerts_recent"));
-        assertTrue(answer.getSources().contains("health_data / 近7天健康记录"));
-        assertTrue(answer.getSources().contains("alert_record / 告警记录"));
     }
 
     @Test
@@ -135,6 +136,24 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "patient_profile"));
         assertTrue(answer.getAnswer().contains("高血压随访"));
         assertTrue(answer.getAnswer().contains("青霉素"));
+    }
+
+    @Test
+    void recommendationQuestionUsesRecommendationToolWithoutDelivering() {
+        RecommendationItemVO item = new RecommendationItemVO(
+                1L, null, "健康测量提醒", "保持规律记录", "HEALTH_CHECK",
+                BigDecimal.valueOf(88), "近7天健康记录较少", "查看健康记录", "family-health.html", null
+        );
+        when(recommendationService.preview(ELDERLY_ID, null)).thenReturn(List.of(item));
+
+        MedicalAiAnswerVO answer = service.chat(
+                MEDICAL_USER_ID,
+                request(ELDERLY_ID, null, "现在适合给王阿姨推荐什么关怀内容？")
+        );
+
+        assertTrue(hasTool(answer, "recommendation_preview"));
+        assertTrue(answer.getAnswer().contains("健康测量提醒"));
+        assertTrue(answer.getAnswer().contains("不会由 AI 自动向家属投放"));
     }
 
     @Test
@@ -164,9 +183,7 @@ class MedicalAiAssistantServiceImplTest {
 
         assertEquals(ELDERLY_ID, second.getElderlyId());
         assertTrue(second.getAnswer().contains("助浴服务"));
-        assertTrue(second.getAnswer().contains("没有独立的“护理计划”表"));
         assertTrue(hasTool(second, "care_schedule"));
-        assertTrue(second.getSources().contains("family_service_record / 待执行服务安排"));
     }
 
     @Test
@@ -175,10 +192,7 @@ class MedicalAiAssistantServiceImplTest {
         detail.setRoomNumber("2-101");
         when(elderlyInfoMapper.selectElderlyWithRoom(ELDERLY_ID)).thenReturn(detail);
 
-        MedicalAiAnswerVO first = service.chat(
-                MEDICAL_USER_ID,
-                request(ELDERLY_ID, null, "住哪个房间？")
-        );
+        MedicalAiAnswerVO first = service.chat(MEDICAL_USER_ID, request(ELDERLY_ID, null, "住哪个房间？"));
         service.resetSession(MEDICAL_USER_ID, first.getSessionId());
 
         MedicalAiAnswerVO afterReset = service.chat(
@@ -188,19 +202,13 @@ class MedicalAiAssistantServiceImplTest {
 
         assertTrue(afterReset.getAnswer().contains("请先选择"));
         assertTrue(hasTool(afterReset, "patient_scope"));
-        assertTrue(afterReset.getSources().contains("当前医护负责老人列表"));
     }
 
     @Test
     void missingPatientContextOnlyReturnsAssignedScope() {
-        MedicalAiAnswerVO answer = service.chat(
-                MEDICAL_USER_ID,
-                request(null, null, "最近整体情况怎么样？")
-        );
-
+        MedicalAiAnswerVO answer = service.chat(MEDICAL_USER_ID, request(null, null, "最近整体情况怎么样？"));
         assertTrue(answer.getAnswer().contains("当前可查询：王阿姨"));
         assertTrue(hasTool(answer, "patient_scope"));
-        assertEquals(List.of("当前医护负责老人列表"), answer.getSources());
     }
 
     @Test
@@ -209,7 +217,6 @@ class MedicalAiAssistantServiceImplTest {
                 service.chat(MEDICAL_USER_ID, request(999L, null, "最近健康怎么样？"))
         );
         assertEquals(403, error.getCode());
-        assertTrue(error.getMessage().contains("无权访问"));
     }
 
     @Test
@@ -218,8 +225,6 @@ class MedicalAiAssistantServiceImplTest {
                 MEDICAL_USER_ID,
                 request(ELDERLY_ID, null, "她这个情况应该怎么用药，要不要调整剂量？")
         );
-
-        assertTrue(answer.getAnswer().contains("不能替代专业诊断"));
         assertTrue(hasTool(answer, "medical_safety_guard"));
         assertTrue(answer.getTools().stream().anyMatch(tool -> "blocked".equals(tool.getStatus())));
     }

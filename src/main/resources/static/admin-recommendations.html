@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>主动关怀推荐 - 管理端</title>
+  <link rel="stylesheet" href="css/pension-variables.css">
+  <link rel="stylesheet" href="css/penou-base.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="css/recommendation-center.css">
+</head>
+<body>
+<div class="admin-container">
+  <aside class="sidebar">
+    <div class="logo"><h2>智慧养老系统</h2><p class="role-badge">管理员</p></div>
+    <nav class="nav-menu">
+      <a href="admin-dashboard.html" class="nav-item"><span class="icon">📊</span><span>数据仪表盘</span></a>
+      <a href="admin-elderly.html" class="nav-item"><span class="icon">👴</span><span>老人信息管理</span></a>
+      <a href="admin-alerts.html" class="nav-item"><span class="icon">⚠️</span><span>预警管理</span></a>
+      <a href="admin-recommendations.html" class="nav-item active"><span class="icon">✨</span><span>主动关怀推荐</span></a>
+    </nav>
+    <div class="sidebar-footer"><button class="logout-btn" onclick="logout()">退出登录</button></div>
+  </aside>
+  <main class="main-content">
+    <header class="top-bar"><h1>主动关怀推荐</h1><div class="user-info"><span id="welcomeText">欢迎，管理员！</span></div></header>
+    <div class="recommend-shell">
+      <a class="recommend-back" href="admin-dashboard.html">← 返回管理仪表盘</a>
+      <section class="recommend-hero">
+        <div>
+          <h2>推荐预览与站内投放</h2>
+          <p>基于健康记录、未闭环告警、生活服务和家属反馈进行可解释排序。当前仅模拟站内投放，不连接真实 Push。</p>
+          <div class="recommend-flow"><span>业务信号</span>→<span>规则评分</span>→<span>类别打散</span>→<span>Top 3</span>→<span>家属反馈</span></div>
+        </div>
+        <div class="recommend-toolbar">
+          <select id="elderlySelect" class="recommend-select"><option value="">选择老人</option></select>
+          <button id="previewBtn" class="recommend-btn secondary">预览推荐</button>
+          <button id="deliverBtn" class="recommend-btn primary">投放给关联家属</button>
+        </div>
+      </section>
+      <div id="statusBar" class="recommend-status"></div>
+      <section class="recommend-info">
+        <div class="recommend-info-card"><small>当前老人</small><strong id="selectedName">未选择</strong></div>
+        <div class="recommend-info-card"><small>推荐策略</small><strong>可解释规则 + 反馈学习</strong></div>
+        <div class="recommend-info-card"><small>投放通道</small><strong>站内 IN_APP</strong></div>
+      </section>
+      <section id="recommendationFeed" class="recommend-feed"><div class="recommend-empty">选择老人后预览推荐。</div></section>
+    </div>
+  </main>
+</div>
+<script src="js/common.js"></script>
+<script src="js/admin-recommendations.js"></script>
+</body>
+</html>

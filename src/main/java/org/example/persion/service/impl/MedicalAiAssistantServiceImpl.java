@@ -143,6 +143,9 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (intents.contains(Intent.CARE)) {
             appendRegisteredTool("care_schedule", target, question, answer, result, sources);
         }
+        if (intents.contains(Intent.RECOMMENDATION)) {
+            appendRegisteredTool("recommendation_preview", target, question, answer, result, sources);
+        }
 
         result.setAnswer(answer.toString().trim());
         result.setSources(new ArrayList<>(sources));
@@ -209,6 +212,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (containsAny(q, "健康", "心率", "血压", "血糖", "体温", "睡眠", "步数", "指标", "身体", "health")) intents.add(Intent.HEALTH);
         if (containsAny(q, "告警", "预警", "报警", "异常提醒", "alarm", "alert")) intents.add(Intent.ALERT);
         if (containsAny(q, "护理计划", "照护计划", "护理安排", "照护安排", "近期安排", "服务安排", "巡查", "巡诊", "care", "plan")) intents.add(Intent.CARE);
+        if (containsAny(q, "推荐", "主动关怀", "适合推", "推什么", "关怀内容", "recommend")) intents.add(Intent.RECOMMENDATION);
 
         if (containsAny(q, "最近怎么样", "近期情况", "整体情况", "概况", "综合看一下")) {
             intents.add(Intent.HEALTH);
@@ -226,13 +230,14 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (!intents.contains(Intent.HEALTH)) suggestions.add(name + "最近7天健康指标怎么样？");
         if (!intents.contains(Intent.ALERT)) suggestions.add(name + "最近有未处理告警吗？");
         if (!intents.contains(Intent.CARE)) suggestions.add(name + "近期有什么照护安排？");
+        if (!intents.contains(Intent.RECOMMENDATION)) suggestions.add("现在适合给" + name + "推荐什么关怀内容？");
         if (!intents.contains(Intent.ROOM)) suggestions.add(name + "住哪个房间？");
         suggestions.add("把她最近的健康、告警和安排一起汇总一下");
         return suggestions.stream().limit(4).toList();
     }
 
     private String buildCapabilityAnswer(ElderlyInfo target) {
-        return "我已定位到" + safeName(target) + "。你可以继续问房间、老人档案、近7天健康指标、最近告警、近期健康巡查和待执行服务安排；也可以一次问多个，例如“她住哪，最近心率和告警怎么样？”。";
+        return "我已定位到" + safeName(target) + "。你可以继续问房间、老人档案、近7天健康指标、最近告警、近期健康巡查和待执行服务安排，也可以查询当前适合的主动关怀推荐；例如“她住哪，最近心率和告警怎么样？”或“现在适合给她推荐什么？”。";
     }
 
     private String buildNeedPatientAnswer(List<ElderlyInfo> assigned) {
@@ -245,7 +250,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private String buildSafetyRedirect(ElderlyInfo target) {
         String prefix = target == null ? "" : "关于" + safeName(target) + "，";
-        return prefix + "我可以查询并整理系统中的健康指标、告警、巡查记录和服务安排，但不能替代专业诊断，也不会给出处方、停药/换药或剂量调整建议。你可以让我先把相关系统记录调出来，供医护人员判断。";
+        return prefix + "我可以查询并整理系统中的健康指标、告警、巡查记录、服务安排和主动关怀推荐，但不能替代专业诊断，也不会给出处方、停药/换药或剂量调整建议。你可以让我先把相关系统记录调出来，供医护人员判断。";
     }
 
     private boolean asksForMedicalDecision(String question) {
@@ -306,7 +311,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
     }
 
     private enum Intent {
-        ROOM, PROFILE, HEALTH, ALERT, CARE
+        ROOM, PROFILE, HEALTH, ALERT, CARE, RECOMMENDATION
     }
 
     private static final class SessionContext {

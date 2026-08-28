@@ -33,7 +33,7 @@ async function loadElderly() {
     ).join('');
     if (elderlyList.length === 1) {
       select.value = elderlyList[0].id;
-      onSelectElderly();
+      await onSelectElderly();
       await previewRecommendations();
     }
   } catch (error) {
@@ -41,13 +41,50 @@ async function loadElderly() {
   }
 }
 
-function onSelectElderly() {
+async function onSelectElderly() {
   const id = Number(document.getElementById('elderlySelect').value);
   selectedElderly = elderlyList.find(item => Number(item.id) === id) || null;
   document.getElementById('selectedName').textContent = selectedElderly?.name || '未选择';
   if (!selectedElderly) {
+    document.getElementById('pendingTriggerCount').textContent = '0';
+    document.getElementById('triggerFeed').innerHTML = '<div class="recommend-empty">选择老人后查看待复核事件。</div>';
     document.getElementById('recommendationFeed').innerHTML = '<div class="recommend-empty">选择老人后预览推荐。</div>';
+    return;
   }
+  await loadTriggers();
+}
+
+async function loadTriggers() {
+  if (!selectedElderly) return;
+  try {
+    const response = await get(`/admin/recommendations/triggers?elderlyId=${selectedElderly.id}`);
+    const triggers = Array.isArray(response?.data) ? response.data : [];
+    document.getElementById('pendingTriggerCount').textContent = String(triggers.length);
+    renderTriggers(triggers);
+  } catch (error) {
+    document.getElementById('pendingTriggerCount').textContent = '-';
+    document.getElementById('triggerFeed').innerHTML = '<div class="recommend-empty">触发队列暂时不可用，请确认已执行最新推荐中心 SQL。</div>';
+  }
+}
+
+function renderTriggers(items) {
+  const feed = document.getElementById('triggerFeed');
+  if (!items.length) {
+    feed.innerHTML = '<div class="recommend-empty">当前没有待复核业务事件。仍可手动预览推荐。</div>';
+    return;
+  }
+  feed.innerHTML = items.map(item => `
+    <article class="recommend-card">
+      <div class="recommend-card-head">
+        <div>
+          <span class="recommend-badge">事件触发</span>
+          <h3>${escapeHtml(item.signalLabel || '业务变化触发关怀复核')}</h3>
+        </div>
+        <span class="recommend-badge">待人工复核</span>
+      </div>
+      <p>触发时间：${escapeHtml(formatTime(item.triggerTime))}</p>
+      <div class="recommend-reason"><strong>隐私边界：</strong>队列只保存事件类型、业务引用 ID 和老人 ID，不复制告警正文或健康测量值。</div>
+    </article>`).join('');
 }
 
 async function previewRecommendations() {
@@ -59,7 +96,8 @@ async function previewRecommendations() {
   try {
     const response = await get(`/admin/recommendations/preview/${selectedElderly.id}`);
     renderRecommendations(response?.data || []);
-    showStatus(`已根据 ${selectedElderly.name || '当前老人'} 的系统信号生成可解释 Top 3。`);
+    await loadTriggers();
+    showStatus(`已根据 ${selectedElderly.name || '当前老人'} 的系统信号生成可解释 Top 3，等待人工确认是否投放。`);
   } catch (error) {
     showStatus(error.message || '推荐预览失败', true);
   } finally {
@@ -77,8 +115,9 @@ async function deliverRecommendations() {
     const response = await post(`/admin/recommendations/deliver/${selectedElderly.id}`, {});
     const count = Number(response?.data || 0);
     showStatus(count > 0
-      ? `已创建 ${count} 条站内投放。关联家属现在可以在 C 端看到推荐。`
-      : '今天没有新增投放：可能尚未关联家属，或同一内容已被幂等拦截。');
+      ? `已人工确认并创建 ${count} 条站内投放；已消费当前待复核事件。`
+      : '今天没有新增投放：可能尚未关联家属，或同一内容已被幂等拦截；待复核事件不会被误标为已投放。');
+    await loadTriggers();
     await previewRecommendations();
   } catch (error) {
     showStatus(error.message || '投放失败', true);
@@ -114,6 +153,12 @@ function renderRecommendations(items) {
 function formatScore(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n.toFixed(n % 1 === 0 ? 0 : 1) : '-';
+}
+
+function formatTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false });
 }
 
 function setBusy(value) {

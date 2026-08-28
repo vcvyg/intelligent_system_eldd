@@ -9,6 +9,13 @@ const categoryLabels = {
   FAMILY_SUPPORT: '家庭陪伴'
 };
 
+const triggerStatusLabels = {
+  PENDING_REVIEW: '待人工复核',
+  APPROVED: '已批准 · 待投放',
+  REJECTED: '已拒绝',
+  DELIVERED: '已投放'
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   const user = checkLogin();
   if (!user || user.role !== 'ADMIN') {
@@ -59,7 +66,8 @@ async function loadTriggers() {
   try {
     const response = await get(`/admin/recommendations/triggers?elderlyId=${selectedElderly.id}`);
     const triggers = Array.isArray(response?.data) ? response.data : [];
-    document.getElementById('pendingTriggerCount').textContent = String(triggers.length);
+    const pendingCount = triggers.filter(item => item.status === 'PENDING_REVIEW').length;
+    document.getElementById('pendingTriggerCount').textContent = String(pendingCount);
     renderTriggers(triggers);
   } catch (error) {
     document.getElementById('pendingTriggerCount').textContent = '-';
@@ -73,18 +81,57 @@ function renderTriggers(items) {
     feed.innerHTML = '<div class="recommend-empty">当前没有待复核业务事件。仍可手动预览推荐。</div>';
     return;
   }
-  feed.innerHTML = items.map(item => `
-    <article class="recommend-card">
-      <div class="recommend-card-head">
-        <div>
-          <span class="recommend-badge">事件触发</span>
-          <h3>${escapeHtml(item.signalLabel || '业务变化触发关怀复核')}</h3>
+
+  feed.innerHTML = items.map(item => {
+    const status = item.status || 'PENDING_REVIEW';
+    const isPending = status === 'PENDING_REVIEW';
+    const reviewInfo = item.reviewedAt
+      ? `<div class="recommend-reason"><strong>复核：</strong>${escapeHtml(formatTime(item.reviewedAt))}${item.decisionReason ? ` · ${escapeHtml(item.decisionReason)}` : ''}</div>`
+      : '';
+    const actions = isPending
+      ? `<div class="recommend-actions">
+           <button class="recommend-btn primary" type="button" onclick="reviewTrigger(${Number(item.id)}, 'approve')">批准候选</button>
+           <button class="recommend-btn secondary" type="button" onclick="reviewTrigger(${Number(item.id)}, 'reject')">拒绝本次触发</button>
+         </div>`
+      : '<div class="recommend-actions"><span class="recommend-badge">等待人工确认投放</span></div>';
+
+    return `
+      <article class="recommend-card">
+        <div class="recommend-card-head">
+          <div>
+            <span class="recommend-badge">${escapeHtml(signalTypeLabel(item.signalType))}</span>
+            <h3>${escapeHtml(item.signalLabel || '业务变化触发关怀复核')}</h3>
+          </div>
+          <span class="recommend-badge">${escapeHtml(triggerStatusLabels[status] || status)}</span>
         </div>
-        <span class="recommend-badge">待人工复核</span>
-      </div>
-      <p>触发时间：${escapeHtml(formatTime(item.triggerTime))}</p>
-      <div class="recommend-reason"><strong>隐私边界：</strong>队列只保存事件类型、业务引用 ID 和老人 ID，不复制告警正文或健康测量值。</div>
-    </article>`).join('');
+        <p>触发时间：${escapeHtml(formatTime(item.triggerTime))}</p>
+        <div class="recommend-reason"><strong>隐私边界：</strong>事件队列只保存最小业务标识，不复制告警正文、健康测量值或家属沟通内容。</div>
+        ${reviewInfo}
+        ${actions}
+      </article>`;
+  }).join('');
+}
+
+async function reviewTrigger(triggerId, action) {
+  if (!selectedElderly || !Number.isFinite(Number(triggerId))) return;
+  const isApprove = action === 'approve';
+  const reason = window.prompt(
+    isApprove ? '可选：填写批准原因（不填写也可以）' : '请填写拒绝原因（建议简短说明）',
+    ''
+  );
+  if (reason === null) return;
+
+  setBusy(true);
+  try {
+    const query = reason.trim() ? `?reason=${encodeURIComponent(reason.trim())}` : '';
+    await post(`/admin/recommendations/triggers/${triggerId}/${isApprove ? 'approve' : 'reject'}${query}`, {});
+    showStatus(isApprove ? '已完成复核：该事件已批准，可继续预览并人工确认投放。' : '已拒绝该触发事件，本次不会进入投放确认。');
+    await loadTriggers();
+  } catch (error) {
+    showStatus(error.message || '事件复核失败', true);
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function previewRecommendations() {
@@ -97,7 +144,7 @@ async function previewRecommendations() {
     const response = await get(`/admin/recommendations/preview/${selectedElderly.id}`);
     renderRecommendations(response?.data || []);
     await loadTriggers();
-    showStatus(`已根据 ${selectedElderly.name || '当前老人'} 的系统信号生成可解释 Top 3，等待人工确认是否投放。`);
+    showStatus(`已根据 ${selectedElderly.name || '当前老人'} 的系统信号生成可解释 Top 3，事件驱动场景需先完成复核再人工确认投放。`);
   } catch (error) {
     showStatus(error.message || '推荐预览失败', true);
   } finally {
@@ -115,8 +162,8 @@ async function deliverRecommendations() {
     const response = await post(`/admin/recommendations/deliver/${selectedElderly.id}`, {});
     const count = Number(response?.data || 0);
     showStatus(count > 0
-      ? `已人工确认并创建 ${count} 条站内投放；已消费当前待复核事件。`
-      : '今天没有新增投放：可能尚未关联家属，或同一内容已被幂等拦截；待复核事件不会被误标为已投放。');
+      ? `已人工确认并创建 ${count} 条站内投放；已批准事件已进入 DELIVERED。`
+      : '今天没有新增投放：可能尚未关联家属，或同一内容已被幂等拦截；事件状态不会被误消费。');
     await loadTriggers();
     await previewRecommendations();
   } catch (error) {
@@ -148,6 +195,14 @@ function renderRecommendations(items) {
         ${item.actionLabel ? `<span class="recommend-badge">${escapeHtml(item.actionLabel)}</span>` : ''}
       </div>
     </article>`).join('');
+}
+
+function signalTypeLabel(value) {
+  return ({
+    ALERT_RAISED: '告警事件',
+    HEALTH_RECORDED: '健康记录事件',
+    SERVICE_SCHEDULED: '服务安排事件'
+  })[value] || '业务事件';
 }
 
 function formatScore(value) {

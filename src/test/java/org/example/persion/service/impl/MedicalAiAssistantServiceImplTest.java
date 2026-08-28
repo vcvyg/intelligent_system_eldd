@@ -1,5 +1,7 @@
 package org.example.persion.service.impl;
 
+import org.example.persion.ai.tool.HealthQueryTool;
+import org.example.persion.ai.tool.MedicalAiToolRegistry;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.entity.ElderlyInfo;
@@ -16,7 +18,6 @@ import org.example.persion.vo.MedicalAiAnswerVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -49,13 +50,22 @@ class MedicalAiAssistantServiceImplTest {
     @Mock
     private FamilyServiceRecordMapper familyServiceRecordMapper;
 
-    @InjectMocks
     private MedicalAiAssistantServiceImpl service;
-
     private ElderlyInfo elderly;
 
     @BeforeEach
     void setUp() {
+        MedicalAiToolRegistry toolRegistry = new MedicalAiToolRegistry(
+                List.of(new HealthQueryTool(healthDataMapper))
+        );
+        service = new MedicalAiAssistantServiceImpl(
+                elderlyInfoMapper,
+                healthDataMapper,
+                alertRecordMapper,
+                familyServiceRecordMapper,
+                toolRegistry
+        );
+
         elderly = new ElderlyInfo();
         elderly.setId(ELDERLY_ID);
         elderly.setName("王阿姨");
@@ -66,7 +76,7 @@ class MedicalAiAssistantServiceImplTest {
     }
 
     @Test
-    void compositeQuestionRunsMultipleToolsAndCombinesFacts() {
+    void compositeQuestionRunsRegisteredHealthToolAndCombinesFacts() {
         ElderlyInfoVO detail = new ElderlyInfoVO();
         detail.setId(ELDERLY_ID);
         detail.setName("王阿姨");
@@ -99,7 +109,7 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "room_lookup"));
         assertTrue(hasTool(answer, "health_recent"));
         assertTrue(hasTool(answer, "alerts_recent"));
-        assertFalse(answer.getSources().isEmpty());
+        assertTrue(answer.getSources().contains("health_data / 近7天健康记录"));
     }
 
     @Test

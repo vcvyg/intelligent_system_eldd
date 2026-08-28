@@ -19,6 +19,7 @@ import org.example.persion.vo.DailyHealthSummaryVO;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -81,6 +82,7 @@ public class MedicalRoundServiceImpl extends ServiceImpl<HealthDataMapper, Healt
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public HealthData saveRecord(HealthData record) {
         this.saveOrUpdate(record);
         if (record.getElderlyId() != null) {

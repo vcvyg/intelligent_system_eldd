@@ -1,5 +1,6 @@
 package org.example.persion.service.impl;
 
+import org.example.persion.ai.agent.MedicalAiExecutor;
 import org.example.persion.ai.agent.MedicalAiPlanner;
 import org.example.persion.ai.tool.AlertQueryTool;
 import org.example.persion.ai.tool.CareQueryTool;
@@ -71,7 +72,11 @@ class MedicalAiAssistantServiceImplTest {
                         new RecommendationQueryTool(recommendationService)
                 )
         );
-        service = new MedicalAiAssistantServiceImpl(elderlyInfoMapper, toolRegistry, new MedicalAiPlanner());
+        service = new MedicalAiAssistantServiceImpl(
+                elderlyInfoMapper,
+                new MedicalAiPlanner(),
+                new MedicalAiExecutor(toolRegistry)
+        );
 
         elderly = new ElderlyInfo();
         elderly.setId(ELDERLY_ID);
@@ -116,13 +121,15 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(answer.getPlanReason().contains("room_lookup -> health_recent -> alerts_recent"));
         assertNotNull(answer.getTraceId());
         assertFalse(answer.getTraceId().isBlank());
-        assertTrue(answer.getElapsedMs() >= 0);
         assertTrue(answer.getAnswer().contains("3-206"));
         assertTrue(answer.getAnswer().contains("76 bpm"));
         assertTrue(answer.getAnswer().contains("心率异常"));
         assertTrue(hasTool(answer, "room_lookup"));
         assertTrue(hasTool(answer, "health_recent"));
         assertTrue(hasTool(answer, "alerts_recent"));
+        assertTrue(answer.getTools().stream()
+                .filter(tool -> List.of("room_lookup", "health_recent", "alerts_recent").contains(tool.getTool()))
+                .allMatch(tool -> tool.getElapsedMs() != null && tool.getElapsedMs() >= 0));
         assertFalse(answer.getPlan().contains("patient_access"));
     }
 

@@ -70,16 +70,11 @@ class RecommendationServiceImplTest {
         safetyContent = content(2L, "SAFETY", "关注近期安全提醒", "SAFETY", 62);
         careContent = content(3L, "CARE", "看看近期生活服务安排", "CARE_SERVICE", 58);
         wellnessContent = content(4L, "WELLNESS", "保持轻量活动", "WELLNESS", 52);
-
-        when(contentMapper.selectList(any())).thenReturn(List.of(
-                healthContent, safetyContent, careContent, wellnessContent
-        ));
-        when(healthDataMapper.findByDateTimeRange(any(), any(), any())).thenReturn(List.of());
-        when(familyServiceRecordMapper.selectList(any())).thenReturn(List.of());
     }
 
     @Test
     void sparseHealthAndOpenAlertBoostRelevantCategories() {
+        stubRecommendationInputs();
         AlertRecordVO alert = new AlertRecordVO();
         alert.setStatus("待处理");
         alert.setAlertType("心率异常");
@@ -100,6 +95,7 @@ class RecommendationServiceImplTest {
 
     @Test
     void notInterestedContentIsRemovedFromNextRanking() {
+        stubRecommendationInputs();
         when(alertRecordMapper.selectByElderlyId(ELDERLY_ID)).thenReturn(List.of());
         RecommendationFeedback feedback = new RecommendationFeedback();
         feedback.setContentId(healthContent.getId());
@@ -113,6 +109,7 @@ class RecommendationServiceImplTest {
 
     @Test
     void deliverCreatesTopThreeForLinkedFamilyAndIsReadyForIdempotencyCheck() {
+        stubRecommendationInputs();
         when(alertRecordMapper.selectByElderlyId(ELDERLY_ID)).thenReturn(List.of());
         when(feedbackMapper.selectList(any())).thenReturn(List.of());
         User family = new User();
@@ -140,6 +137,14 @@ class RecommendationServiceImplTest {
 
         assertEquals(403, error.getCode());
         assertTrue(error.getMessage().contains("无权访问"));
+    }
+
+    private void stubRecommendationInputs() {
+        when(contentMapper.selectList(any())).thenReturn(List.of(
+                healthContent, safetyContent, careContent, wellnessContent
+        ));
+        when(healthDataMapper.findByDateTimeRange(any(), any(), any())).thenReturn(List.of());
+        when(familyServiceRecordMapper.selectList(any())).thenReturn(List.of());
     }
 
     private RecommendationContent content(Long id, String code, String title, String category, int score) {

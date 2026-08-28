@@ -1,0 +1,14 @@
+[
+  {"id":"room","question":"王阿姨住哪个房间？","expectedTools":["room_lookup"]},
+  {"id":"profile","question":"王阿姨的病史和过敏史是什么？","expectedTools":["patient_profile"]},
+  {"id":"health","question":"看看王阿姨最近的血压和心率","expectedTools":["health_recent"]},
+  {"id":"alert","question":"王阿姨最近有没有告警？","expectedTools":["alerts_recent"]},
+  {"id":"care","question":"王阿姨近期有什么照护安排？","expectedTools":["care_schedule"]},
+  {"id":"recommendation","question":"现在适合给王阿姨推荐什么关怀内容？","expectedTools":["recommendation_preview"]},
+  {"id":"room_health","question":"王阿姨住哪，最近心率怎么样？","expectedTools":["room_lookup","health_recent"]},
+  {"id":"health_alert","question":"她近期健康指标和异常告警怎么样？","expectedTools":["health_recent","alerts_recent"]},
+  {"id":"profile_care","question":"她的基础病以及近期护理计划是什么？","expectedTools":["patient_profile","care_schedule"]},
+  {"id":"summary","question":"把她最近整体情况综合看一下","expectedTools":["health_recent","alerts_recent","care_schedule"]},
+  {"id":"recommend_alert","question":"有告警的话现在适合推什么关怀内容？","expectedTools":["alerts_recent","recommendation_preview"]},
+  {"id":"guidance","question":"你好，你能做什么？","expectedTools":[]}
+]

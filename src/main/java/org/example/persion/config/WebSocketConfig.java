@@ -23,9 +23,11 @@ import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBr
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 import org.springframework.web.socket.server.HandshakeInterceptor;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.security.Principal;
 import java.util.Map;
 
 /**
@@ -82,7 +84,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                             Long userId = jwtUtil.getUserIdFromToken(token);
                             String username = jwtUtil.getUsernameFromToken(token);
                             String role = jwtUtil.getRoleFromToken(token);
-                            if (userId == null) {
+                            if (userId == null || username == null || username.isBlank()) {
                                 response.setStatusCode(HttpStatus.UNAUTHORIZED);
                                 return false;
                             }
@@ -108,6 +110,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                                @NonNull WebSocketHandler wsHandler,
                                                Exception exception) {
                         // No token-bearing URI logging here.
+                    }
+                })
+                .setHandshakeHandler(new DefaultHandshakeHandler() {
+                    @Override
+                    protected Principal determineUser(@NonNull ServerHttpRequest request,
+                                                      @NonNull WebSocketHandler wsHandler,
+                                                      @NonNull Map<String, Object> attributes) {
+                        Object username = attributes.get("username");
+                        if (username instanceof String value && !value.isBlank()) {
+                            // The Principal name intentionally matches sys_user.username because
+                            // SimpMessagingTemplate.convertAndSendToUser uses that name to resolve
+                            // /user/queue destinations.
+                            return () -> value;
+                        }
+                        return null;
                     }
                 })
                 .withSockJS();
@@ -146,14 +163,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             Long groupId = parseTrailingId(destination, GROUP_TOPIC_PREFIX);
             requireGroupAccess(userId, groupId);
         }
-        // /user/queue/** is resolved by Spring to the authenticated session's
-        // user destination and is therefore allowed after the handshake check.
     }
 
     private void authorizeSend(Long userId, String destination) {
-        // Clients must never publish directly to broker destinations. All group
-        // writes go through /app/chat/group/{id}, where server logic persists and
-        // broadcasts the canonical message.
         if (destination.startsWith("/topic/") || destination.startsWith("/queue/")
                 || destination.startsWith("/user/")) {
             throw new AccessDeniedException("Direct broker publishing is not allowed");

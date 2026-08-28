@@ -134,6 +134,40 @@ class MedicalAiAssistantServiceImplTest {
     }
 
     @Test
+    void resetSessionRemovesPatientContext() {
+        ElderlyInfoVO detail = new ElderlyInfoVO();
+        detail.setRoomNumber("2-101");
+        when(elderlyInfoMapper.selectElderlyWithRoom(ELDERLY_ID)).thenReturn(detail);
+
+        MedicalAiAnswerVO first = service.chat(
+                MEDICAL_USER_ID,
+                request(ELDERLY_ID, null, "住哪个房间？")
+        );
+        service.resetSession(MEDICAL_USER_ID, first.getSessionId());
+
+        MedicalAiAnswerVO afterReset = service.chat(
+                MEDICAL_USER_ID,
+                request(null, first.getSessionId(), "那她最近怎么样？")
+        );
+
+        assertTrue(afterReset.getAnswer().contains("请先选择"));
+        assertTrue(hasTool(afterReset, "patient_scope"));
+        assertTrue(afterReset.getSources().contains("当前医护负责老人列表"));
+    }
+
+    @Test
+    void missingPatientContextOnlyReturnsAssignedScope() {
+        MedicalAiAnswerVO answer = service.chat(
+                MEDICAL_USER_ID,
+                request(null, null, "最近整体情况怎么样？")
+        );
+
+        assertTrue(answer.getAnswer().contains("当前可查询：王阿姨"));
+        assertTrue(hasTool(answer, "patient_scope"));
+        assertEquals(List.of("当前医护负责老人列表"), answer.getSources());
+    }
+
+    @Test
     void rejectsPatientOutsideCurrentMedicalScope() {
         BusinessException error = assertThrows(BusinessException.class, () ->
                 service.chat(MEDICAL_USER_ID, request(999L, null, "最近健康怎么样？"))

@@ -134,14 +134,28 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         String type = normalizeFeedback(dto.getFeedbackType());
-        RecommendationFeedback feedback = new RecommendationFeedback();
-        feedback.setElderlyId(dto.getElderlyId());
-        feedback.setFamilyUserId(familyUserId);
-        feedback.setContentId(delivery.getContentId());
-        feedback.setDeliveryId(delivery.getId());
+        RecommendationFeedback feedback = feedbackMapper.selectOne(
+                new LambdaQueryWrapper<RecommendationFeedback>()
+                        .eq(RecommendationFeedback::getDeliveryId, delivery.getId())
+                        .eq(RecommendationFeedback::getFamilyUserId, familyUserId)
+                        .eq(RecommendationFeedback::getElderlyId, dto.getElderlyId())
+                        .last("LIMIT 1")
+        );
+        boolean existingFeedback = feedback != null;
+        if (!existingFeedback) {
+            feedback = new RecommendationFeedback();
+            feedback.setElderlyId(dto.getElderlyId());
+            feedback.setFamilyUserId(familyUserId);
+            feedback.setContentId(delivery.getContentId());
+            feedback.setDeliveryId(delivery.getId());
+        }
         feedback.setFeedbackType(type);
         feedback.setWeight("USEFUL".equals(type) ? 1 : "NOT_INTERESTED".equals(type) ? -1 : 0);
-        feedbackMapper.insert(feedback);
+        if (existingFeedback) {
+            feedbackMapper.updateById(feedback);
+        } else {
+            feedbackMapper.insert(feedback);
+        }
 
         if ("NOT_INTERESTED".equals(type)) {
             delivery.setStatus("NOT_INTERESTED");

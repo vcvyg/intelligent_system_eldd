@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医护 AI 助手 - 智慧养老系统</title>
+    <link rel="stylesheet" href="css/pension-variables.css">
+    <link rel="stylesheet" href="css/penou-base.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <link rel="stylesheet" href="css/medical-ai-assistant.css">
+</head>
+<body>
+<div class="admin-container">
+    <aside class="sidebar">
+        <div class="logo">
+            <h2>智慧养老系统</h2>
+            <p class="role-badge">医护人员</p>
+        </div>
+        <nav class="nav-menu">
+            <a href="medical-dashboard.html" class="nav-item"><span class="icon">🩺</span><span>医护工作台</span></a>
+            <a href="medical-ai-assistant.html" class="nav-item active"><span class="icon">✨</span><span>AI 助手</span></a>
+            <a href="medical-patients.html" class="nav-item"><span class="icon">👴</span><span>老人档案</span></a>
+            <a href="medical-schedule.html" class="nav-item"><span class="icon">📅</span><span>我的排班</span></a>
+            <a href="medical-rounds.html" class="nav-item"><span class="icon">📝</span><span>巡诊记录</span></a>
+            <a href="medical-alerts.html" class="nav-item"><span class="icon">⚠️</span><span>告警中心</span></a>
+            <a href="medical-chat.html" class="nav-item"><span class="icon">💬</span><span>医护-子女聊天</span></a>
+            <a href="medical-leave.html" class="nav-item"><span class="icon">📝</span><span>请假申请</span></a>
+            <a href="medical-services.html" class="nav-item"><span class="icon">💳</span><span>生活服务录入</span></a>
+        </nav>
+        <div class="sidebar-footer"><button class="logout-btn" onclick="logout()">退出登录</button></div>
+    </aside>
+
+    <main class="main-content assistant-page">
+        <header class="assistant-header">
+            <div>
+                <div class="eyebrow">WORKSPACE AGENT</div>
+                <h1>医护 AI 助手 <span class="beta">Beta</span></h1>
+                <p>查系统、串信息、接着问。答案只来自你有权限访问的业务数据。</p>
+            </div>
+            <div class="header-actions">
+                <div class="mode-badge"><span class="status-dot"></span>事实工具模式</div>
+                <button class="ghost-btn" id="resetBtn">新建会话</button>
+            </div>
+        </header>
+
+        <section class="assistant-shell">
+            <aside class="patient-panel">
+                <div class="panel-title-row">
+                    <div>
+                        <span class="panel-kicker">PATIENT SCOPE</span>
+                        <h2>当前负责老人</h2>
+                    </div>
+                    <span class="count-pill" id="patientCount">0</span>
+                </div>
+                <div class="patient-search-wrap">
+                    <input id="patientSearch" type="search" placeholder="搜索姓名 / 房间号">
+                </div>
+                <div class="patient-list" id="patientList">
+                    <div class="panel-loading">正在加载权限范围…</div>
+                </div>
+                <div class="scope-note">
+                    <strong>权限边界</strong>
+                    <span>AI 每轮都会重新校验负责关系，不会因为会话记忆读取未分配老人。</span>
+                </div>
+            </aside>
+
+            <section class="chat-panel">
+                <div class="chat-context-bar">
+                    <div>
+                        <span class="context-label">当前上下文</span>
+                        <strong id="contextPatient">暂未选择老人</strong>
+                        <span id="contextRoom"></span>
+                    </div>
+                    <div class="context-hint">可连续追问“她呢？”“那近期安排呢？”</div>
+                </div>
+
+                <div class="message-list" id="messageList">
+                    <div class="message assistant-message welcome-message">
+                        <div class="avatar ai-avatar">AI</div>
+                        <div class="message-body">
+                            <div class="message-meta">医护 AI 助手</div>
+                            <div class="bubble">
+                                我可以帮你查询老人房间、档案、近 7 天健康指标、告警，以及由近期健康巡查和待执行服务组成的照护安排。<br><br>
+                                你也可以一次问多个问题，例如：<strong>“王阿姨住哪，最近心率和告警怎么样？”</strong>
+                            </div>
+                            <div class="safety-strip">不会自动诊断，也不会给出处方或用药调整建议。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="starter-prompts" id="starterPrompts">
+                    <button data-question="住哪个房间？">🏠 住哪个房间？</button>
+                    <button data-question="最近7天健康指标怎么样？">❤️ 最近健康指标</button>
+                    <button data-question="最近有未处理告警吗？">⚠️ 最近告警</button>
+                    <button data-question="近期有什么照护安排？">📋 近期照护安排</button>
+                </div>
+
+                <div class="composer">
+                    <textarea id="questionInput" rows="1" placeholder="输入问题，Enter 发送，Shift + Enter 换行"></textarea>
+                    <button id="sendBtn" class="send-btn" title="发送">➤</button>
+                </div>
+                <div class="composer-note">AI 只整理系统事实；涉及诊断、处方和用药调整时会提示由医护人员判断。</div>
+            </section>
+        </section>
+    </main>
+</div>
+<script src="js/common.js"></script>
+<script src="js/medical-ai-assistant.js"></script>
+</body>
+</html>

@@ -3,6 +3,7 @@ package org.example.persion.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
+import org.example.persion.ai.event.CareSignalEvent;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.AlertCreateDTO;
 import org.example.persion.dto.AlertHandleDTO;
@@ -16,6 +17,7 @@ import org.example.persion.security.SecurityUtil;
 import org.example.persion.service.AlertService;
 import org.example.persion.vo.AlertRecordVO;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,16 +37,15 @@ public class AlertServiceImpl implements AlertService {
     private final AlertRecordMapper alertRecordMapper;
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final RoomMapper roomMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<AlertRecordVO> getAlertList(int current, int size, String alertType, String alertLevel, String status, String elderlyName) {
         Page<AlertRecord> page = new Page<>(current, size);
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
 
-        // 只查询未删除的记录
         wrapper.eq(AlertRecord::getDeleted, 0);
 
-        // 老人姓名筛选
         if (elderlyName != null && !elderlyName.isEmpty()) {
             List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectList(
                     new LambdaQueryWrapper<ElderlyInfo>()
@@ -54,72 +55,58 @@ public class AlertServiceImpl implements AlertService {
                     .map(ElderlyInfo::getId)
                     .collect(Collectors.toSet());
             if (elderlyIds.isEmpty()) {
-                wrapper.apply("1 = 0"); // 无匹配数据，直接返回空
+                wrapper.apply("1 = 0");
             } else {
                 wrapper.in(AlertRecord::getElderlyId, elderlyIds);
             }
         }
 
-        // 预警类型筛选
         if (alertType != null && !alertType.isEmpty()) {
             wrapper.eq(AlertRecord::getAlertType, alertType);
         }
-
-        // 预警等级筛选
         if (alertLevel != null && !alertLevel.isEmpty()) {
             wrapper.eq(AlertRecord::getAlertLevel, alertLevel);
         }
-
-        // 状态筛选
         if (status != null && !status.isEmpty()) {
             wrapper.eq(AlertRecord::getStatus, status);
         }
 
         wrapper.orderByDesc(AlertRecord::getAlertTime);
-
         Page<AlertRecord> alertPage = alertRecordMapper.selectPage(page, wrapper);
 
-        // 转换为VO
         Page<AlertRecordVO> voPage = new Page<>();
         BeanUtils.copyProperties(alertPage, voPage, "records");
 
-        // 优化：批量查询老人和房间信息，避免N+1查询问题
         List<AlertRecordVO> voList = new ArrayList<>();
         if (!alertPage.getRecords().isEmpty()) {
-            // 收集所有老人ID
             Set<Long> elderlyIds = alertPage.getRecords().stream()
                     .map(AlertRecord::getElderlyId)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toSet());
-            
-            // 批量查询老人信息
+
             Map<Long, ElderlyInfo> elderlyMap = new HashMap<>();
             Set<Long> roomIds = new HashSet<>();
             if (!elderlyIds.isEmpty()) {
                 List<ElderlyInfo> elderlyList = elderlyInfoMapper.selectBatchIds(elderlyIds);
                 elderlyMap = elderlyList.stream()
                         .collect(Collectors.toMap(ElderlyInfo::getId, e -> e));
-                
-                // 收集房间ID
                 roomIds = elderlyList.stream()
                         .map(ElderlyInfo::getRoomId)
                         .filter(Objects::nonNull)
                         .collect(Collectors.toSet());
             }
-            
-            // 批量查询房间信息
+
             Map<Long, Room> roomMap = new HashMap<>();
             if (!roomIds.isEmpty()) {
                 List<Room> roomList = roomMapper.selectBatchIds(roomIds);
                 roomMap = roomList.stream()
                         .collect(Collectors.toMap(Room::getId, r -> r));
             }
-            
-            // 组装VO
+
             for (AlertRecord alert : alertPage.getRecords()) {
                 AlertRecordVO vo = new AlertRecordVO();
                 BeanUtils.copyProperties(alert, vo);
-                
+
                 if (alert.getElderlyId() != null) {
                     ElderlyInfo elderlyInfo = elderlyMap.get(alert.getElderlyId());
                     if (elderlyInfo != null) {
@@ -163,7 +150,6 @@ public class AlertServiceImpl implements AlertService {
 
         AlertRecordVO vo = new AlertRecordVO();
         BeanUtils.copyProperties(alert, vo);
-        // 补充老人和房间信息
         if (alert.getElderlyId() != null) {
             ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(alert.getElderlyId());
             if (elderlyInfo != null) {
@@ -190,15 +176,17 @@ public class AlertServiceImpl implements AlertService {
         AlertRecord alert = new AlertRecord();
         BeanUtils.copyProperties(dto, alert);
 
-        // 如果未设置预警时间,使用当前时间
         if (alert.getAlertTime() == null) {
             alert.setAlertTime(LocalDateTime.now());
         }
-
-        // 默认状态为待处理
         alert.setStatus("待处理");
 
         alertRecordMapper.insert(alert);
+        eventPublisher.publishEvent(CareSignalEvent.alertRaised(
+                alert.getElderlyId(),
+                alert.getId(),
+                alert.getAlertTime()
+        ));
         return alert.getId();
     }
 
@@ -262,15 +250,12 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
-        // 修改状态判断，支持"待处理"和"未处理"两种状态
         if (!"待处理".equals(alert.getStatus()) && !"未处理".equals(alert.getStatus())) {
             throw new BusinessException("该告警已在处理中或已处理完成");
         }
 
-        // 获取当前操作员ID
         Long operatorId = org.example.persion.security.SecurityUtil.getUserId();
         if (operatorId != null) {
-            // 假设操作员是医护人员，并分配任务
             alert.setAssignedMedicalId(operatorId);
         }
 
@@ -285,14 +270,11 @@ public class AlertServiceImpl implements AlertService {
         if (alert == null) {
             throw new BusinessException("预警记录不存在");
         }
-
-        // 使用MyBatis Plus的deleteById方法，会自动处理逻辑删除
         alertRecordMapper.deleteById(id);
     }
 
     @Override
     public Map<String, Object> getAlertStatistics() {
-        // 只统计未删除的告警
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(AlertRecord::getDeleted, 0);
         List<AlertRecord> alerts = alertRecordMapper.selectList(wrapper);
@@ -303,16 +285,13 @@ public class AlertServiceImpl implements AlertService {
         statistics.put("processing", alerts.stream().filter(a -> "处理中".equals(a.getStatus())).count());
         statistics.put("handled", alerts.stream().filter(a -> "已处理".equals(a.getStatus())).count());
 
-        // 按预警等级统计
         Map<String, Long> levelCount = new HashMap<>();
         levelCount.put("低", alerts.stream().filter(a -> "低".equals(a.getAlertLevel())).count());
         levelCount.put("中", alerts.stream().filter(a -> "中".equals(a.getAlertLevel())).count());
         levelCount.put("高", alerts.stream().filter(a -> "高".equals(a.getAlertLevel())).count());
         levelCount.put("紧急", alerts.stream().filter(a -> "紧急".equals(a.getAlertLevel())).count());
-
         statistics.put("levelCount", levelCount);
 
-        // 按预警类型统计
         Map<String, Long> typeCount = new HashMap<>();
         typeCount.put("心率异常", alerts.stream().filter(a -> "心率异常".equals(a.getAlertType())).count());
         typeCount.put("血压异常", alerts.stream().filter(a -> "血压异常".equals(a.getAlertType())).count());
@@ -320,7 +299,6 @@ public class AlertServiceImpl implements AlertService {
         typeCount.put("体温异常", alerts.stream().filter(a -> "体温异常".equals(a.getAlertType())).count());
         typeCount.put("跌倒", alerts.stream().filter(a -> "跌倒".equals(a.getAlertType())).count());
         typeCount.put("离家", alerts.stream().filter(a -> "离家".equals(a.getAlertType())).count());
-
         statistics.put("typeCount", typeCount);
 
         return statistics;
@@ -332,7 +310,7 @@ public class AlertServiceImpl implements AlertService {
         LocalDateTime endOfDay = LocalDateTime.of(LocalDate.now(), LocalTime.MAX);
 
         LambdaQueryWrapper<AlertRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(AlertRecord::getDeleted, 0); // 只查询未删除的记录
+        wrapper.eq(AlertRecord::getDeleted, 0);
         wrapper.between(AlertRecord::getAlertTime, startOfDay, endOfDay);
         wrapper.orderByDesc(AlertRecord::getAlertTime);
 

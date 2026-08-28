@@ -153,9 +153,14 @@ function appendUserMessage(text) {
 }
 
 function appendAssistantMessage(answer) {
+    const plan = (answer.plan || []).map((tool, index) => `
+        <span class="tool-chip" title="计划步骤 ${index + 1}">
+            ${index + 1}. ${escapeHtml(toolDisplayName(tool))}
+        </span>`).join('');
+
     const tools = (answer.tools || []).map(tool => `
         <span class="tool-chip ${escapeHtml(tool.status || '')}" title="${escapeHtml(tool.summary || '')}">
-            ${escapeHtml(tool.tool || 'tool')}
+            ${escapeHtml(toolDisplayName(tool.tool || 'tool'))}
         </span>`).join('');
 
     const sources = (answer.sources || []).map(source => `
@@ -164,15 +169,25 @@ function appendAssistantMessage(answer) {
     const suggestions = (answer.suggestions || []).map((suggestion, index) => `
         <button class="suggestion-btn" data-suggestion-index="${index}">${escapeHtml(suggestion)}</button>`).join('');
 
+    const runMeta = [
+        answer.traceId ? `Trace ${String(answer.traceId).slice(0, 8)}` : null,
+        Number.isFinite(Number(answer.elapsedMs)) ? `${Number(answer.elapsedMs)} ms` : null,
+        answer.modelEnhanced ? '模型润色' : '事实工具模式'
+    ].filter(Boolean).join(' · ');
+
     const node = document.createElement('div');
     node.className = 'message assistant-message';
     node.innerHTML = `
         <div class="avatar ai-avatar">AI</div>
         <div class="message-body">
-            <div class="message-meta">医护 AI 助手${answer.elderlyName ? ` · ${escapeHtml(answer.elderlyName)}` : ''}</div>
+            <div class="message-meta">
+                医护 AI 助手${answer.elderlyName ? ` · ${escapeHtml(answer.elderlyName)}` : ''}
+                ${runMeta ? `<span style="margin-left:8px;font-weight:400;color:#9299a8;">${escapeHtml(runMeta)}</span>` : ''}
+            </div>
             <div class="bubble">${escapeHtml(answer.answer || '')}</div>
             <div class="trace-block">
-                ${tools ? `<div class="trace-row"><span class="trace-label">工具</span>${tools}</div>` : ''}
+                ${plan ? `<div class="trace-row"><span class="trace-label">计划</span>${plan}</div>` : ''}
+                ${tools ? `<div class="trace-row"><span class="trace-label">执行</span>${tools}</div>` : ''}
                 ${sources ? `<div class="source-row"><span class="trace-label">来源</span>${sources}</div>` : ''}
             </div>
             ${answer.safetyNote ? `<div class="safety-strip">${escapeHtml(answer.safetyNote)}</div>` : ''}
@@ -188,6 +203,21 @@ function appendAssistantMessage(answer) {
 
     messageList.appendChild(node);
     scrollToBottom();
+}
+
+function toolDisplayName(tool) {
+    const names = {
+        patient_access: '权限校验',
+        patient_scope: '患者范围',
+        room_lookup: '房间查询',
+        patient_profile: '老人档案',
+        health_recent: '近期健康',
+        alerts_recent: '近期告警',
+        care_schedule: '照护安排',
+        medical_safety_guard: '医疗安全',
+        llm_polish: '语言润色'
+    };
+    return names[tool] || tool;
 }
 
 function appendErrorMessage(text) {
@@ -219,7 +249,7 @@ function appendTyping() {
     node.innerHTML = `
         <div class="avatar ai-avatar">AI</div>
         <div class="message-body">
-            <div class="message-meta">正在查询系统工具…</div>
+            <div class="message-meta">正在规划并查询系统工具…</div>
             <div class="bubble typing-bubble"><i></i><i></i><i></i></div>
         </div>`;
     messageList.appendChild(node);

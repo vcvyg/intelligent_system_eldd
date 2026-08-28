@@ -21,6 +21,7 @@ public class MedicalAiAnswerVO {
     private boolean modelEnhanced;
     private String safetyNote;
     private long elapsedMs;
+    private String planReason;
     private List<String> plan = new ArrayList<>();
     private List<ToolTrace> tools = new ArrayList<>();
     private List<String> sources = new ArrayList<>();

@@ -1,12 +1,12 @@
 package org.example.persion.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.persion.ai.agent.MedicalAiExecutionResult;
+import org.example.persion.ai.agent.MedicalAiExecutor;
 import org.example.persion.ai.agent.MedicalAiPlan;
 import org.example.persion.ai.agent.MedicalAiPlanner;
-import org.example.persion.ai.tool.MedicalAiTool;
+import org.example.persion.ai.agent.MedicalAiToolExecution;
 import org.example.persion.ai.tool.MedicalAiToolContext;
-import org.example.persion.ai.tool.MedicalAiToolRegistry;
-import org.example.persion.ai.tool.MedicalAiToolResult;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.entity.ElderlyInfo;
@@ -19,21 +19,19 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 医护 AI 助手：负责权限、会话、Planner 调度与 Tool 执行。
+ * 医护 AI 助手：负责权限、会话、Planner 调度与结果编排。
  *
- * <p>所有业务事实查询都由注册 Tool 负责，核心 Service 不直接访问健康、告警、服务或档案业务表。
- * 不依赖外部模型也能完整运行；不做诊断、处方和用药调整。</p>
+ * <p>Planner 决定只读业务 Tool，Executor 负责容错执行；核心 Service 不直接访问健康、告警、
+ * 服务或档案业务表。不依赖外部模型也能完整运行；不做诊断、处方和用药调整。</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -42,8 +40,8 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
     private static final Duration SESSION_TTL = Duration.ofHours(2);
 
     private final ElderlyInfoMapper elderlyInfoMapper;
-    private final MedicalAiToolRegistry medicalAiToolRegistry;
     private final MedicalAiPlanner medicalAiPlanner;
+    private final MedicalAiExecutor medicalAiExecutor;
 
     private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
 
@@ -65,7 +63,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     @Override
     public MedicalAiAnswerVO chat(Long medicalUserId, MedicalAiChatRequest request) {
-        long startedAt = System.nanoTime();
         requireMedicalUser(medicalUserId);
         if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
             throw new BusinessException(400, "问题不能为空");
@@ -97,17 +94,17 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (asksForMedicalDecision(question)) {
             result.setAnswer(buildSafetyRedirect(target));
             result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                    "medical_safety_guard", "blocked", "拦截诊断/处方/用药调整类请求"
+                    "medical_safety_guard", "blocked", "拦截诊断/处方/用药调整类请求", 0L
             ));
             result.setPlanReason("医疗安全规则优先于 Planner，未执行任何业务 Tool");
             result.setSuggestions(suggestionsFor(List.of(), target));
-            return finish(result, startedAt);
+            return result;
         }
 
         if (target == null) {
             result.setAnswer(buildNeedPatientAnswer(assigned));
             result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                    "patient_scope", "needs_context", "未解析到当前医护负责的老人"
+                    "patient_scope", "needs_context", "未解析到当前医护负责的老人", 0L
             ));
             result.setPlanReason("缺少可授权的老人上下文，Planner 暂不执行业务 Tool");
             result.setSources(List.of("当前医护负责老人列表"));
@@ -115,12 +112,12 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                     .limit(3)
                     .map(item -> "查看" + item.getName() + "的近期情况")
                     .toList());
-            return finish(result, startedAt);
+            return result;
         }
 
         assertAssigned(target.getId(), assigned);
         result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                "patient_access", "ok", "已校验当前医护与" + safeName(target) + "的负责关系"
+                "patient_access", "ok", "已校验当前医护与" + safeName(target) + "的负责关系", 0L
         ));
 
         MedicalAiPlan plan = medicalAiPlanner.plan(question);
@@ -130,19 +127,25 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (plan.toolNames().isEmpty()) {
             result.setAnswer(buildCapabilityAnswer(target));
             result.setSuggestions(suggestionsFor(plan.toolNames(), target));
-            return finish(result, startedAt);
+            return result;
         }
 
-        StringBuilder answer = new StringBuilder();
-        Set<String> sources = new LinkedHashSet<>();
-        for (String toolName : plan.toolNames()) {
-            appendRegisteredTool(toolName, target, question, answer, result, sources);
+        MedicalAiExecutionResult execution = medicalAiExecutor.execute(
+                plan,
+                new MedicalAiToolContext(target.getId(), safeName(target), question)
+        );
+        result.setAnswer(execution.answer());
+        result.setSources(execution.sources());
+        for (MedicalAiToolExecution tool : execution.executions()) {
+            result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
+                    tool.toolName(), tool.status(), tool.summary(), tool.elapsedMs()
+            ));
         }
-
-        result.setAnswer(answer.toString().trim());
-        result.setSources(new ArrayList<>(sources));
+        if (execution.partial()) {
+            result.setPlanReason(plan.reason() + "；部分 Tool 执行失败，已降级返回成功查询到的事实");
+        }
         result.setSuggestions(suggestionsFor(plan.toolNames(), target));
-        return finish(result, startedAt);
+        return result;
     }
 
     @Override
@@ -151,24 +154,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (sessionId != null && !sessionId.isBlank()) {
             sessions.remove(sessionKey(medicalUserId, sessionId.trim()));
         }
-    }
-
-    private void appendRegisteredTool(String toolName,
-                                      ElderlyInfo target,
-                                      String question,
-                                      StringBuilder answer,
-                                      MedicalAiAnswerVO result,
-                                      Set<String> sources) {
-        MedicalAiTool tool = medicalAiToolRegistry.require(toolName);
-        MedicalAiToolResult toolResult = tool.execute(new MedicalAiToolContext(
-                target.getId(), safeName(target), question
-        ));
-
-        section(answer, toolResult.sectionTitle(), toolResult.body());
-        result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                tool.name(), toolResult.status(), toolResult.summary()
-        ));
-        sources.addAll(toolResult.sources());
     }
 
     private ElderlyInfo resolveTargetElderly(Long requestedId,
@@ -266,11 +251,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         sessions.entrySet().removeIf(entry -> entry.getValue().lastAccess.isBefore(cutoff));
     }
 
-    private void section(StringBuilder answer, String title, String body) {
-        if (!answer.isEmpty()) answer.append("\n\n");
-        answer.append("【").append(title).append("】").append(body);
-    }
-
     private boolean containsAny(String text, String... keywords) {
         if (text == null) return false;
         for (String keyword : keywords) {
@@ -281,11 +261,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private String safeName(ElderlyInfo elderly) {
         return elderly.getName() == null || elderly.getName().isBlank() ? "该老人" : elderly.getName();
-    }
-
-    private MedicalAiAnswerVO finish(MedicalAiAnswerVO result, long startedAt) {
-        result.setElapsedMs((System.nanoTime() - startedAt) / 1_000_000L);
-        return result;
     }
 
     private static final class SessionContext {

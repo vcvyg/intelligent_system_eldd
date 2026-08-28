@@ -1,5 +1,6 @@
 package org.example.persion.service.impl;
 
+import org.example.persion.ai.tool.AlertQueryTool;
 import org.example.persion.ai.tool.HealthQueryTool;
 import org.example.persion.ai.tool.MedicalAiToolRegistry;
 import org.example.persion.common.exception.BusinessException;
@@ -56,7 +57,10 @@ class MedicalAiAssistantServiceImplTest {
     @BeforeEach
     void setUp() {
         MedicalAiToolRegistry toolRegistry = new MedicalAiToolRegistry(
-                List.of(new HealthQueryTool(healthDataMapper))
+                List.of(
+                        new HealthQueryTool(healthDataMapper),
+                        new AlertQueryTool(alertRecordMapper)
+                )
         );
         service = new MedicalAiAssistantServiceImpl(
                 elderlyInfoMapper,
@@ -76,7 +80,7 @@ class MedicalAiAssistantServiceImplTest {
     }
 
     @Test
-    void compositeQuestionRunsRegisteredHealthToolAndCombinesFacts() {
+    void compositeQuestionRunsRegisteredToolsAndCombinesFacts() {
         ElderlyInfoVO detail = new ElderlyInfoVO();
         detail.setId(ELDERLY_ID);
         detail.setName("王阿姨");
@@ -110,6 +114,7 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "health_recent"));
         assertTrue(hasTool(answer, "alerts_recent"));
         assertTrue(answer.getSources().contains("health_data / 近7天健康记录"));
+        assertTrue(answer.getSources().contains("alert_record / 告警记录"));
     }
 
     @Test

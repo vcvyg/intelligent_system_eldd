@@ -44,6 +44,11 @@ medical.ai.api-key=
 medical.ai.model=
 medical.ai.timeout-ms=5000
 
+# Reliable proactive-care event delivery. Execute sql/add_recommendation_center.sql first.
+medical.ai.care-outbox.enabled=true
+medical.ai.care-outbox.batch-size=25
+medical.ai.care-outbox.fixed-delay-ms=10000
+
 # Uploads
 file.upload.path=./uploads
 spring.servlet.multipart.max-file-size=50MB

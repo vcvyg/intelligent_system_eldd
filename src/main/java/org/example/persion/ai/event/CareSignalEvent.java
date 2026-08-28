@@ -16,4 +16,16 @@ public record CareSignalEvent(
     public static CareSignalEvent alertRaised(Long elderlyId, Long alertId, LocalDateTime occurredAt) {
         return new CareSignalEvent(elderlyId, "ALERT_RAISED", alertId, occurredAt);
     }
+
+    public static CareSignalEvent healthRecorded(Long elderlyId, Long healthRecordId, LocalDateTime occurredAt) {
+        return new CareSignalEvent(elderlyId, "HEALTH_RECORDED", healthRecordId, occurredAt);
+    }
+
+    public static CareSignalEvent serviceScheduled(Long elderlyId, Long serviceRecordId, LocalDateTime occurredAt) {
+        return new CareSignalEvent(elderlyId, "SERVICE_SCHEDULED", serviceRecordId, occurredAt);
+    }
+
+    public String eventKey() {
+        return signalType + ":" + elderlyId + ":" + (referenceId == null ? "none" : referenceId);
+    }
 }

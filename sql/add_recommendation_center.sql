@@ -72,6 +72,10 @@ BEGIN
         reference_id BIGINT NULL,
         status NVARCHAR(32) NOT NULL DEFAULT 'PENDING_REVIEW',
         trigger_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        reviewer_id BIGINT NULL,
+        reviewed_at DATETIME2 NULL,
+        decision_reason NVARCHAR(300) NULL,
+        delivered_at DATETIME2 NULL,
         create_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
         update_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
         deleted INT NOT NULL DEFAULT 0
@@ -81,6 +85,50 @@ BEGIN
     CREATE UNIQUE INDEX uk_recommend_trigger_reference
         ON dbo.recommendation_trigger(elderly_id, signal_type, reference_id)
         WHERE reference_id IS NOT NULL AND deleted = 0;
+END;
+GO
+
+/* Existing installations: evolve the review queue without requiring a destructive rebuild. */
+IF COL_LENGTH('dbo.recommendation_trigger', 'reviewer_id') IS NULL
+    ALTER TABLE dbo.recommendation_trigger ADD reviewer_id BIGINT NULL;
+GO
+IF COL_LENGTH('dbo.recommendation_trigger', 'reviewed_at') IS NULL
+    ALTER TABLE dbo.recommendation_trigger ADD reviewed_at DATETIME2 NULL;
+GO
+IF COL_LENGTH('dbo.recommendation_trigger', 'decision_reason') IS NULL
+    ALTER TABLE dbo.recommendation_trigger ADD decision_reason NVARCHAR(300) NULL;
+GO
+IF COL_LENGTH('dbo.recommendation_trigger', 'delivered_at') IS NULL
+    ALTER TABLE dbo.recommendation_trigger ADD delivered_at DATETIME2 NULL;
+GO
+
+/*
+ * Transactional Outbox: commits with the business write and is drained asynchronously.
+ * The payload contains only event identifiers, never health values or alert text.
+ */
+IF OBJECT_ID('dbo.care_signal_outbox', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.care_signal_outbox (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        event_key NVARCHAR(180) NOT NULL,
+        elderly_id BIGINT NOT NULL,
+        signal_type NVARCHAR(64) NOT NULL,
+        reference_id BIGINT NULL,
+        occurred_at DATETIME2 NOT NULL,
+        status NVARCHAR(32) NOT NULL DEFAULT 'PENDING',
+        retry_count INT NOT NULL DEFAULT 0,
+        next_retry_at DATETIME2 NULL,
+        last_error_type NVARCHAR(80) NULL,
+        processed_at DATETIME2 NULL,
+        create_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        update_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        deleted INT NOT NULL DEFAULT 0
+    );
+    CREATE UNIQUE INDEX uk_care_signal_outbox_event_key
+        ON dbo.care_signal_outbox(event_key)
+        WHERE deleted = 0;
+    CREATE INDEX idx_care_signal_outbox_delivery
+        ON dbo.care_signal_outbox(status, next_retry_at, create_time, id);
 END;
 GO
 

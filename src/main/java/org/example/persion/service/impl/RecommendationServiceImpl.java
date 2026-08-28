@@ -134,13 +134,19 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         String type = normalizeFeedback(dto.getFeedbackType());
-        RecommendationFeedback feedback = feedbackMapper.selectOne(
+        List<RecommendationFeedback> deliveryFeedbacks = feedbackMapper.selectList(
                 new LambdaQueryWrapper<RecommendationFeedback>()
                         .eq(RecommendationFeedback::getDeliveryId, delivery.getId())
                         .eq(RecommendationFeedback::getFamilyUserId, familyUserId)
                         .eq(RecommendationFeedback::getElderlyId, dto.getElderlyId())
-                        .last("LIMIT 1")
         );
+        RecommendationFeedback feedback = deliveryFeedbacks == null ? null : deliveryFeedbacks.stream()
+                .max(Comparator.comparing(
+                        RecommendationFeedback::getId,
+                        Comparator.nullsFirst(Long::compareTo)
+                ))
+                .orElse(null);
+
         boolean existingFeedback = feedback != null;
         if (!existingFeedback) {
             feedback = new RecommendationFeedback();

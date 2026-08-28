@@ -110,7 +110,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                 "patient_access", "ok", "已校验当前医护与" + safeName(target) + "的负责关系", 0L
         ));
 
-        MedicalAiPlan plan = medicalAiPlanner.plan(question);
+        MedicalAiPlan plan = medicalAiPlanner.plan(anonymizePlannerQuestion(question, target));
         result.setPlan(plan.toolNames());
         result.setPlanReason(plan.reason());
 
@@ -168,6 +168,13 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                     .orElse(null);
         }
         return null;
+    }
+
+    private String anonymizePlannerQuestion(String question, ElderlyInfo target) {
+        if (question == null || target == null || target.getName() == null || target.getName().isBlank()) {
+            return question;
+        }
+        return question.replace(target.getName(), "该老人");
     }
 
     private List<String> suggestionsFor(List<String> plannedTools, ElderlyInfo target) {

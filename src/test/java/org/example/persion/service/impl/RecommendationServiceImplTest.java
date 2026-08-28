@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -123,6 +124,42 @@ class RecommendationServiceImplTest {
         assertEquals(3, created);
         verify(deliveryMapper, times(3)).insert(any(RecommendationDelivery.class));
         verify(deliveryMapper, times(3)).selectCount(any());
+    }
+
+    @Test
+    void repeatedFeedbackForSameDeliveryUpdatesExistingSignalInsteadOfAccumulatingRows() {
+        when(familyRelationMapper.selectCount(any())).thenReturn(1L);
+
+        RecommendationDelivery delivery = new RecommendationDelivery();
+        delivery.setId(90L);
+        delivery.setElderlyId(ELDERLY_ID);
+        delivery.setFamilyUserId(FAMILY_ID);
+        delivery.setContentId(healthContent.getId());
+        delivery.setStatus("DELIVERED");
+        when(deliveryMapper.selectById(90L)).thenReturn(delivery);
+
+        RecommendationFeedback existing = new RecommendationFeedback();
+        existing.setId(91L);
+        existing.setElderlyId(ELDERLY_ID);
+        existing.setFamilyUserId(FAMILY_ID);
+        existing.setContentId(healthContent.getId());
+        existing.setDeliveryId(90L);
+        existing.setFeedbackType("CLICK");
+        when(feedbackMapper.selectList(any())).thenReturn(List.of(existing));
+
+        RecommendationFeedbackDTO dto = new RecommendationFeedbackDTO();
+        dto.setElderlyId(ELDERLY_ID);
+        dto.setDeliveryId(90L);
+        dto.setFeedbackType("USEFUL");
+
+        service.feedback(FAMILY_ID, dto);
+
+        assertEquals("USEFUL", existing.getFeedbackType());
+        assertEquals(1, existing.getWeight());
+        assertEquals("USEFUL", delivery.getStatus());
+        verify(feedbackMapper).updateById(existing);
+        verify(feedbackMapper, never()).insert(any(RecommendationFeedback.class));
+        verify(deliveryMapper).updateById(delivery);
     }
 
     @Test

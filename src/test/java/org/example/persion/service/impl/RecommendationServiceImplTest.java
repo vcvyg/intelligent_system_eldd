@@ -3,6 +3,7 @@ package org.example.persion.service.impl;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.RecommendationFeedbackDTO;
 import org.example.persion.entity.RecommendationContent;
+import org.example.persion.entity.RecommendationDelivery;
 import org.example.persion.entity.RecommendationFeedback;
 import org.example.persion.entity.User;
 import org.example.persion.repository.AlertRecordMapper;
@@ -118,12 +119,12 @@ class RecommendationServiceImplTest {
         family.setId(FAMILY_ID);
         when(familyRelationMapper.selectUsersByElderlyId(ELDERLY_ID)).thenReturn(List.of(family));
         when(deliveryMapper.selectCount(any())).thenReturn(0L);
-        when(deliveryMapper.insert(any())).thenReturn(1);
+        when(deliveryMapper.insert(any(RecommendationDelivery.class))).thenReturn(1);
 
         int created = service.deliver(ELDERLY_ID);
 
         assertEquals(3, created);
-        verify(deliveryMapper, times(3)).insert(any());
+        verify(deliveryMapper, times(3)).insert(any(RecommendationDelivery.class));
         verify(deliveryMapper, times(3)).selectCount(any());
     }
 

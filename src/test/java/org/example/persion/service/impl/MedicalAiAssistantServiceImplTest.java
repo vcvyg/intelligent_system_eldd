@@ -2,6 +2,7 @@ package org.example.persion.service.impl;
 
 import org.example.persion.ai.agent.MedicalAiExecutor;
 import org.example.persion.ai.agent.MedicalAiPlanner;
+import org.example.persion.ai.session.MedicalAiSessionStore;
 import org.example.persion.ai.tool.AlertQueryTool;
 import org.example.persion.ai.tool.CareQueryTool;
 import org.example.persion.ai.tool.HealthQueryTool;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -43,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -72,10 +75,12 @@ class MedicalAiAssistantServiceImplTest {
                         new RecommendationQueryTool(recommendationService)
                 )
         );
+        MedicalAiSessionStore sessionStore = new MedicalAiSessionStore(mock(StringRedisTemplate.class));
         service = new MedicalAiAssistantServiceImpl(
                 elderlyInfoMapper,
                 new MedicalAiPlanner(),
-                new MedicalAiExecutor(toolRegistry)
+                new MedicalAiExecutor(toolRegistry),
+                sessionStore
         );
 
         elderly = new ElderlyInfo();

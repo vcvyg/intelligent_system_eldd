@@ -30,7 +30,7 @@ jobs:
       - name: Run focused regression tests
         run: >-
           ./mvnw -q
-          -Dtest=FileSecurityControllerTest,MedicalAiPlannerTest,MedicalAiPlannerEvaluationTest,MedicalAiExecutorTest,MedicalAiSessionStoreTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,MedicalAiModelEnhancerTest,RecommendationServiceImplTest,RecommendationTriggerServiceImplTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
+          -Dtest=FileSecurityControllerTest,MedicalAiPlannerTest,MedicalAiPlannerEvaluationTest,OpenAiCompatibleMedicalAiPlanningModelTest,MedicalAiExecutorTest,MedicalAiSessionStoreTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,MedicalAiModelEnhancerTest,RecommendationServiceImplTest,RecommendationTriggerServiceImplTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
           test
 
       - name: Check interactive JavaScript syntax

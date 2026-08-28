@@ -1,6 +1,8 @@
 package org.example.persion.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.persion.ai.agent.MedicalAiPlan;
+import org.example.persion.ai.agent.MedicalAiPlanner;
 import org.example.persion.ai.tool.MedicalAiTool;
 import org.example.persion.ai.tool.MedicalAiToolContext;
 import org.example.persion.ai.tool.MedicalAiToolRegistry;
@@ -19,10 +21,8 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 医护 AI 助手：负责权限、会话、问题路由与 Tool 编排。
+ * 医护 AI 助手：负责权限、会话、Planner 调度与 Tool 执行。
  *
  * <p>所有业务事实查询都由注册 Tool 负责，核心 Service 不直接访问健康、告警、服务或档案业务表。
  * 不依赖外部模型也能完整运行；不做诊断、处方和用药调整。</p>
@@ -43,6 +43,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final MedicalAiToolRegistry medicalAiToolRegistry;
+    private final MedicalAiPlanner medicalAiPlanner;
 
     private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
 
@@ -64,6 +65,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     @Override
     public MedicalAiAnswerVO chat(Long medicalUserId, MedicalAiChatRequest request) {
+        long startedAt = System.nanoTime();
         requireMedicalUser(medicalUserId);
         if (request == null || request.getMessage() == null || request.getMessage().isBlank()) {
             throw new BusinessException(400, "问题不能为空");
@@ -80,6 +82,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         ElderlyInfo target = resolveTargetElderly(request.getElderlyId(), question, assigned, context);
 
         MedicalAiAnswerVO result = new MedicalAiAnswerVO();
+        result.setTraceId(UUID.randomUUID().toString());
         result.setSessionId(sessionId);
         result.setModelEnhanced(false);
         result.setSafetyNote("仅基于当前系统记录辅助查询，不替代医护判断；不提供诊断、处方或用药调整建议。");
@@ -96,8 +99,9 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
                     "medical_safety_guard", "blocked", "拦截诊断/处方/用药调整类请求"
             ));
-            result.setSuggestions(suggestionsFor(EnumSet.noneOf(Intent.class), target));
-            return result;
+            result.setPlanReason("医疗安全规则优先于 Planner，未执行任何业务 Tool");
+            result.setSuggestions(suggestionsFor(List.of(), target));
+            return finish(result, startedAt);
         }
 
         if (target == null) {
@@ -105,12 +109,13 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
                     "patient_scope", "needs_context", "未解析到当前医护负责的老人"
             ));
+            result.setPlanReason("缺少可授权的老人上下文，Planner 暂不执行业务 Tool");
             result.setSources(List.of("当前医护负责老人列表"));
             result.setSuggestions(assigned.stream()
                     .limit(3)
                     .map(item -> "查看" + item.getName() + "的近期情况")
                     .toList());
-            return result;
+            return finish(result, startedAt);
         }
 
         assertAssigned(target.getId(), assigned);
@@ -118,39 +123,26 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                 "patient_access", "ok", "已校验当前医护与" + safeName(target) + "的负责关系"
         ));
 
-        EnumSet<Intent> intents = route(question);
-        if (intents.isEmpty()) {
+        MedicalAiPlan plan = medicalAiPlanner.plan(question);
+        result.setPlan(plan.toolNames());
+        result.setPlanReason(plan.reason());
+
+        if (plan.toolNames().isEmpty()) {
             result.setAnswer(buildCapabilityAnswer(target));
-            result.setSuggestions(suggestionsFor(intents, target));
-            return result;
+            result.setSuggestions(suggestionsFor(plan.toolNames(), target));
+            return finish(result, startedAt);
         }
 
         StringBuilder answer = new StringBuilder();
         Set<String> sources = new LinkedHashSet<>();
-
-        if (intents.contains(Intent.ROOM)) {
-            appendRegisteredTool("room_lookup", target, question, answer, result, sources);
-        }
-        if (intents.contains(Intent.PROFILE)) {
-            appendRegisteredTool("patient_profile", target, question, answer, result, sources);
-        }
-        if (intents.contains(Intent.HEALTH)) {
-            appendRegisteredTool("health_recent", target, question, answer, result, sources);
-        }
-        if (intents.contains(Intent.ALERT)) {
-            appendRegisteredTool("alerts_recent", target, question, answer, result, sources);
-        }
-        if (intents.contains(Intent.CARE)) {
-            appendRegisteredTool("care_schedule", target, question, answer, result, sources);
-        }
-        if (intents.contains(Intent.RECOMMENDATION)) {
-            appendRegisteredTool("recommendation_preview", target, question, answer, result, sources);
+        for (String toolName : plan.toolNames()) {
+            appendRegisteredTool(toolName, target, question, answer, result, sources);
         }
 
         result.setAnswer(answer.toString().trim());
         result.setSources(new ArrayList<>(sources));
-        result.setSuggestions(suggestionsFor(intents, target));
-        return result;
+        result.setSuggestions(suggestionsFor(plan.toolNames(), target));
+        return finish(result, startedAt);
     }
 
     @Override
@@ -203,35 +195,16 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         return null;
     }
 
-    private EnumSet<Intent> route(String question) {
-        String q = question.toLowerCase(Locale.ROOT);
-        EnumSet<Intent> intents = EnumSet.noneOf(Intent.class);
-
-        if (containsAny(q, "房间", "房号", "几号房", "住哪", "住在哪里", "room")) intents.add(Intent.ROOM);
-        if (containsAny(q, "档案", "年龄", "性别", "病史", "既往史", "基础病", "过敏", "病情", "profile")) intents.add(Intent.PROFILE);
-        if (containsAny(q, "健康", "心率", "血压", "血糖", "体温", "睡眠", "步数", "指标", "身体", "health")) intents.add(Intent.HEALTH);
-        if (containsAny(q, "告警", "预警", "报警", "异常提醒", "alarm", "alert")) intents.add(Intent.ALERT);
-        if (containsAny(q, "护理计划", "照护计划", "护理安排", "照护安排", "近期安排", "服务安排", "巡查", "巡诊", "care", "plan")) intents.add(Intent.CARE);
-        if (containsAny(q, "推荐", "主动关怀", "适合推", "推什么", "关怀内容", "recommend")) intents.add(Intent.RECOMMENDATION);
-
-        if (containsAny(q, "最近怎么样", "近期情况", "整体情况", "概况", "综合看一下")) {
-            intents.add(Intent.HEALTH);
-            intents.add(Intent.ALERT);
-            intents.add(Intent.CARE);
-        }
-        return intents;
-    }
-
-    private List<String> suggestionsFor(Set<Intent> intents, ElderlyInfo target) {
+    private List<String> suggestionsFor(List<String> plannedTools, ElderlyInfo target) {
         if (target == null) return List.of();
         String name = safeName(target);
         LinkedHashSet<String> suggestions = new LinkedHashSet<>();
 
-        if (!intents.contains(Intent.HEALTH)) suggestions.add(name + "最近7天健康指标怎么样？");
-        if (!intents.contains(Intent.ALERT)) suggestions.add(name + "最近有未处理告警吗？");
-        if (!intents.contains(Intent.CARE)) suggestions.add(name + "近期有什么照护安排？");
-        if (!intents.contains(Intent.RECOMMENDATION)) suggestions.add("现在适合给" + name + "推荐什么关怀内容？");
-        if (!intents.contains(Intent.ROOM)) suggestions.add(name + "住哪个房间？");
+        if (!plannedTools.contains("health_recent")) suggestions.add(name + "最近7天健康指标怎么样？");
+        if (!plannedTools.contains("alerts_recent")) suggestions.add(name + "最近有未处理告警吗？");
+        if (!plannedTools.contains("care_schedule")) suggestions.add(name + "近期有什么照护安排？");
+        if (!plannedTools.contains("recommendation_preview")) suggestions.add("现在适合给" + name + "推荐什么关怀内容？");
+        if (!plannedTools.contains("room_lookup")) suggestions.add(name + "住哪个房间？");
         suggestions.add("把她最近的健康、告警和安排一起汇总一下");
         return suggestions.stream().limit(4).toList();
     }
@@ -310,8 +283,9 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         return elderly.getName() == null || elderly.getName().isBlank() ? "该老人" : elderly.getName();
     }
 
-    private enum Intent {
-        ROOM, PROFILE, HEALTH, ALERT, CARE, RECOMMENDATION
+    private MedicalAiAnswerVO finish(MedicalAiAnswerVO result, long startedAt) {
+        result.setElapsedMs((System.nanoTime() - startedAt) / 1_000_000L);
+        return result;
     }
 
     private static final class SessionContext {

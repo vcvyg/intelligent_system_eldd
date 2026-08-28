@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.example.persion.common.Result;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.service.MedicalAiAssistantService;
+import org.example.persion.service.impl.MedicalAiModelEnhancer;
 import org.example.persion.vo.MedicalAiAnswerVO;
 import org.example.persion.vo.MedicalAiPatientVO;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +27,7 @@ import java.util.List;
 public class MedicalAiAssistantController {
 
     private final MedicalAiAssistantService medicalAiAssistantService;
+    private final MedicalAiModelEnhancer medicalAiModelEnhancer;
 
     @GetMapping("/patients")
     public Result<List<MedicalAiPatientVO>> patients(@AuthenticationPrincipal Long medicalUserId) {
@@ -35,7 +37,23 @@ public class MedicalAiAssistantController {
     @PostMapping("/chat")
     public Result<MedicalAiAnswerVO> chat(@AuthenticationPrincipal Long medicalUserId,
                                           @Valid @RequestBody MedicalAiChatRequest request) {
-        return Result.success(medicalAiAssistantService.chat(medicalUserId, request));
+        MedicalAiAnswerVO answer = medicalAiAssistantService.chat(medicalUserId, request);
+
+        boolean safeToPolish = answer.getElderlyId() != null
+                && answer.getSources() != null
+                && !answer.getSources().isEmpty()
+                && answer.getTools().stream().noneMatch(tool -> "blocked".equals(tool.getStatus()));
+        if (safeToPolish) {
+            medicalAiModelEnhancer.enhance(request.getMessage(), answer.getAnswer(), answer.getSources())
+                    .ifPresent(enhanced -> {
+                        answer.setAnswer(enhanced);
+                        answer.setModelEnhanced(true);
+                        answer.getTools().add(new MedicalAiAnswerVO.ToolTrace(
+                                "llm_polish", "ok", "仅基于已查询系统事实进行语言组织"
+                        ));
+                    });
+        }
+        return Result.success(answer);
     }
 
     @DeleteMapping("/sessions/{sessionId}")

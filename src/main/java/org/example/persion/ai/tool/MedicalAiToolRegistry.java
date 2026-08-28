@@ -7,8 +7,6 @@ import java.util.List;
 
 /**
  * 医护 AI Tool 注册中心。
- *
- * <p>当前先提供扩展骨架，后续 Health/Alert/Care/Recommendation Tool 可以直接注册。</p>
  */
 @Component
 public class MedicalAiToolRegistry {
@@ -27,5 +25,12 @@ public class MedicalAiToolRegistry {
         return tools.stream()
                 .filter(tool -> tool.supports(question))
                 .toList();
+    }
+
+    public MedicalAiTool require(String name) {
+        return tools.stream()
+                .filter(tool -> tool.name().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Medical AI tool not registered: " + name));
     }
 }

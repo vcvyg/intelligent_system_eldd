@@ -2,6 +2,7 @@ package org.example.persion.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.example.persion.ai.event.CareSignalEvent;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalPaymentRecordRequestDTO;
 import org.example.persion.dto.MedicalServiceRecordRequestDTO;
@@ -28,6 +29,7 @@ import org.example.persion.vo.FamilyServiceRecordVO;
 import org.example.persion.vo.MedicalFamilyServiceSummaryVO;
 import org.example.persion.vo.ServiceStatusHistoryVO;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,8 +39,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -52,6 +54,7 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final ElderlyFamilyRelationMapper elderlyFamilyRelationMapper;
     private final UserMapper userMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -74,6 +77,7 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
 
         familyServiceRecordMapper.insert(record);
         recordStatusHistory(record.getId(), null, record.getStatus(), "创建记录", medicalUser);
+        publishServiceScheduledIfNeeded(record, null, record.getStatus());
         return toServiceRecordVO(record, elderlyInfo, getStatusTimeline(record.getId()));
     }
 
@@ -99,6 +103,7 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
 
         User operator = getCurrentUser();
         recordStatusHistory(recordId, oldStatus, request.getStatus(), request.getRemark(), operator);
+        publishServiceScheduledIfNeeded(record, oldStatus, request.getStatus());
 
         ElderlyInfo elderlyInfo = elderlyInfoMapper.selectById(record.getElderlyId());
         return toServiceRecordVO(record, elderlyInfo, getStatusTimeline(recordId));
@@ -315,6 +320,20 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
         serviceStatusHistoryMapper.insert(history);
     }
 
+    private void publishServiceScheduledIfNeeded(FamilyServiceRecord record,
+                                                 ServiceProgressStatus oldStatus,
+                                                 ServiceProgressStatus newStatus) {
+        boolean scheduledNow = newStatus == ServiceProgressStatus.PENDING || newStatus == ServiceProgressStatus.PROCESSING;
+        boolean wasScheduled = oldStatus == ServiceProgressStatus.PENDING || oldStatus == ServiceProgressStatus.PROCESSING;
+        if (!scheduledNow || wasScheduled || record.getElderlyId() == null) return;
+
+        eventPublisher.publishEvent(CareSignalEvent.serviceScheduled(
+                record.getElderlyId(),
+                record.getId(),
+                LocalDateTime.now()
+        ));
+    }
+
     private Map<Long, List<ServiceStatusHistoryVO>> loadStatusTimeline(List<FamilyServiceRecord> records) {
         if (records == null || records.isEmpty()) {
             return Map.of();
@@ -381,4 +400,3 @@ public class MedicalFamilyServicesServiceImpl implements MedicalFamilyServicesSe
         return vo;
     }
 }
-

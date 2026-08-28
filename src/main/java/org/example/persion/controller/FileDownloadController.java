@@ -1,14 +1,17 @@
 package org.example.persion.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.io.File;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -17,125 +20,108 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 文件下载控制器 - 完全开放的文件访问，无需任何认证
+ * Serves files that were created under the configured upload root.
+ * Public download is retained for the current browser chat implementation, so
+ * path confinement is enforced here rather than relying on caller identity.
  */
+@Slf4j
 @RestController
 public class FileDownloadController {
 
-    @Value("${file.upload.path:uploads}")
+    @Value("${file.upload.path:./uploads}")
     private String uploadPath;
 
-    /**
-     * 下载文件 - 完全开放，无需任何认证
-     * 路径格式: /download?path=/uploads/file/2024-01-01/filename.ext
-     */
     @GetMapping("/download")
     public ResponseEntity<Resource> downloadFile(@RequestParam("path") String filePath) {
         try {
-            System.out.println("文件下载请求 - 路径: " + filePath);
-            
-            // 安全检查：确保路径在uploads目录下
-            if (!filePath.startsWith("/uploads/")) {
-                System.err.println("非法文件路径: " + filePath);
+            Path actualPath = resolveUploadWebPath(filePath);
+            if (actualPath == null) {
                 return ResponseEntity.badRequest().build();
             }
-            
-            // 移除开头的斜杠，构建实际文件路径
-            String relativePath = filePath.substring(1); // 移除开头的 "/"
-            Path actualPath = Paths.get(uploadPath).resolve(relativePath.substring("uploads/".length()));
-            
-            System.out.println("实际文件路径: " + actualPath.toAbsolutePath());
-            
-            File file = actualPath.toFile();
-            if (!file.exists() || !file.isFile()) {
-                System.err.println("文件不存在: " + actualPath.toAbsolutePath());
+            if (!Files.isRegularFile(actualPath)) {
                 return ResponseEntity.notFound().build();
             }
-            
-            // 创建资源
-            Resource resource = new FileSystemResource(file);
-            
-            // 获取文件名和MIME类型
-            String filename = file.getName();
-            String contentType = Files.probeContentType(actualPath);
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
-            
-            System.out.println("下载文件: " + filename + ", 类型: " + contentType + ", 大小: " + file.length());
-            
-            // 设置响应头
+
+            Resource resource = new FileSystemResource(actualPath);
+            String filename = actualPath.getFileName().toString();
+            String contentType = safeContentType(actualPath);
+
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, 
-                           "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8))
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET")
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "*")
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8))
+                    .header("X-Content-Type-Options", "nosniff")
                     .body(resource);
-                    
-        } catch (IOException e) {
-            System.err.println("文件下载失败: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+        } catch (IOException exception) {
+            log.warn("Attachment download failed: {}", exception.getClass().getSimpleName());
+            return ResponseEntity.notFound().build();
         }
     }
-    
-    /**
-     * 直接通过路径访问文件 - 完全开放访问
-     * 路径格式: /file-access/uploads/file/2024-01-01/filename.ext
-     */
+
     @GetMapping("/file-access/uploads/**")
-    public ResponseEntity<Resource> serveFile(@RequestParam(value = "download", defaultValue = "false") boolean download) {
+    public ResponseEntity<Resource> serveFile(
+            @RequestParam(value = "download", defaultValue = "false") boolean download,
+            HttpServletRequest request) {
         try {
-            // 从请求URI中提取文件路径
-            String requestURI = ((jakarta.servlet.http.HttpServletRequest) 
-                org.springframework.web.context.request.RequestContextHolder
-                    .currentRequestAttributes()
-                    .resolveReference(org.springframework.web.context.request.RequestAttributes.REFERENCE_REQUEST))
-                    .getRequestURI();
-            
-            System.out.println("文件访问请求 - URI: " + requestURI);
-            
-            // 提取uploads后的路径
-            String uploadsPath = requestURI.substring(requestURI.indexOf("/uploads/") + "/uploads/".length());
-            Path actualPath = Paths.get(uploadPath, uploadsPath);
-            
-            System.out.println("实际文件路径: " + actualPath.toAbsolutePath());
-            
-            File file = actualPath.toFile();
-            if (!file.exists() || !file.isFile()) {
-                System.err.println("文件不存在: " + actualPath.toAbsolutePath());
+            String requestUri = request.getRequestURI();
+            int index = requestUri.indexOf("/uploads/");
+            if (index < 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            Path actualPath = resolveUploadWebPath(requestUri.substring(index));
+            if (actualPath == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (!Files.isRegularFile(actualPath)) {
                 return ResponseEntity.notFound().build();
             }
-            
-            Resource resource = new FileSystemResource(file);
-            String filename = file.getName();
-            String contentType = Files.probeContentType(actualPath);
-            if (contentType == null) {
-                contentType = "application/octet-stream";
-            }
-            
-            System.out.println("访问文件: " + filename + ", 类型: " + contentType);
-            
+
+            String contentType = safeContentType(actualPath);
             ResponseEntity.BodyBuilder builder = ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, "GET")
-                    .header(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, "*");
-            
-            // 如果是下载请求，添加下载头
+                    .header("X-Content-Type-Options", "nosniff");
+
             if (download) {
-                builder.header(HttpHeaders.CONTENT_DISPOSITION, 
-                              "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
+                String filename = actualPath.getFileName().toString();
+                builder.header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + URLEncoder.encode(filename, StandardCharsets.UTF_8));
             }
-            
-            return builder.body(resource);
-            
-        } catch (Exception e) {
-            System.err.println("文件访问失败: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            return builder.body(new FileSystemResource(actualPath));
+        } catch (IOException exception) {
+            log.warn("Attachment access failed: {}", exception.getClass().getSimpleName());
+            return ResponseEntity.notFound().build();
         }
+    }
+
+    private Path resolveUploadWebPath(String webPath) throws IOException {
+        if (webPath == null || !webPath.startsWith("/uploads/")) {
+            return null;
+        }
+
+        String relative = webPath.substring("/uploads/".length());
+        if (relative.isBlank() || relative.indexOf('\0') >= 0) {
+            return null;
+        }
+
+        Path root = Paths.get(uploadPath).toAbsolutePath().normalize();
+        Path candidate = root.resolve(relative).normalize();
+        if (!candidate.startsWith(root)) {
+            return null;
+        }
+        if (!Files.exists(candidate)) {
+            return candidate;
+        }
+
+        // Resolve symlinks only after the lexical confinement check, then enforce
+        // confinement again against the real upload root.
+        Path realRoot = Files.exists(root) ? root.toRealPath() : root;
+        Path realCandidate = candidate.toRealPath();
+        return realCandidate.startsWith(realRoot) ? realCandidate : null;
+    }
+
+    private String safeContentType(Path path) throws IOException {
+        String contentType = Files.probeContentType(path);
+        return contentType == null ? "application/octet-stream" : contentType;
     }
 }

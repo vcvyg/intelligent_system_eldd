@@ -158,10 +158,14 @@ function appendAssistantMessage(answer) {
             ${index + 1}. ${escapeHtml(toolDisplayName(tool))}
         </span>`).join('');
 
-    const tools = (answer.tools || []).map(tool => `
-        <span class="tool-chip ${escapeHtml(tool.status || '')}" title="${escapeHtml(tool.summary || '')}">
-            ${escapeHtml(toolDisplayName(tool.tool || 'tool'))}
-        </span>`).join('');
+    const tools = (answer.tools || []).map(tool => {
+        const latency = Number.isFinite(Number(tool.elapsedMs)) ? ` · ${Number(tool.elapsedMs)} ms` : '';
+        const title = `${tool.summary || ''}${latency}`;
+        return `
+        <span class="tool-chip ${escapeHtml(tool.status || '')}" title="${escapeHtml(title)}">
+            ${escapeHtml(toolDisplayName(tool.tool || 'tool'))}${latency ? `<small>${escapeHtml(latency)}</small>` : ''}
+        </span>`;
+    }).join('');
 
     const sources = (answer.sources || []).map(source => `
         <span class="source-chip">${escapeHtml(source)}</span>`).join('');
@@ -169,9 +173,11 @@ function appendAssistantMessage(answer) {
     const suggestions = (answer.suggestions || []).map((suggestion, index) => `
         <button class="suggestion-btn" data-suggestion-index="${index}">${escapeHtml(suggestion)}</button>`).join('');
 
+    const hasFailedTool = (answer.tools || []).some(tool => tool.status === 'failed');
     const runMeta = [
         answer.traceId ? `Trace ${String(answer.traceId).slice(0, 8)}` : null,
         Number.isFinite(Number(answer.elapsedMs)) ? `${Number(answer.elapsedMs)} ms` : null,
+        hasFailedTool ? '部分结果' : null,
         answer.modelEnhanced ? '模型润色' : '事实工具模式'
     ].filter(Boolean).join(' · ');
 
@@ -186,10 +192,12 @@ function appendAssistantMessage(answer) {
             </div>
             <div class="bubble">${escapeHtml(answer.answer || '')}</div>
             <div class="trace-block">
+                ${answer.planReason ? `<div class="trace-row"><span class="trace-label">规划</span><span class="source-chip">${escapeHtml(answer.planReason)}</span></div>` : ''}
                 ${plan ? `<div class="trace-row"><span class="trace-label">计划</span>${plan}</div>` : ''}
                 ${tools ? `<div class="trace-row"><span class="trace-label">执行</span>${tools}</div>` : ''}
                 ${sources ? `<div class="source-row"><span class="trace-label">来源</span>${sources}</div>` : ''}
             </div>
+            ${hasFailedTool ? '<div class="safety-strip">部分业务数据源暂时不可用，本轮仅展示成功查询到的系统事实。</div>' : ''}
             ${answer.safetyNote ? `<div class="safety-strip">${escapeHtml(answer.safetyNote)}</div>` : ''}
             ${suggestions ? `<div class="suggestion-row">${suggestions}</div>` : ''}
         </div>`;
@@ -214,6 +222,7 @@ function toolDisplayName(tool) {
         health_recent: '近期健康',
         alerts_recent: '近期告警',
         care_schedule: '照护安排',
+        recommendation_preview: '关怀推荐',
         medical_safety_guard: '医疗安全',
         llm_polish: '语言润色'
     };

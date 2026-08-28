@@ -10,7 +10,7 @@ on:
       - 'src/main/resources/static/medical-ai-assistant.html'
       - 'src/main/resources/static/css/medical-ai-assistant.css'
       - 'src/main/resources/static/js/medical-ai-assistant.js'
-      - 'src/test/java/org/example/persion/service/impl/MedicalAiAssistantServiceImplTest.java'
+      - 'src/test/java/org/example/persion/**/MedicalAi*'
       - '.github/workflows/medical-ai-assistant-ci.yml'
   pull_request:
     paths:
@@ -19,7 +19,7 @@ on:
       - 'src/main/resources/static/medical-ai-assistant.html'
       - 'src/main/resources/static/css/medical-ai-assistant.css'
       - 'src/main/resources/static/js/medical-ai-assistant.js'
-      - 'src/test/java/org/example/persion/service/impl/MedicalAiAssistantServiceImplTest.java'
+      - 'src/test/java/org/example/persion/**/MedicalAi*'
   workflow_dispatch:
 
 jobs:
@@ -27,8 +27,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '21'
@@ -36,6 +36,6 @@ jobs:
       - name: Run focused Java tests
         run: |
           chmod +x mvnw
-          ./mvnw -q -Dtest=MedicalAiAssistantServiceImplTest test
+          ./mvnw -q -Dtest=MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest test
       - name: Check assistant JavaScript syntax
         run: node --check src/main/resources/static/js/medical-ai-assistant.js

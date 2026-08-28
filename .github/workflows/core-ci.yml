@@ -30,7 +30,7 @@ jobs:
       - name: Run focused regression tests
         run: >-
           ./mvnw -q
-          -Dtest=FileSecurityControllerTest,MedicalAiPlannerTest,MedicalAiPlannerEvaluationTest,OpenAiCompatibleMedicalAiPlanningModelTest,MedicalAiExecutorTest,MedicalAiSessionStoreTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,MedicalAiModelEnhancerTest,RecommendationServiceImplTest,RecommendationTriggerServiceImplTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
+          -Dtest=FileSecurityControllerTest,MedicalAiPlannerTest,MedicalAiPlannerEvaluationTest,MedicalAiEvaluationReportTest,OpenAiCompatibleMedicalAiPlanningModelTest,MedicalAiExecutorTest,MedicalAiSessionStoreTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,MedicalAiModelEnhancerTest,CareSignalOutboxServiceTest,MedicalRoundServiceImplTest,MedicalFamilyServicesServiceImplTest,RecommendationServiceImplTest,RecommendationTriggerServiceImplTest,AlertServiceImplTest,FamilyChatControllerTest,MedicalChatControllerTest
           test
 
       - name: Check interactive JavaScript syntax
@@ -38,3 +38,13 @@ jobs:
           node --check src/main/resources/static/js/medical-ai-assistant.js
           node --check src/main/resources/static/js/admin-recommendations.js
           node --check src/main/resources/static/js/family-recommendations.js
+
+      - name: Upload Agent evaluation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: medical-ai-evaluation-report
+          path: |
+            target/medical-ai-evaluation-report.json
+            target/medical-ai-evaluation-report.md
+          if-no-files-found: warn

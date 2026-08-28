@@ -6,6 +6,7 @@ import org.example.persion.ai.agent.MedicalAiExecutor;
 import org.example.persion.ai.agent.MedicalAiPlan;
 import org.example.persion.ai.agent.MedicalAiPlanner;
 import org.example.persion.ai.agent.MedicalAiToolExecution;
+import org.example.persion.ai.session.MedicalAiSessionStore;
 import org.example.persion.ai.tool.MedicalAiToolContext;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
@@ -17,14 +18,10 @@ import org.example.persion.vo.MedicalAiAnswerVO;
 import org.example.persion.vo.MedicalAiPatientVO;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -37,13 +34,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService {
 
-    private static final Duration SESSION_TTL = Duration.ofHours(2);
-
     private final ElderlyInfoMapper elderlyInfoMapper;
     private final MedicalAiPlanner medicalAiPlanner;
     private final MedicalAiExecutor medicalAiExecutor;
-
-    private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
+    private final MedicalAiSessionStore sessionStore;
 
     @Override
     public List<MedicalAiPatientVO> listAssignedPatients(Long medicalUserId) {
@@ -68,15 +62,12 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             throw new BusinessException(400, "问题不能为空");
         }
 
-        cleanupExpiredSessions();
         String sessionId = normalizeSessionId(request.getSessionId());
-        String sessionKey = sessionKey(medicalUserId, sessionId);
-        SessionContext context = sessions.computeIfAbsent(sessionKey, ignored -> new SessionContext());
-        context.touch();
+        Long rememberedElderlyId = sessionStore.currentElderlyId(medicalUserId, sessionId).orElse(null);
 
         String question = request.getMessage().trim();
         List<ElderlyInfo> assigned = assignedPatients(medicalUserId);
-        ElderlyInfo target = resolveTargetElderly(request.getElderlyId(), question, assigned, context);
+        ElderlyInfo target = resolveTargetElderly(request.getElderlyId(), question, assigned, rememberedElderlyId);
 
         MedicalAiAnswerVO result = new MedicalAiAnswerVO();
         result.setTraceId(UUID.randomUUID().toString());
@@ -85,8 +76,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         result.setSafetyNote("仅基于当前系统记录辅助查询，不替代医护判断；不提供诊断、处方或用药调整建议。");
 
         if (target != null) {
-            context.currentElderlyId = target.getId();
-            context.currentElderlyName = target.getName();
+            sessionStore.remember(medicalUserId, sessionId, target.getId());
             result.setElderlyId(target.getId());
             result.setElderlyName(target.getName());
         }
@@ -152,14 +142,14 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
     public void resetSession(Long medicalUserId, String sessionId) {
         requireMedicalUser(medicalUserId);
         if (sessionId != null && !sessionId.isBlank()) {
-            sessions.remove(sessionKey(medicalUserId, sessionId.trim()));
+            sessionStore.clear(medicalUserId, sessionId.trim());
         }
     }
 
     private ElderlyInfo resolveTargetElderly(Long requestedId,
                                              String question,
                                              List<ElderlyInfo> assigned,
-                                             SessionContext context) {
+                                             Long rememberedElderlyId) {
         if (requestedId != null) {
             assertAssigned(requestedId, assigned);
             return assigned.stream().filter(item -> requestedId.equals(item.getId())).findFirst().orElseThrow();
@@ -171,9 +161,9 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             }
         }
 
-        if (context.currentElderlyId != null) {
+        if (rememberedElderlyId != null) {
             return assigned.stream()
-                    .filter(item -> context.currentElderlyId.equals(item.getId()))
+                    .filter(item -> rememberedElderlyId.equals(item.getId()))
                     .findFirst()
                     .orElse(null);
         }
@@ -242,15 +232,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         return normalized;
     }
 
-    private String sessionKey(Long userId, String sessionId) {
-        return userId + ":" + sessionId;
-    }
-
-    private void cleanupExpiredSessions() {
-        LocalDateTime cutoff = LocalDateTime.now().minus(SESSION_TTL);
-        sessions.entrySet().removeIf(entry -> entry.getValue().lastAccess.isBefore(cutoff));
-    }
-
     private boolean containsAny(String text, String... keywords) {
         if (text == null) return false;
         for (String keyword : keywords) {
@@ -261,15 +242,5 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private String safeName(ElderlyInfo elderly) {
         return elderly.getName() == null || elderly.getName().isBlank() ? "该老人" : elderly.getName();
-    }
-
-    private static final class SessionContext {
-        private Long currentElderlyId;
-        private String currentElderlyName;
-        private LocalDateTime lastAccess = LocalDateTime.now();
-
-        private void touch() {
-            lastAccess = LocalDateTime.now();
-        }
     }
 }

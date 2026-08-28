@@ -1,6 +1,5 @@
 package org.example.persion.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.example.persion.ai.tool.MedicalAiTool;
 import org.example.persion.ai.tool.MedicalAiToolContext;
@@ -9,26 +8,15 @@ import org.example.persion.ai.tool.MedicalAiToolResult;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.entity.ElderlyInfo;
-import org.example.persion.entity.FamilyServiceRecord;
-import org.example.persion.entity.HealthData;
-import org.example.persion.enums.ServiceProgressStatus;
-import org.example.persion.repository.AlertRecordMapper;
 import org.example.persion.repository.ElderlyInfoMapper;
-import org.example.persion.repository.FamilyServiceRecordMapper;
-import org.example.persion.repository.HealthDataMapper;
 import org.example.persion.service.MedicalAiAssistantService;
-import org.example.persion.vo.AlertRecordVO;
 import org.example.persion.vo.ElderlyInfoVO;
 import org.example.persion.vo.MedicalAiAnswerVO;
 import org.example.persion.vo.MedicalAiPatientVO;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -42,22 +30,18 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 医护 AI 助手：先规划需要查询的系统工具，再基于工具事实生成回答。
+ * 医护 AI 助手：负责权限、会话、问题路由与 Tool 编排。
  *
- * <p>第一版故意保持“事实优先”：不依赖外部模型也能完整运行；不做诊断、处方和用药调整。
- * 会话只保存当前老人上下文，不保存完整医疗回答，降低无必要的敏感信息驻留。</p>
+ * <p>健康、告警、照护等业务查询由注册 Tool 负责，核心 Service 不直接访问对应业务表。
+ * 不依赖外部模型也能完整运行；不做诊断、处方和用药调整。</p>
  */
 @Service
 @RequiredArgsConstructor
 public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService {
 
     private static final Duration SESSION_TTL = Duration.ofHours(2);
-    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
     private final ElderlyInfoMapper elderlyInfoMapper;
-    private final HealthDataMapper healthDataMapper;
-    private final AlertRecordMapper alertRecordMapper;
-    private final FamilyServiceRecordMapper familyServiceRecordMapper;
     private final MedicalAiToolRegistry medicalAiToolRegistry;
 
     private final Map<String, SessionContext> sessions = new ConcurrentHashMap<>();
@@ -157,7 +141,7 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
             appendRegisteredTool("alerts_recent", target, question, answer, result, sources);
         }
         if (intents.contains(Intent.CARE)) {
-            appendCarePlan(target, answer, result, sources);
+            appendRegisteredTool("care_schedule", target, question, answer, result, sources);
         }
 
         result.setAnswer(answer.toString().trim());
@@ -229,57 +213,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                 tool.name(), toolResult.status(), toolResult.summary()
         ));
         sources.addAll(toolResult.sources());
-    }
-
-    private void appendCarePlan(ElderlyInfo target,
-                                StringBuilder answer,
-                                MedicalAiAnswerVO result,
-                                Set<String> sources) {
-        LocalDateTime now = LocalDateTime.now();
-        List<HealthData> recentRoundLike = healthDataMapper.findByDateTimeRange(now.minusDays(3), now, target.getId());
-        recentRoundLike = recentRoundLike == null ? List.of() : recentRoundLike;
-
-        List<FamilyServiceRecord> services = familyServiceRecordMapper.selectList(
-                new LambdaQueryWrapper<FamilyServiceRecord>()
-                        .eq(FamilyServiceRecord::getElderlyId, target.getId())
-                        .ge(FamilyServiceRecord::getServiceDate, LocalDate.now().minusDays(1))
-                        .in(FamilyServiceRecord::getStatus, ServiceProgressStatus.PENDING, ServiceProgressStatus.PROCESSING)
-                        .orderByAsc(FamilyServiceRecord::getServiceDate)
-                        .orderByAsc(FamilyServiceRecord::getServiceTime)
-        );
-        services = services == null ? List.of() : services;
-
-        StringBuilder text = new StringBuilder("项目当前没有独立的“护理计划”表，因此这里按“近期健康巡查记录 + 待执行服务安排”汇总。 ");
-        if (recentRoundLike.isEmpty()) {
-            text.append("近3天没有健康巡查/测量记录。 ");
-        } else {
-            HealthData latest = recentRoundLike.stream()
-                    .filter(item -> item.getMeasureTime() != null)
-                    .max(Comparator.comparing(HealthData::getMeasureTime))
-                    .orElse(recentRoundLike.get(recentRoundLike.size() - 1));
-            text.append("近3天有 ").append(recentRoundLike.size()).append(" 条健康巡查/测量记录");
-            if (latest.getMeasureTime() != null) text.append("，最近一次为 ").append(TIME_FORMAT.format(latest.getMeasureTime()));
-            text.append("。 ");
-        }
-
-        if (services.isEmpty()) {
-            text.append("目前没有查到待执行或执行中的生活服务安排。");
-        } else {
-            String serviceText = services.stream().limit(5).map(item -> {
-                String when = item.getServiceDate() == null ? "日期待定" : item.getServiceDate().toString();
-                if (item.getServiceTime() != null) when += " " + item.getServiceTime();
-                return when + " " + emptyAs(item.getServiceType(), "服务") + "（" + item.getStatus() + "）"
-                        + (item.getDescription() == null ? "" : "：" + item.getDescription());
-            }).collect(Collectors.joining("；"));
-            text.append("待执行/执行中安排：").append(serviceText).append("。");
-        }
-
-        section(answer, "近期照护安排", text.toString());
-        result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                "care_schedule", "ok", "组合近期健康巡查与待执行服务安排"
-        ));
-        sources.add("health_data / 近3天健康巡查记录");
-        sources.add("family_service_record / 待执行服务安排");
     }
 
     private ElderlyInfo resolveTargetElderly(Long requestedId,
@@ -360,12 +293,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
                 "给个诊断", "帮我诊断", "诊断一下", "是不是得了", "怎么治疗", "治疗方案", "开处方");
     }
 
-    private boolean isOpenAlert(AlertRecordVO alert) {
-        String status = alert.getStatus();
-        if (status == null) return true;
-        return !(status.contains("已处理") || status.contains("已关闭") || status.contains("已忽略") || status.equalsIgnoreCase("CLOSED"));
-    }
-
     private void assertAssigned(Long elderlyId, List<ElderlyInfo> assigned) {
         boolean allowed = assigned.stream().anyMatch(item -> elderlyId.equals(item.getId()));
         if (!allowed) {
@@ -419,18 +346,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private String emptyAs(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
-    }
-
-    private String number(BigDecimal value) {
-        return value == null ? "-" : value.stripTrailingZeros().toPlainString();
-    }
-
-    private java.util.Optional<String> average(List<HealthData> records,
-                                               java.util.function.Function<HealthData, BigDecimal> extractor) {
-        List<BigDecimal> values = records.stream().map(extractor).filter(java.util.Objects::nonNull).toList();
-        if (values.isEmpty()) return java.util.Optional.empty();
-        BigDecimal sum = values.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return java.util.Optional.of(sum.divide(BigDecimal.valueOf(values.size()), 1, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString());
     }
 
     private enum Intent {

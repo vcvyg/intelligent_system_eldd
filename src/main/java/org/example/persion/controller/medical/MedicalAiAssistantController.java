@@ -41,19 +41,26 @@ public class MedicalAiAssistantController {
                                           @Valid @RequestBody MedicalAiChatRequest request) {
         long startedNanos = System.nanoTime();
         MedicalAiAnswerVO answer = medicalAiAssistantService.chat(medicalUserId, request);
-        answer.setTraceId(UUID.randomUUID().toString());
+        if (answer.getTraceId() == null || answer.getTraceId().isBlank()) {
+            answer.setTraceId(UUID.randomUUID().toString());
+        }
 
         boolean safeToPolish = answer.getElderlyId() != null
                 && answer.getSources() != null
                 && !answer.getSources().isEmpty()
-                && answer.getTools().stream().noneMatch(tool -> "blocked".equals(tool.getStatus()));
+                && answer.getTools().stream().noneMatch(tool -> "blocked".equals(tool.getStatus()))
+                && answer.getTools().stream().noneMatch(tool -> "failed".equals(tool.getStatus()));
         if (safeToPolish) {
+            long polishStarted = System.nanoTime();
             medicalAiModelEnhancer.enhance(request.getMessage(), answer.getAnswer(), answer.getSources())
                     .ifPresent(enhanced -> {
                         answer.setAnswer(enhanced);
                         answer.setModelEnhanced(true);
                         answer.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                                "llm_polish", "ok", "仅基于已查询系统事实进行语言组织"
+                                "llm_polish",
+                                "ok",
+                                "仅基于已查询系统事实进行语言组织",
+                                TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - polishStarted)
                         ));
                     });
         }

@@ -2,6 +2,7 @@ package org.example.persion.controller.medical;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.persion.common.Result;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.service.MedicalAiAssistantService;
@@ -21,7 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/medical/ai-assistant")
 @PreAuthorize("hasRole('MEDICAL')")
@@ -66,6 +69,7 @@ public class MedicalAiAssistantController {
         }
 
         answer.setElapsedMs(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedNanos));
+        audit(answer);
         return Result.success(answer);
     }
 
@@ -74,5 +78,19 @@ public class MedicalAiAssistantController {
                               @PathVariable String sessionId) {
         medicalAiAssistantService.resetSession(medicalUserId, sessionId);
         return Result.success();
+    }
+
+    private void audit(MedicalAiAnswerVO answer) {
+        String toolStates = answer.getTools().stream()
+                .map(tool -> tool.getTool() + ":" + tool.getStatus())
+                .collect(Collectors.joining(","));
+        log.info(
+                "medical_ai_execution traceId={} plan={} tools={} elapsedMs={} modelEnhanced={}",
+                answer.getTraceId(),
+                answer.getPlan(),
+                toolStates,
+                answer.getElapsedMs(),
+                answer.isModelEnhanced()
+        );
     }
 }

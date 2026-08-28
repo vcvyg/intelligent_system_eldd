@@ -17,7 +17,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 /**
- * Spring Security配置
+ * Spring Security configuration.
  */
 @Configuration
 @EnableWebSecurity
@@ -36,66 +36,42 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 启用CORS支持(必须在其他配置之前)
                 .cors(cors -> {})
-
-                // 禁用CSRF(使用JWT不需要CSRF保护)
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 配置请求授权 - 文件访问完全开放
                 .authorizeHttpRequests(auth -> auth
-                        // 根路径和静态资源(HTML、CSS、JS等)
+                        // Login shell and static assets are public. Business APIs enforce JWT.
                         .requestMatchers("/", "/*.html", "/admin-*.html").permitAll()
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-                        
-                        // 文件访问 - 完全开放，无需任何认证
+
+                        // Chat attachment rendering/downloading remains public for the current
+                        // browser implementation, but the serving controllers constrain every
+                        // resolved path to the configured upload root. Upload APIs themselves
+                        // are NOT public.
                         .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/api/files/**").permitAll()
-                        .requestMatchers("/api/upload/**").permitAll()
-                        .requestMatchers("/upload-**").permitAll()
-                        .requestMatchers("/download").permitAll()
-                        .requestMatchers("/download/**").permitAll()
-                        .requestMatchers("/file-access/**").permitAll()
-                        
-                        // 公开接口(登录、注册等)
+                        .requestMatchers("/download", "/download/**").permitAll()
+
+                        // Authentication endpoints must remain public.
                         .requestMatchers("/api/auth/**").permitAll()
-                        
-                        // WebSocket端点
+
+                        // SockJS handshake authenticates the token supplied by the chat client.
                         .requestMatchers("/ws-chat/**").permitAll()
-                        
-                        // 测试接口临时开放
-                        .requestMatchers("/api/*/test").permitAll()
-                        .requestMatchers("/test-**").permitAll()
-                        
-                        // 其他接口需要认证
+
+                        // Everything else, including upload/file-access/test APIs, requires JWT.
                         .anyRequest().authenticated()
                 )
-
-                // 无状态session(使用JWT)
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
-
-                // 异常处理
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                         .accessDeniedHandler(jwtAccessDeniedHandler)
                 )
-
-                // 添加JWT过滤器
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                
-                // 配置X-Frame-Options，允许同源嵌套
-                .headers(headers -> headers
-                        .frameOptions().sameOrigin()
-                );
+                .headers(headers -> headers.frameOptions().sameOrigin());
 
         return http.build();
     }
 
-    /**
-     * 密码加密器
-     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

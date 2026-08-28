@@ -72,7 +72,6 @@ public class FileUploadController {
 
     private final ChatGroupAccessService chatGroupAccessService;
 
-    /** Upload an audio attachment for a known chat group. */
     @PostMapping("/upload-audio")
     public Result<FileUploadResult> uploadAudio(@RequestParam("audio") MultipartFile file,
                                                 @RequestParam("groupId") Long groupId) {
@@ -80,7 +79,6 @@ public class FileUploadController {
         return store(file, AttachmentKind.AUDIO);
     }
 
-    /** Upload an image attachment for a known chat group. */
     @PostMapping("/upload-image")
     public Result<FileUploadResult> uploadImage(@RequestParam("image") MultipartFile file,
                                                 @RequestParam("groupId") Long groupId) {
@@ -100,7 +98,6 @@ public class FileUploadController {
         return store(file, inferKind(file));
     }
 
-    /** Authenticated audio upload retained for the family chat client. */
     @PostMapping("/api/upload/audio")
     public Result<FileUploadResult> uploadAudioFile(@RequestParam("audio") MultipartFile file,
                                                      @RequestParam(value = "groupId", required = false) Long groupId) {
@@ -138,7 +135,6 @@ public class FileUploadController {
             FileUploadResult result = new FileUploadResult();
             result.setFilename(filename);
             result.setOriginalFilename(safeOriginalFilename(file.getOriginalFilename()));
-            result.setFileName(result.getOriginalFilename());
             result.setSize(file.getSize());
             result.setContentType(mimeType);
             result.setUrl(webPath);
@@ -282,7 +278,6 @@ public class FileUploadController {
         private String imageUrl;
         private String url;
         private String fileUrl;
-        private String fileName;
         private int duration;
     }
 }

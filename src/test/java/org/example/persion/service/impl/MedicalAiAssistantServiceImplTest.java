@@ -4,6 +4,8 @@ import org.example.persion.ai.tool.AlertQueryTool;
 import org.example.persion.ai.tool.CareQueryTool;
 import org.example.persion.ai.tool.HealthQueryTool;
 import org.example.persion.ai.tool.MedicalAiToolRegistry;
+import org.example.persion.ai.tool.ProfileQueryTool;
+import org.example.persion.ai.tool.RoomQueryTool;
 import org.example.persion.common.exception.BusinessException;
 import org.example.persion.dto.MedicalAiChatRequest;
 import org.example.persion.entity.ElderlyInfo;
@@ -30,8 +32,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -58,6 +60,8 @@ class MedicalAiAssistantServiceImplTest {
     void setUp() {
         MedicalAiToolRegistry toolRegistry = new MedicalAiToolRegistry(
                 List.of(
+                        new RoomQueryTool(elderlyInfoMapper),
+                        new ProfileQueryTool(elderlyInfoMapper),
                         new HealthQueryTool(healthDataMapper),
                         new AlertQueryTool(alertRecordMapper),
                         new CareQueryTool(healthDataMapper, familyServiceRecordMapper)
@@ -110,6 +114,27 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "alerts_recent"));
         assertTrue(answer.getSources().contains("health_data / 近7天健康记录"));
         assertTrue(answer.getSources().contains("alert_record / 告警记录"));
+    }
+
+    @Test
+    void profileQuestionUsesRegisteredProfileTool() {
+        ElderlyInfo stored = new ElderlyInfo();
+        stored.setId(ELDERLY_ID);
+        stored.setName("王阿姨");
+        stored.setAge(72);
+        stored.setGender("女");
+        stored.setMedicalHistory("高血压随访");
+        stored.setAllergyHistory("青霉素");
+        when(elderlyInfoMapper.selectById(ELDERLY_ID)).thenReturn(stored);
+
+        MedicalAiAnswerVO answer = service.chat(
+                MEDICAL_USER_ID,
+                request(ELDERLY_ID, null, "王阿姨的病史和过敏史是什么？")
+        );
+
+        assertTrue(hasTool(answer, "patient_profile"));
+        assertTrue(answer.getAnswer().contains("高血压随访"));
+        assertTrue(answer.getAnswer().contains("青霉素"));
     }
 
     @Test

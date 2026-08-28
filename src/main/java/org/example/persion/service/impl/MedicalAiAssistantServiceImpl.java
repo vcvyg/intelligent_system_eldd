@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 /**
  * 医护 AI 助手：负责权限、会话、问题路由与 Tool 编排。
  *
- * <p>健康、告警、照护等业务查询由注册 Tool 负责，核心 Service 不直接访问对应业务表。
+ * <p>所有业务事实查询都由注册 Tool 负责，核心 Service 不直接访问健康、告警、服务或档案业务表。
  * 不依赖外部模型也能完整运行；不做诊断、处方和用药调整。</p>
  */
 @Service
@@ -129,10 +129,10 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         Set<String> sources = new LinkedHashSet<>();
 
         if (intents.contains(Intent.ROOM)) {
-            appendRoom(target, answer, result, sources);
+            appendRegisteredTool("room_lookup", target, question, answer, result, sources);
         }
         if (intents.contains(Intent.PROFILE)) {
-            appendProfile(target, question, answer, result, sources);
+            appendRegisteredTool("patient_profile", target, question, answer, result, sources);
         }
         if (intents.contains(Intent.HEALTH)) {
             appendRegisteredTool("health_recent", target, question, answer, result, sources);
@@ -156,45 +156,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
         if (sessionId != null && !sessionId.isBlank()) {
             sessions.remove(sessionKey(medicalUserId, sessionId.trim()));
         }
-    }
-
-    private void appendRoom(ElderlyInfo target,
-                            StringBuilder answer,
-                            MedicalAiAnswerVO result,
-                            Set<String> sources) {
-        ElderlyInfoVO detail = elderlyInfoMapper.selectElderlyWithRoom(target.getId());
-        String room = detail == null || detail.getRoomNumber() == null || detail.getRoomNumber().isBlank()
-                ? "系统暂未登记房间"
-                : detail.getRoomNumber() + (detail.getRoomType() == null ? "" : "（" + detail.getRoomType() + "）");
-        section(answer, "房间信息", safeName(target) + "目前为：" + room + "。");
-        result.getTools().add(new MedicalAiAnswerVO.ToolTrace("room_lookup", "ok", room));
-        sources.add("老人档案 / 房间信息");
-    }
-
-    private void appendProfile(ElderlyInfo target,
-                               String question,
-                               StringBuilder answer,
-                               MedicalAiAnswerVO result,
-                               Set<String> sources) {
-        List<String> facts = new ArrayList<>();
-        if (target.getAge() != null) facts.add(target.getAge() + "岁");
-        if (target.getGender() != null && !target.getGender().isBlank()) facts.add(target.getGender());
-
-        if (containsAny(question, "病史", "既往史", "基础病", "病情")) {
-            facts.add("系统病史：" + emptyAs(target.getMedicalHistory(), "暂无登记"));
-        }
-        if (containsAny(question, "过敏", "过敏史")) {
-            facts.add("过敏史：" + emptyAs(target.getAllergyHistory(), "暂无登记"));
-        }
-        if (facts.isEmpty()) {
-            facts.add("已定位到当前负责老人档案");
-        }
-
-        section(answer, "档案信息", String.join("；", facts) + "。");
-        result.getTools().add(new MedicalAiAnswerVO.ToolTrace(
-                "patient_profile", "ok", "读取必要的老人档案字段"
-        ));
-        sources.add("老人档案");
     }
 
     private void appendRegisteredTool(String toolName,
@@ -342,10 +303,6 @@ public class MedicalAiAssistantServiceImpl implements MedicalAiAssistantService 
 
     private String safeName(ElderlyInfo elderly) {
         return elderly.getName() == null || elderly.getName().isBlank() ? "该老人" : elderly.getName();
-    }
-
-    private String emptyAs(String value, String fallback) {
-        return value == null || value.isBlank() ? fallback : value;
     }
 
     private enum Intent {

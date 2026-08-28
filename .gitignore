@@ -43,8 +43,6 @@ vcvyg.github.io/
 .env.*
 !.env.example
 src/main/resources/application-local.properties
-src/main/resources/application-dev.properties
-src/main/resources/application-prod.properties
 *_application.properties
 
 ### Local uploads / binaries ###

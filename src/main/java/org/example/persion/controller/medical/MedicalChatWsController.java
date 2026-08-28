@@ -1,12 +1,16 @@
 package org.example.persion.controller.medical;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.persion.entity.ChatMessage;
 import org.example.persion.entity.User;
 import org.example.persion.repository.ChatMessageMapper;
 import org.example.persion.repository.ElderlyFamilyRelationMapper;
 import org.example.persion.repository.ElderlyMedicalRelationMapper;
 import org.example.persion.repository.UserMapper;
+import org.example.persion.service.ChatGroupAccessService;
 import org.example.persion.vo.MessageVO;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -15,13 +19,24 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
+/**
+ * Canonical WebSocket write path for family/medical chat messages.
+ */
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class MedicalChatWsController {
+
+    private static final String UNREAD_COUNT_KEY_PREFIX = "unread:count:";
+    private static final int MAX_TEXT_LENGTH = 4000;
+    private static final Set<String> SUPPORTED_TYPES = Set.of("TEXT", "VOICE", "IMAGE", "FILE", "delete");
 
     private final SimpMessagingTemplate messagingTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -29,130 +44,149 @@ public class MedicalChatWsController {
     private final ElderlyMedicalRelationMapper medicalRelationMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final UserMapper userMapper;
-
-    private static final String UNREAD_COUNT_KEY_PREFIX = "unread:count:";
+    private final ObjectMapper objectMapper;
+    private final ChatGroupAccessService chatGroupAccessService;
 
     @MessageMapping("/chat/group/{groupId}")
-    public void handleGroupMessage(@DestinationVariable Long groupId, String content, SimpMessageHeaderAccessor headerAccessor) {
+    public void handleGroupMessage(@DestinationVariable Long groupId,
+                                   String content,
+                                   SimpMessageHeaderAccessor headerAccessor) {
         try {
-            // 从WebSocket会话中获取用户信息
-            Long senderId = (Long) headerAccessor.getSessionAttributes().get("userId");
-            String senderUsername = (String) headerAccessor.getSessionAttributes().get("username");
-            
-            if (senderId == null) {
-                System.err.println("错误: WebSocket会话中未找到用户ID。消息无法处理。");
-                return; // Not authenticated
+            Long senderId = sessionUserId(headerAccessor);
+            if (senderId == null || !chatGroupAccessService.canAccess(senderId, groupId)) {
+                log.warn("Rejected unauthorized WebSocket group write, groupId={}", groupId);
+                return;
             }
-            
+
             User sender = userMapper.selectById(senderId);
             if (sender == null) {
-                System.err.println("错误: 在数据库中未找到ID为 " + senderId + " 的用户。");
-                return; // User not found
+                log.warn("Rejected WebSocket message for missing userId={}", senderId);
+                return;
             }
-            
-            System.out.println("正在处理来自用户 " + senderId + " (" + senderUsername + ") 发往群组 " + groupId + " 的消息。");
 
-            // 1. 解析消息内容
-            String messageType = "TEXT";
-            String messageContent = content;
-            String audioUrl = null;
-            String imageUrl = null;
-            String fileName = null;
-            String fileUrl = null;
-            Integer duration = null;
-            
-            if (content.startsWith("{")) {
-                try {
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    com.fasterxml.jackson.databind.JsonNode jsonNode = mapper.readTree(content);
-                    
-                    if (jsonNode.has("messageType")) {
-                        messageType = jsonNode.get("messageType").asText();
-                        
-                        if (jsonNode.has("content")) {
-                            messageContent = jsonNode.get("content").asText();
-                        }
-                        
-                        if ("VOICE".equals(messageType)) {
-                            audioUrl = jsonNode.has("audioUrl") ? jsonNode.get("audioUrl").asText() : null;
-                            duration = jsonNode.has("duration") ? jsonNode.get("duration").asInt() : null;
-                        } else if ("IMAGE".equals(messageType)) {
-                            imageUrl = jsonNode.has("imageUrl") ? jsonNode.get("imageUrl").asText() : null;
-                        } else if ("FILE".equals(messageType)) {
-                            fileName = jsonNode.has("fileName") ? jsonNode.get("fileName").asText() : null;
-                            fileUrl = jsonNode.has("fileUrl") ? jsonNode.get("fileUrl").asText() : null;
-                            System.out.println("DEBUG - 解析FILE消息: fileName=" + fileName + ", fileUrl=" + fileUrl);
-                            System.out.println("DEBUG - 原始JSON: " + jsonNode.toString());
-                        } else if ("delete".equals(messageType)) {
-                            // 处理删除消息
-                            Long messageId = jsonNode.has("messageId") ? jsonNode.get("messageId").asLong() : null;
-                            if (messageId != null) {
-                                handleDeleteMessage(groupId, messageId, senderId);
-                            }
-                            return;
-                        }
-                    }
-                } catch (Exception e) {
-                    System.err.println("警告: 消息内容解析为JSON失败，将作为纯文本处理。错误: " + e.getMessage());
+            ParsedMessage parsed = parse(content);
+            if (parsed == null || !SUPPORTED_TYPES.contains(parsed.type)) {
+                log.warn("Rejected unsupported WebSocket message type");
+                return;
+            }
+
+            if ("delete".equals(parsed.type)) {
+                if (parsed.messageId != null) {
+                    handleDeleteMessage(groupId, parsed.messageId, senderId);
                 }
+                return;
             }
 
-            // 2. 创建并填充ChatMessage实体
+            if ("TEXT".equals(parsed.type)) {
+                if (parsed.content == null || parsed.content.isBlank() || parsed.content.length() > MAX_TEXT_LENGTH) {
+                    log.warn("Rejected empty or oversized chat text, groupId={}", groupId);
+                    return;
+                }
+            } else if (!validAttachmentPath(parsed.attachmentUrl())) {
+                log.warn("Rejected non-upload attachment path, groupId={}, type={}", groupId, parsed.type);
+                return;
+            }
+
             ChatMessage chatMessage = new ChatMessage();
             chatMessage.setGroupId(groupId);
             chatMessage.setSenderId(sender.getId());
             chatMessage.setSenderName(sender.getRealName() != null ? sender.getRealName() : sender.getUsername());
             chatMessage.setSenderRole(sender.getRole());
-            chatMessage.setMessageType(messageType);
-            chatMessage.setContent(messageContent);
-            
-            if ("VOICE".equals(messageType)) {
-                chatMessage.setAudioUrl(audioUrl);
-                chatMessage.setDuration(duration);
-            } else if ("IMAGE".equals(messageType)) {
-                chatMessage.setImageUrl(imageUrl);
-            } else if ("FILE".equals(messageType)) {
-                System.out.println("DEBUG - 保存FILE消息: fileName=" + fileName + ", fileUrl=" + fileUrl);
-                chatMessage.setFileName(fileName);
-                chatMessage.setFileUrl(fileUrl);
-            }
+            chatMessage.setMessageType(parsed.type);
+            chatMessage.setContent(parsed.content);
 
-            java.time.LocalDateTime currentTime = java.time.LocalDateTime.now();
-            chatMessage.setCreateTime(currentTime);
-            chatMessage.setUpdateTime(currentTime);
-            chatMessage.setDeleted(0); // 设置默认的删除状态为0 (未删除)
-            
-            // 3. 保存到数据库
-            System.out.println("准备将消息存入数据库: " + chatMessage);
-            chatMessageMapper.insert(chatMessage);
-            System.out.println("消息成功存入数据库! ID: " + chatMessage.getId());
-
-            // 4. 广播消息
-            List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
-            List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
-            List<User> allMembers = Stream.concat(familyMembers.stream(), medicalMembers.stream()).distinct().toList();
-            
-            System.out.println("准备向 " + allMembers.size() + " 位群组成员广播消息。");
-            
-            for (User member : allMembers) {
-                if (!member.getId().equals(sender.getId())) {
-                    String unreadKey = UNREAD_COUNT_KEY_PREFIX + member.getId() + ":" + groupId;
-                    redisTemplate.opsForValue().increment(unreadKey);
+            switch (parsed.type) {
+                case "VOICE" -> {
+                    chatMessage.setAudioUrl(parsed.audioUrl);
+                    chatMessage.setDuration(parsed.duration);
                 }
-                MessageVO personalMessageVO = createMessageVO(chatMessage, member.getId());
-                messagingTemplate.convertAndSendToUser(member.getUsername(), "/queue/group-messages", personalMessageVO);
+                case "IMAGE" -> chatMessage.setImageUrl(parsed.imageUrl);
+                case "FILE" -> {
+                    chatMessage.setFileName(safeFileName(parsed.fileName));
+                    chatMessage.setFileUrl(parsed.fileUrl);
+                }
+                default -> {
+                    // TEXT has no attachment fields.
+                }
             }
-            
-            MessageVO generalMessageVO = createMessageVO(chatMessage, senderId);
-            messagingTemplate.convertAndSend("/topic/group/" + groupId, generalMessageVO);
-            System.out.println("消息已成功广播到群组话题: /topic/group/" + groupId);
 
-        } catch (Exception e) {
-            // !!! 关键的错误捕获 !!!
-            System.err.println("!!!!!! 处理WebSocket消息时发生严重错误 !!!!!!");
-            e.printStackTrace();
-            System.err.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            LocalDateTime now = LocalDateTime.now();
+            chatMessage.setCreateTime(now);
+            chatMessage.setUpdateTime(now);
+            chatMessage.setDeleted(0);
+            chatMessageMapper.insert(chatMessage);
+
+            broadcast(chatMessage, senderId, groupId);
+        } catch (Exception exception) {
+            // Do not log message content or attachment paths: chat data may contain
+            // personal/medical information.
+            log.error("WebSocket chat processing failed for groupId={}: {}",
+                    groupId, exception.getClass().getSimpleName());
         }
+    }
+
+    private ParsedMessage parse(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+
+        if (!raw.trim().startsWith("{")) {
+            ParsedMessage text = new ParsedMessage();
+            text.type = "TEXT";
+            text.content = raw;
+            return text;
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(raw);
+            ParsedMessage parsed = new ParsedMessage();
+            parsed.type = node.has("messageType") ? node.get("messageType").asText("TEXT") : "TEXT";
+            parsed.content = node.has("content") ? node.get("content").asText("") : "";
+            parsed.audioUrl = text(node, "audioUrl");
+            parsed.imageUrl = text(node, "imageUrl");
+            parsed.fileUrl = text(node, "fileUrl");
+            parsed.fileName = text(node, "fileName");
+            parsed.duration = node.has("duration") ? node.get("duration").asInt() : null;
+            parsed.messageId = node.has("messageId") ? node.get("messageId").asLong() : null;
+            return parsed;
+        } catch (Exception exception) {
+            // Invalid JSON is treated as plain text for backwards compatibility.
+            ParsedMessage text = new ParsedMessage();
+            text.type = "TEXT";
+            text.content = raw;
+            return text;
+        }
+    }
+
+    private String text(JsonNode node, String field) {
+        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : null;
+    }
+
+    private void broadcast(ChatMessage chatMessage, Long senderId, Long groupId) {
+        List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
+        List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
+        List<User> allMembers = Stream.concat(familyMembers.stream(), medicalMembers.stream())
+                .distinct()
+                .toList();
+
+        for (User member : allMembers) {
+            if (!member.getId().equals(senderId)) {
+                String unreadKey = UNREAD_COUNT_KEY_PREFIX + member.getId() + ":" + groupId;
+                redisTemplate.opsForValue().increment(unreadKey);
+            }
+            if (member.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        member.getUsername(),
+                        "/queue/group-messages",
+                        createMessageVO(chatMessage, member.getId())
+                );
+            }
+        }
+
+        messagingTemplate.convertAndSend(
+                "/topic/group/" + groupId,
+                createMessageVO(chatMessage, senderId)
+        );
     }
 
     private MessageVO createMessageVO(ChatMessage chatMessage, Long currentUserId) {
@@ -164,134 +198,118 @@ public class MedicalChatWsController {
         vo.setSenderRole(chatMessage.getSenderRole());
         vo.setContent(chatMessage.getContent());
         vo.setMessageType(chatMessage.getMessageType());
-        
-        // 设置多媒体字段 - 将绝对路径转换为相对路径
-        vo.setAudioUrl(convertToRelativePath(chatMessage.getAudioUrl()));
-        vo.setImageUrl(convertToRelativePath(chatMessage.getImageUrl()));
+        vo.setAudioUrl(toWebUploadPath(chatMessage.getAudioUrl()));
+        vo.setImageUrl(toWebUploadPath(chatMessage.getImageUrl()));
         vo.setDuration(chatMessage.getDuration());
-        
-        // 设置文件字段
-        if (chatMessage.getFileName() != null) {
-            vo.setFileName(chatMessage.getFileName());
-        }
-        if (chatMessage.getFileUrl() != null) {
-            vo.setFileUrl(convertToRelativePath(chatMessage.getFileUrl()));
-        }
-        
-        // 调试日志
-        if ("FILE".equals(chatMessage.getMessageType())) {
-            System.out.println("DEBUG - createMessageVO FILE消息: fileName=" + chatMessage.getFileName() + 
-                             ", fileUrl=" + chatMessage.getFileUrl() + 
-                             ", content=" + chatMessage.getContent());
-        }
-        
-        // Format time from entity's createTime, which is now a LocalDateTime
-        if (chatMessage.getCreateTime() != null) {
-            // 使用ISO格式，确保时间正确传递
-            vo.setTime(chatMessage.getCreateTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            System.out.println("WebSocket - 消息时间: " + vo.getTime() + " (原始: " + chatMessage.getCreateTime() + ")");
-        } else {
-            // 如果没有创建时间，使用当前时间
-            vo.setTime(java.time.LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            System.out.println("WebSocket - 使用当前时间: " + vo.getTime());
-        }
-        
-        if (currentUserId != null) {
-            vo.setMe(currentUserId.equals(chatMessage.getSenderId()));
-        }
+        vo.setFileName(chatMessage.getFileName());
+        vo.setFileUrl(toWebUploadPath(chatMessage.getFileUrl()));
+        vo.setTime((chatMessage.getCreateTime() == null ? LocalDateTime.now() : chatMessage.getCreateTime())
+                .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+        vo.setMe(currentUserId != null && currentUserId.equals(chatMessage.getSenderId()));
         return vo;
     }
-    
-    /**
-     * 将路径转换为Web访问路径
-     */
-    private String convertToRelativePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return path;
-        }
-        
-        // 如果已经是Web路径，直接返回
-        if (path.startsWith("/uploads/")) {
-            return path;
-        }
-        
-        try {
-            // 如果是绝对路径，转换为相对路径
-            if (path.contains("uploads")) {
-                int uploadsIndex = path.indexOf("uploads");
-                String relativePath = "/" + path.substring(uploadsIndex).replace("\\", "/");
-                System.out.println("WebSocket - 转换路径: " + path + " -> " + relativePath);
-                return relativePath;
-            }
-        } catch (Exception e) {
-            System.err.println("WebSocket - 路径转换失败: " + e.getMessage());
-        }
-        
-        return path;
-    }
-    
-    /**
-     * 处理删除消息
-     */
+
     private void handleDeleteMessage(Long groupId, Long messageId, Long senderId) {
-        try {
-            // 1. 验证消息是否存在且属于发送者
-            ChatMessage existingMessage = chatMessageMapper.selectById(messageId);
-            if (existingMessage == null) {
-                System.err.println("要删除的消息不存在: messageId=" + messageId);
-                return;
+        ChatMessage existing = chatMessageMapper.selectById(messageId);
+        if (existing == null
+                || !groupId.equals(existing.getGroupId())
+                || !senderId.equals(existing.getSenderId())
+                || Integer.valueOf(1).equals(existing.getDeleted())) {
+            log.warn("Rejected invalid chat delete request, groupId={}, messageId={}", groupId, messageId);
+            return;
+        }
+
+        existing.setDeleted(1);
+        existing.setUpdateTime(LocalDateTime.now());
+        if (chatMessageMapper.updateById(existing) <= 0) {
+            return;
+        }
+
+        MessageVO notification = new MessageVO();
+        notification.setId(messageId);
+        notification.setGroupId(groupId);
+        notification.setMessageType("delete");
+        notification.setSenderId(senderId);
+        notification.setContent("消息已删除");
+        notification.setTime(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+
+        List<User> allMembers = Stream.concat(
+                        familyRelationMapper.selectUsersByElderlyId(groupId).stream(),
+                        medicalRelationMapper.selectUsersByElderlyId(groupId).stream())
+                .distinct()
+                .toList();
+        for (User member : allMembers) {
+            if (member.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(member.getUsername(), "/queue/group-messages", notification);
             }
-            
-            if (!existingMessage.getSenderId().equals(senderId)) {
-                System.err.println("用户无权删除此消息: messageId=" + messageId + ", senderId=" + senderId);
-                return;
-            }
-            
-            // 2. 逻辑删除消息（设置deleted=1）
-            existingMessage.setDeleted(1);
-            int updatedRows = chatMessageMapper.updateById(existingMessage);
-            if (updatedRows > 0) {
-                System.out.println("消息已逻辑删除: messageId=" + messageId + ", deleted=1");
-            } else {
-                System.err.println("逻辑删除消息失败: messageId=" + messageId);
-                return;
-            }
-            
-            // 3. 获取群组所有成员
-            List<User> familyMembers = familyRelationMapper.selectUsersByElderlyId(groupId);
-            List<User> medicalMembers = medicalRelationMapper.selectUsersByElderlyId(groupId);
-            List<User> allMembers = Stream.concat(familyMembers.stream(), medicalMembers.stream())
-                    .distinct()
-                    .toList();
-            
-            // 4. 创建删除通知消息
-            MessageVO deleteNotification = new MessageVO();
-            deleteNotification.setGroupId(groupId);
-            deleteNotification.setMessageType("delete");
-            deleteNotification.setSenderId(senderId);
-            deleteNotification.setContent("消息已删除");
-            deleteNotification.setTime(java.time.LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
-            
-            // 添加消息ID用于前端删除
-            deleteNotification.setId(messageId);
-            
-            // 5. 广播删除通知给所有群组成员
-            for (User member : allMembers) {
-                messagingTemplate.convertAndSendToUser(
-                    member.getUsername(),
-                    "/queue/group-messages",
-                    deleteNotification
-                );
-            }
-            
-            // 6. 也广播到群组主题
-            messagingTemplate.convertAndSend("/topic/group/" + groupId, deleteNotification);
-            
-            System.out.println("删除消息通知已广播: messageId=" + messageId + ", groupId=" + groupId);
-            
-        } catch (Exception e) {
-            System.err.println("处理删除消息失败: " + e.getMessage());
-            e.printStackTrace();
+        }
+        messagingTemplate.convertAndSend("/topic/group/" + groupId, notification);
+    }
+
+    private Long sessionUserId(SimpMessageHeaderAccessor accessor) {
+        Map<String, Object> attributes = accessor.getSessionAttributes();
+        if (attributes == null) {
+            return null;
+        }
+        Object userId = attributes.get("userId");
+        return userId instanceof Long ? (Long) userId : null;
+    }
+
+    private boolean validAttachmentPath(String path) {
+        return path != null
+                && path.startsWith("/uploads/")
+                && !path.contains("..")
+                && !path.contains("\\")
+                && path.length() <= 500;
+    }
+
+    private String safeFileName(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "附件";
+        }
+        String normalized = filename.replace('\\', '/');
+        int slash = normalized.lastIndexOf('/');
+        String name = slash >= 0 ? normalized.substring(slash + 1) : normalized;
+        name = name.replaceAll("[\\r\\n\\t]", "_");
+        return name.length() > 255 ? name.substring(0, 255) : name;
+    }
+
+    private String toWebUploadPath(String path) {
+        if (path == null || path.isBlank()) {
+            return path;
+        }
+        if (validAttachmentPath(path)) {
+            return path;
+        }
+
+        // Backwards compatibility for historical records that stored an absolute
+        // path. Only expose the suffix rooted at uploads, never the original path.
+        String normalized = path.replace('\\', '/');
+        int index = normalized.indexOf("uploads/");
+        if (index >= 0) {
+            String webPath = "/" + normalized.substring(index);
+            return validAttachmentPath(webPath) ? webPath : null;
+        }
+        return null;
+    }
+
+    private static final class ParsedMessage {
+        private String type;
+        private String content;
+        private String audioUrl;
+        private String imageUrl;
+        private String fileUrl;
+        private String fileName;
+        private Integer duration;
+        private Long messageId;
+
+        private String attachmentUrl() {
+            return switch (type) {
+                case "VOICE" -> audioUrl;
+                case "IMAGE" -> imageUrl;
+                case "FILE" -> fileUrl;
+                default -> null;
+            };
         }
     }
 }

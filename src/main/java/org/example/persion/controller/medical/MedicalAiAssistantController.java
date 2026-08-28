@@ -1,0 +1,47 @@
+package org.example.persion.controller.medical;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.example.persion.common.Result;
+import org.example.persion.dto.MedicalAiChatRequest;
+import org.example.persion.service.MedicalAiAssistantService;
+import org.example.persion.vo.MedicalAiAnswerVO;
+import org.example.persion.vo.MedicalAiPatientVO;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/medical/ai-assistant")
+@PreAuthorize("hasRole('MEDICAL')")
+@RequiredArgsConstructor
+public class MedicalAiAssistantController {
+
+    private final MedicalAiAssistantService medicalAiAssistantService;
+
+    @GetMapping("/patients")
+    public Result<List<MedicalAiPatientVO>> patients(@AuthenticationPrincipal Long medicalUserId) {
+        return Result.success(medicalAiAssistantService.listAssignedPatients(medicalUserId));
+    }
+
+    @PostMapping("/chat")
+    public Result<MedicalAiAnswerVO> chat(@AuthenticationPrincipal Long medicalUserId,
+                                          @Valid @RequestBody MedicalAiChatRequest request) {
+        return Result.success(medicalAiAssistantService.chat(medicalUserId, request));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public Result<Void> reset(@AuthenticationPrincipal Long medicalUserId,
+                              @PathVariable String sessionId) {
+        medicalAiAssistantService.resetSession(medicalUserId, sessionId);
+        return Result.success();
+    }
+}

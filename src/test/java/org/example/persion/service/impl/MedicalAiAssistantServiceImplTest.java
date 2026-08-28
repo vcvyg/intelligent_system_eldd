@@ -1,5 +1,6 @@
 package org.example.persion.service.impl;
 
+import org.example.persion.ai.agent.MedicalAiPlanner;
 import org.example.persion.ai.tool.AlertQueryTool;
 import org.example.persion.ai.tool.CareQueryTool;
 import org.example.persion.ai.tool.HealthQueryTool;
@@ -35,6 +36,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,7 +71,7 @@ class MedicalAiAssistantServiceImplTest {
                         new RecommendationQueryTool(recommendationService)
                 )
         );
-        service = new MedicalAiAssistantServiceImpl(elderlyInfoMapper, toolRegistry);
+        service = new MedicalAiAssistantServiceImpl(elderlyInfoMapper, toolRegistry, new MedicalAiPlanner());
 
         elderly = new ElderlyInfo();
         elderly.setId(ELDERLY_ID);
@@ -80,7 +83,7 @@ class MedicalAiAssistantServiceImplTest {
     }
 
     @Test
-    void compositeQuestionRunsRegisteredToolsAndCombinesFacts() {
+    void compositeQuestionRunsPlannerThenRegisteredToolsAndCombinesFacts() {
         ElderlyInfoVO detail = new ElderlyInfoVO();
         detail.setId(ELDERLY_ID);
         detail.setName("王阿姨");
@@ -109,6 +112,11 @@ class MedicalAiAssistantServiceImplTest {
                 request(ELDERLY_ID, null, "王阿姨住哪，最近心率和告警怎么样？")
         );
 
+        assertEquals(List.of("room_lookup", "health_recent", "alerts_recent"), answer.getPlan());
+        assertTrue(answer.getPlanReason().contains("room_lookup -> health_recent -> alerts_recent"));
+        assertNotNull(answer.getTraceId());
+        assertFalse(answer.getTraceId().isBlank());
+        assertTrue(answer.getElapsedMs() >= 0);
         assertTrue(answer.getAnswer().contains("3-206"));
         assertTrue(answer.getAnswer().contains("76 bpm"));
         assertTrue(answer.getAnswer().contains("心率异常"));
@@ -133,6 +141,7 @@ class MedicalAiAssistantServiceImplTest {
                 request(ELDERLY_ID, null, "王阿姨的病史和过敏史是什么？")
         );
 
+        assertEquals(List.of("patient_profile"), answer.getPlan());
         assertTrue(hasTool(answer, "patient_profile"));
         assertTrue(answer.getAnswer().contains("高血压随访"));
         assertTrue(answer.getAnswer().contains("青霉素"));
@@ -151,6 +160,7 @@ class MedicalAiAssistantServiceImplTest {
                 request(ELDERLY_ID, null, "现在适合给王阿姨推荐什么关怀内容？")
         );
 
+        assertEquals(List.of("recommendation_preview"), answer.getPlan());
         assertTrue(hasTool(answer, "recommendation_preview"));
         assertTrue(answer.getAnswer().contains("健康测量提醒"));
         assertTrue(answer.getAnswer().contains("不会由 AI 自动向家属投放"));
@@ -182,6 +192,7 @@ class MedicalAiAssistantServiceImplTest {
         );
 
         assertEquals(ELDERLY_ID, second.getElderlyId());
+        assertEquals(List.of("care_schedule"), second.getPlan());
         assertTrue(second.getAnswer().contains("助浴服务"));
         assertTrue(hasTool(second, "care_schedule"));
     }
@@ -202,6 +213,7 @@ class MedicalAiAssistantServiceImplTest {
 
         assertTrue(afterReset.getAnswer().contains("请先选择"));
         assertTrue(hasTool(afterReset, "patient_scope"));
+        assertTrue(afterReset.getPlan().isEmpty());
     }
 
     @Test
@@ -209,6 +221,7 @@ class MedicalAiAssistantServiceImplTest {
         MedicalAiAnswerVO answer = service.chat(MEDICAL_USER_ID, request(null, null, "最近整体情况怎么样？"));
         assertTrue(answer.getAnswer().contains("当前可查询：王阿姨"));
         assertTrue(hasTool(answer, "patient_scope"));
+        assertTrue(answer.getPlan().isEmpty());
     }
 
     @Test
@@ -220,11 +233,13 @@ class MedicalAiAssistantServiceImplTest {
     }
 
     @Test
-    void blocksDiagnosisAndMedicationDecisionRequests() {
+    void blocksDiagnosisAndMedicationDecisionRequestsBeforePlannerExecution() {
         MedicalAiAnswerVO answer = service.chat(
                 MEDICAL_USER_ID,
                 request(ELDERLY_ID, null, "她这个情况应该怎么用药，要不要调整剂量？")
         );
+        assertTrue(answer.getPlan().isEmpty());
+        assertTrue(answer.getPlanReason().contains("医疗安全规则优先于 Planner"));
         assertTrue(hasTool(answer, "medical_safety_guard"));
         assertTrue(answer.getTools().stream().anyMatch(tool -> "blocked".equals(tool.getStatus())));
     }

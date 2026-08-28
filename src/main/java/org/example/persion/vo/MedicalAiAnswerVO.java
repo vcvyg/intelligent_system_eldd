@@ -1,6 +1,5 @@
 package org.example.persion.vo;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -29,10 +28,21 @@ public class MedicalAiAnswerVO {
 
     @Data
     @NoArgsConstructor
-    @AllArgsConstructor
     public static class ToolTrace {
         private String tool;
         private String status;
         private String summary;
+        private Long elapsedMs;
+
+        public ToolTrace(String tool, String status, String summary) {
+            this(tool, status, summary, null);
+        }
+
+        public ToolTrace(String tool, String status, String summary, Long elapsedMs) {
+            this.tool = tool;
+            this.status = status;
+            this.summary = summary;
+            this.elapsedMs = elapsedMs;
+        }
     }
 }

@@ -18,11 +18,11 @@
 可选模型润色
 ```
 
-## 下一阶段：Tool Registry
+## 已完成：Planner + Tool Registry
 
-目标：避免业务能力增加后 Service 内部条件分支持续增长。
+当前 Agent 已将问题规划与 Tool 执行拆开，避免业务能力增加后 Service 内部条件分支持续增长。
 
-建议抽象：
+当前抽象：
 
 ```java
 interface MedicalTool {
@@ -32,16 +32,16 @@ interface MedicalTool {
 }
 ```
 
-候选 Tool：
+已注册 Tool：
 
-- HealthTool
-- AlertTool
-- ProfileTool
-- CareScheduleTool
-- RecommendationTool
-- FamilyContactTool
+- `room_lookup`
+- `patient_profile`
+- `health_recent`
+- `alerts_recent`
+- `care_schedule`
+- `recommendation_preview`
 
-## 第二阶段：主动关怀推荐闭环
+## 已完成：主动关怀推荐闭环
 
 将被动问答扩展为主动服务：
 
@@ -59,12 +59,12 @@ Push/站内提醒
 更新偏好
 ```
 
-第一版不需要复杂模型，可采用：
+第一版已采用：
 
 - 规则召回
 - 特征评分
 - 反馈加权
-- 频控
+- 按日投放去重
 
 ## 第三阶段：Agent Evaluation
 

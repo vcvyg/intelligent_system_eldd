@@ -33,6 +33,7 @@ class MedicalAiAssistantControllerTest {
         answer.setElderlyId(11L);
         answer.setAnswer("不提供用药调整建议");
         answer.setSources(List.of("老人档案"));
+        answer.setPlanReason("安全策略拦截，不执行业务查询工具");
         answer.getTools().add(new MedicalAiAnswerVO.ToolTrace(
                 "medical_safety_guard", "blocked", "拦截用药调整请求"
         ));
@@ -43,7 +44,7 @@ class MedicalAiAssistantControllerTest {
         verify(enhancer, never()).enhance(request.getMessage(), answer.getAnswer(), answer.getSources());
         assertFalse(answer.isModelEnhanced());
         assertEquals("不提供用药调整建议", answer.getAnswer());
-        assertEquals(List.of("medical_safety_guard"), answer.getPlan());
+        assertTrue(answer.getPlan().isEmpty());
         assertNotNull(answer.getTraceId());
         assertFalse(answer.getTraceId().isBlank());
         assertTrue(answer.getElapsedMs() >= 0);
@@ -60,6 +61,7 @@ class MedicalAiAssistantControllerTest {
         answer.setElderlyId(11L);
         answer.setAnswer("近7天心率均值约 76 bpm。");
         answer.setSources(List.of("health_data / 近7天健康记录"));
+        answer.setPlan(List.of("health_recent"));
         answer.getTools().add(new MedicalAiAnswerVO.ToolTrace(
                 "patient_access", "ok", "已校验负责关系"
         ));
@@ -74,7 +76,7 @@ class MedicalAiAssistantControllerTest {
 
         assertTrue(answer.isModelEnhanced());
         assertEquals("系统记录显示，近7天心率均值约 76 bpm。", answer.getAnswer());
-        assertEquals(List.of("patient_access", "health_recent"), answer.getPlan());
+        assertEquals(List.of("health_recent"), answer.getPlan());
         assertTrue(answer.getTools().stream().anyMatch(tool -> "health_recent".equals(tool.getTool())));
         assertTrue(answer.getTools().stream().anyMatch(tool -> "llm_polish".equals(tool.getTool())));
         assertFalse(answer.getPlan().contains("llm_polish"));

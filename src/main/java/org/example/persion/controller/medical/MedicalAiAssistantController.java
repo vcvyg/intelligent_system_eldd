@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -43,14 +42,6 @@ public class MedicalAiAssistantController {
         long startedNanos = System.nanoTime();
         MedicalAiAnswerVO answer = medicalAiAssistantService.chat(medicalUserId, request);
         answer.setTraceId(UUID.randomUUID().toString());
-
-        // The deterministic router chooses tools before execution. Existing ToolTrace
-        // entries preserve that execution order, so expose the distinct non-LLM tools
-        // as the plan for observability/demo purposes.
-        answer.setPlan(new LinkedHashSet<>(answer.getTools().stream()
-                .map(MedicalAiAnswerVO.ToolTrace::getTool)
-                .filter(tool -> tool != null && !tool.isBlank() && !"llm_polish".equals(tool))
-                .toList()).stream().toList());
 
         boolean safeToPolish = answer.getElderlyId() != null
                 && answer.getSources() != null

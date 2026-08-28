@@ -21,6 +21,7 @@
 | 老人管理 | 老人档案、房间、家属关系、医护分配、健康数据 |
 | 医护工作台 | 排班、巡诊、健康记录、请假申请、服务记录与缴费通知 |
 | 医护 AI 助手 | 多工具业务问答、老人上下文记忆、权限复核、健康/告警/照护安排汇总、推荐追问、医疗安全拦截 |
+| 主动关怀推荐 | B 端可解释预览与站内投放、C 端推荐流、有用/不感兴趣反馈、反馈驱动下一轮排序 |
 | 家属服务 | 探访预约、服务进度、缴费记录、定位与围栏信息 |
 | 告警处理 | 健康/设备预警、处理状态流转、医护分配、统计与任务列表 |
 | 实时沟通 | 家属与医护围绕老人建立沟通群，支持多类型消息与历史记录 |
@@ -61,6 +62,7 @@
 ### 已实现能力
 
 - 支持一个问题同时执行多个查询，例如“王阿姨住哪，最近心率和告警怎么样？”会组合房间、健康和告警工具。
+- Planner 先生成只读 Tool 执行计划，Registry 再按计划调用房间、档案、健康、告警、照护安排和主动关怀推荐工具；计划与执行轨迹分开返回。
 - 支持会话上下文：先选择/提到一位老人后，可以继续问“那她近期有什么照护安排？”。
 - 每轮重新校验当前医护与目标老人的负责关系，显式访问未分配老人直接返回 403，会话记忆不能绕过权限。
 - 回答同时返回 Tool Trace、数据来源和推荐追问，便于前端解释“查了什么、答案来自哪里”。
@@ -78,6 +80,18 @@
 - `docs/MEDICAL_AI_ASSISTANT.md`
 
 详细架构、API、模型开关、隐私边界和 Tool 扩展方式见 [`docs/MEDICAL_AI_ASSISTANT.md`](docs/MEDICAL_AI_ASSISTANT.md)。
+
+## 主动关怀推荐闭环
+
+推荐中心使用脱敏的通用关怀内容和现有业务信号完成一条可演示闭环，不连接任何内部生产接口，也不生成诊断、处方或用药建议。
+
+- B 端可按老人预览 Top 3 推荐并执行站内投放，同一老人、家属和内容按天去重。
+- 排序综合内容基础分、近 7 天健康记录、未闭环告警、待执行服务以及家属历史反馈，并优先保证类别多样性。
+- C 端家属只能查看关联老人的已投放内容，可提交“有用”“不感兴趣”或点击反馈。
+- “有用”会提升相同内容和同类内容的后续分数；“不感兴趣”会隐藏该内容并降低同类内容偏好。
+- 医护 Agent 的 `recommendation_preview` Tool 只读取可解释推荐，不会绕过人工审核自动投放。
+
+数据库脚本、API 与评分规则见 [`docs/RECOMMENDATION_CENTER.md`](docs/RECOMMENDATION_CENTER.md)。
 
 ## 告警任务流与工单化方向
 
@@ -133,7 +147,8 @@
 | 实时会话 | WebSocket/STOMP、消息落库、历史分页、Redis 未读数 |
 | 工单与任务流 | 告警任务分配、接单、处理、关闭校验、个人任务列表 |
 | 多角色协作 | 管理员、医护、家属的接口和页面隔离 |
-| Agent / Tool Use | 医护 AI 助手按问题组合房间、健康、告警、照护安排等只读 Tool，并暴露 Tool Trace 与数据来源 |
+| Agent / Tool Use | 医护 AI 助手通过 Planner + Tool Registry 组合房间、档案、健康、告警、照护安排和推荐预览等只读 Tool，并暴露计划、Tool Trace 与数据来源 |
+| 推荐闭环 | 规则召回与排序、B 端投放、C 端反馈、反馈影响下一轮推荐 |
 | Agent 安全边界 | 医护-老人权限复核、会话上下文隔离、医疗决策拦截、外部模型默认关闭与失败降级 |
 
 ## 技术栈
@@ -173,7 +188,7 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 医护 AI 助手聚焦测试：
 
 ```powershell
-.\mvnw.cmd '-Dtest=MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest' test
+.\mvnw.cmd '-Dtest=MedicalAiPlannerTest,MedicalAiAssistantServiceImplTest,MedicalAiAssistantControllerTest,RecommendationServiceImplTest' test
 ```
 
 对应 GitHub Actions 工作流还会执行 `medical-ai-assistant.js` 语法检查。

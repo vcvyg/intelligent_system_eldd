@@ -123,6 +123,7 @@ class MedicalAiAssistantServiceImplTest {
         assertTrue(hasTool(answer, "room_lookup"));
         assertTrue(hasTool(answer, "health_recent"));
         assertTrue(hasTool(answer, "alerts_recent"));
+        assertFalse(answer.getPlan().contains("patient_access"));
     }
 
     @Test
@@ -160,10 +161,10 @@ class MedicalAiAssistantServiceImplTest {
                 request(ELDERLY_ID, null, "现在适合给王阿姨推荐什么关怀内容？")
         );
 
-        assertEquals(List.of("recommendation_preview"), answer.getPlan());
         assertTrue(hasTool(answer, "recommendation_preview"));
         assertTrue(answer.getAnswer().contains("健康测量提醒"));
         assertTrue(answer.getAnswer().contains("不会由 AI 自动向家属投放"));
+        assertEquals(List.of("recommendation_preview"), answer.getPlan());
     }
 
     @Test

@@ -38,6 +38,7 @@ Plan: room_lookup → health_recent → alerts_recent
 
 - `traceId`：本轮执行标识，便于演示和后续日志/指标关联；
 - `plan`：本轮计划涉及的业务 Tool；
+- `planReason`：Planner 选择这些 Tool 的原因，或说明为什么没有执行 Tool；
 - `tools`：实际执行轨迹和状态；
 - `elapsedMs`：本轮后端总耗时；
 - `sources`：答案使用的数据来源。
@@ -54,6 +55,7 @@ Plan: room_lookup → health_recent → alerts_recent
 | `health_recent` | `health_data` | 汇总近 7 天健康指标与最新记录 |
 | `alerts_recent` | 告警记录 | 查询最近告警和未闭环告警数量 |
 | `care_schedule` | 近期健康巡查 + 服务记录 | 组合“近期照护安排” |
+| `recommendation_preview` | 主动关怀内容池 + 健康/告警/服务信号 | 查询可解释 Top 3 推荐，只预览不自动投放 |
 | `medical_safety_guard` | 安全规则 | 拦截诊断、处方、换药、剂量调整等请求 |
 | `llm_polish` | 可选模型 | 仅对已查询事实做语言组织，不负责产生业务事实 |
 
@@ -103,6 +105,7 @@ AI：……
 - 查询告警；
 - 查询房间和业务档案；
 - 汇总近期服务安排。
+- 查询当前适合的主动关怀推荐。
 
 助手不会：
 
@@ -173,6 +176,7 @@ Content-Type: application/json
 
 - `traceId`：本轮 Agent Trace 标识；
 - `plan`：计划执行的业务 Tool；
+- `planReason`：本轮规划原因；
 - `answer`：最终回答；
 - `tools`：实际执行过的工具和状态；
 - `sources`：数据来源；
@@ -217,9 +221,9 @@ medical-dashboard.html
 推荐保持“只读查询 Tool 优先”的扩展顺序：
 
 1. 明确数据权限和真实数据源；
-2. 在 Service 中增加独立查询方法；
-3. 为问题路由增加对应意图；
-4. 把计划 Tool 写入 Plan，把执行结果写入 `ToolTrace` 和 `sources`；
+2. 实现 `MedicalAiTool` 并注册为 Spring Bean；
+3. 在 `MedicalAiPlanner` 中增加对应语义和 Tool 名称；
+4. Planner 自动把 Tool 写入 Plan，Agent 从 Registry 执行并把结果写入 `ToolTrace` 和 `sources`；
 5. 增加至少一个成功测试和一个权限/空数据边界测试；
 6. 再决定是否允许模型对结果做语言整理。
 
@@ -233,9 +237,9 @@ medical-dashboard.html
 
 如果未来增加“修改服务状态、创建记录、处理告警”等写 Tool，应额外加入人工确认、幂等、操作审计和可回滚边界，不建议直接复用当前只读查询策略。
 
-### 下一阶段结构优化
+### 当前执行结构
 
-当前业务逻辑已经能稳定运行。若继续扩展 Tool 数量，下一步再把现有服务明确拆成：
+当前业务逻辑已经按以下结构运行：
 
 ```text
 Planner / Router
@@ -247,7 +251,7 @@ Fact Synthesizer
 Optional LLM Rewriter + Grounding Gate
 ```
 
-不建议为了“类更多”提前拆分；当 Tool 数量继续增长时再进行这一层重构，收益更高。
+Planner 只决定只读业务 Tool，权限校验、安全拦截和可选模型润色不会混入业务 Plan；实际执行顺序和状态单独记录在 Tool Trace 中。
 
 ## 10. 验证
 

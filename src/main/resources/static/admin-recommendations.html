@@ -27,9 +27,9 @@
       <a class="recommend-back" href="admin-dashboard.html">← 返回管理仪表盘</a>
       <section class="recommend-hero">
         <div>
-          <h2>推荐预览与站内投放</h2>
-          <p>基于健康记录、未闭环告警、生活服务和家属反馈进行可解释排序。当前仅模拟站内投放，不连接真实 Push。</p>
-          <div class="recommend-flow"><span>业务信号</span>→<span>规则评分</span>→<span>类别打散</span>→<span>Top 3</span>→<span>家属反馈</span></div>
+          <h2>事件触发 · 人工复核 · 站内投放</h2>
+          <p>告警等业务变化先进入关怀复核队列，再结合健康记录、未闭环告警、生活服务和家属反馈生成可解释推荐。AI 不绕过人工确认自动投放。</p>
+          <div class="recommend-flow"><span>业务事件</span>→<span>复核队列</span>→<span>规则评分</span>→<span>Top 3</span>→<span>人工投放</span>→<span>家属反馈</span></div>
         </div>
         <div class="recommend-toolbar">
           <select id="elderlySelect" class="recommend-select"><option value="">选择老人</option></select>
@@ -40,8 +40,14 @@
       <div id="statusBar" class="recommend-status"></div>
       <section class="recommend-info">
         <div class="recommend-info-card"><small>当前老人</small><strong id="selectedName">未选择</strong></div>
+        <div class="recommend-info-card"><small>待复核事件</small><strong id="pendingTriggerCount">0</strong></div>
         <div class="recommend-info-card"><small>推荐策略</small><strong>可解释规则 + 反馈学习</strong></div>
         <div class="recommend-info-card"><small>投放通道</small><strong>站内 IN_APP</strong></div>
+      </section>
+      <section class="recommend-trigger-panel">
+        <h3>主动关怀触发队列</h3>
+        <p>业务事件只触发“需要复核”的信号，不携带告警正文或健康测量值。</p>
+        <div id="triggerFeed" class="recommend-feed"><div class="recommend-empty">选择老人后查看待复核事件。</div></div>
       </section>
       <section id="recommendationFeed" class="recommend-feed"><div class="recommend-empty">选择老人后预览推荐。</div></section>
     </div>

@@ -23,9 +23,9 @@
         ↓
 解析当前老人 + 医护负责关系校验
         ↓
-room_lookup
-health_recent
-alerts_recent
+Plan: room_lookup → health_recent → alerts_recent
+        ↓
+执行 Tool 并收集事实
         ↓
 汇总工具事实
         ↓
@@ -33,6 +33,16 @@ alerts_recent
 ```
 
 关键区别在于：回答不是直接由模型凭上下文生成，而是由系统工具产生事实。模型层（如果显式开启）只允许对已经得到的事实做语言整理。
+
+每轮回答还会返回：
+
+- `traceId`：本轮执行标识，便于演示和后续日志/指标关联；
+- `plan`：本轮计划涉及的业务 Tool；
+- `tools`：实际执行轨迹和状态；
+- `elapsedMs`：本轮后端总耗时；
+- `sources`：答案使用的数据来源。
+
+因此页面可以直接展示“计划 → 执行 → 来源 → 最终回答”，而不是只展示一段无法解释来源的 AI 文本。
 
 ## 3. 当前工具
 
@@ -115,6 +125,7 @@ medical.ai.enabled=true
 medical.ai.base-url=http://127.0.0.1:8000/v1
 medical.ai.model=your-model
 medical.ai.api-key=${MEDICAL_AI_API_KEY:}
+medical.ai.timeout-ms=5000
 ```
 
 模型调用只发生在：
@@ -123,7 +134,17 @@ medical.ai.api-key=${MEDICAL_AI_API_KEY:}
 - 已经查询到明确数据来源；
 - 当前回答没有被医疗安全规则拦截。
 
-模型失败时会直接回退到确定性的工具事实回答。
+### Grounding Gate
+
+模型返回文本不会直接成为最终答案，还必须经过本地 grounding gate：
+
+1. 模型新增的数字必须已经存在于原始 Tool 事实中；
+2. 输出中不得出现诊断、处方、停药/换药、剂量调整、治疗方案等决策措辞；
+3. 输出长度必须处于合理范围；
+4. 任一校验失败时直接丢弃模型结果，回退到确定性的 Tool 事实回答；
+5. 模型调用本身有超时边界，调用失败同样自动降级。
+
+因此“LLM 只做润色”不仅依赖 Prompt，也有代码层的输出约束。
 
 **生产环境中不要把真实医疗数据发送给未经批准的外部模型。** 推荐优先接入内部合规模型或在明确的数据治理策略下使用模型服务。
 
@@ -150,9 +171,12 @@ Content-Type: application/json
 
 返回包含：
 
+- `traceId`：本轮 Agent Trace 标识；
+- `plan`：计划执行的业务 Tool；
 - `answer`：最终回答；
-- `tools`：执行过的工具和状态；
+- `tools`：实际执行过的工具和状态；
 - `sources`：数据来源；
+- `elapsedMs`：本轮后端总耗时；
 - `suggestions`：推荐追问；
 - `safetyNote`：医疗边界提示；
 - `modelEnhanced`：是否使用了可选模型润色。
@@ -178,8 +202,11 @@ medical-dashboard.html
 - 当前负责老人列表；
 - 当前会话老人上下文；
 - 多轮对话；
+- Agent Plan；
 - Tool Trace；
 - 数据来源；
+- 短 Trace ID 与执行耗时；
+- 事实工具模式 / 模型润色状态；
 - 安全提示；
 - 推荐追问。
 
@@ -192,7 +219,7 @@ medical-dashboard.html
 1. 明确数据权限和真实数据源；
 2. 在 Service 中增加独立查询方法；
 3. 为问题路由增加对应意图；
-4. 把执行结果写入 `ToolTrace` 和 `sources`；
+4. 把计划 Tool 写入 Plan，把执行结果写入 `ToolTrace` 和 `sources`；
 5. 增加至少一个成功测试和一个权限/空数据边界测试；
 6. 再决定是否允许模型对结果做语言整理。
 
@@ -206,16 +233,34 @@ medical-dashboard.html
 
 如果未来增加“修改服务状态、创建记录、处理告警”等写 Tool，应额外加入人工确认、幂等、操作审计和可回滚边界，不建议直接复用当前只读查询策略。
 
-## 10. 验证
+### 下一阶段结构优化
 
-GitHub Actions 工作流：
+当前业务逻辑已经能稳定运行。若继续扩展 Tool 数量，下一步再把现有服务明确拆成：
 
 ```text
-.github/workflows/medical-ai-assistant-ci.yml
+Planner / Router
+      ↓
+Tool Executor / Registry
+      ↓
+Fact Synthesizer
+      ↓
+Optional LLM Rewriter + Grounding Gate
 ```
 
-当前聚焦验证：
+不建议为了“类更多”提前拆分；当 Tool 数量继续增长时再进行这一层重构，收益更高。
 
+## 10. 验证
+
+主分支统一使用：
+
+```text
+.github/workflows/core-ci.yml
+```
+
+当前 CI 包含：
+
+- tracked secret / 本地运行时文件 guard；
+- 全项目 Maven 编译；
 - 多工具组合查询；
 - 会话上下文追问；
 - 会话 reset；
@@ -223,5 +268,10 @@ GitHub Actions 工作流：
 - 越权老人访问拦截；
 - 诊断/用药请求安全拦截；
 - 安全拦截时禁止调用外部模型；
-- 安全工具事实允许可选语言润色；
-- 前端 JavaScript 语法检查。
+- LLM 新增数字事实拦截；
+- LLM 医疗决策措辞拦截；
+- Agent plan / trace 元数据；
+- 文件上传白名单与群组权限；
+- 下载路径穿越防护；
+- 原有聊天与告警重点回归测试；
+- 医护 AI 前端 JavaScript 语法检查。

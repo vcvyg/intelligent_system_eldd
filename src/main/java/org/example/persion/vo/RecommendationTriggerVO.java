@@ -11,6 +11,10 @@ public record RecommendationTriggerVO(
         String signalType,
         String signalLabel,
         String status,
-        LocalDateTime triggerTime
+        LocalDateTime triggerTime,
+        Long reviewerId,
+        LocalDateTime reviewedAt,
+        String decisionReason,
+        LocalDateTime deliveredAt
 ) {
 }

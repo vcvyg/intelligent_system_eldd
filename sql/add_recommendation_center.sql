@@ -63,6 +63,27 @@ BEGIN
 END;
 GO
 
+IF OBJECT_ID('dbo.recommendation_trigger', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.recommendation_trigger (
+        id BIGINT IDENTITY(1,1) PRIMARY KEY,
+        elderly_id BIGINT NOT NULL,
+        signal_type NVARCHAR(64) NOT NULL,
+        reference_id BIGINT NULL,
+        status NVARCHAR(32) NOT NULL DEFAULT 'PENDING_REVIEW',
+        trigger_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        create_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        update_time DATETIME2 NOT NULL DEFAULT SYSDATETIME(),
+        deleted INT NOT NULL DEFAULT 0
+    );
+    CREATE INDEX idx_recommend_trigger_status_elderly
+        ON dbo.recommendation_trigger(status, elderly_id, trigger_time DESC);
+    CREATE UNIQUE INDEX uk_recommend_trigger_reference
+        ON dbo.recommendation_trigger(elderly_id, signal_type, reference_id)
+        WHERE reference_id IS NOT NULL AND deleted = 0;
+END;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM dbo.recommendation_content WHERE code = 'HEALTH_CHECK_REMINDER')
     INSERT INTO dbo.recommendation_content
         (code, title, summary, category, base_score, action_label, action_url, enabled)

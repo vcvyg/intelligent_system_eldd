@@ -89,8 +89,19 @@ public class MedicalAiPlanner {
         if (contains(q, "护理计划", "照护计划", "护理安排", "照护安排", "近期安排", "服务安排", "护理", "照护", "服务", "巡查", "巡诊", "care", "plan")) {
             tools.add("care_schedule");
         }
-        if (contains(q, "推荐", "主动关怀", "适合推", "推什么", "关怀内容", "关怀", "recommend")) {
+
+        boolean asksRecommendationPerformance = contains(q,
+                "推荐效果", "投放效果", "推荐表现", "投放表现", "点击率", "反馈率", "不感兴趣",
+                "用户反馈", "家属反馈", "推荐策略", "投放策略", "策略优化", "哪类内容", "performance");
+        boolean asksRecommendationPreview = contains(q,
+                "适合推", "推什么", "推荐什么", "关怀内容", "主动关怀", "recommend")
+                || (!asksRecommendationPerformance && contains(q, "推荐"));
+
+        if (asksRecommendationPreview) {
             tools.add("recommendation_preview");
+        }
+        if (asksRecommendationPerformance) {
+            tools.add("recommendation_performance");
         }
 
         if (contains(q, "最近怎么样", "近期情况", "整体情况", "概况", "综合看一下")) {

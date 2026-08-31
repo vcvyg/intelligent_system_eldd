@@ -6,6 +6,7 @@ import org.example.persion.common.exception.BusinessException;
 import org.example.persion.service.RecommendationService;
 import org.example.persion.service.RecommendationTriggerService;
 import org.example.persion.vo.RecommendationItemVO;
+import org.example.persion.vo.RecommendationPerformanceVO;
 import org.example.persion.vo.RecommendationTriggerVO;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,6 +33,14 @@ public class AdminRecommendationController {
             @PathVariable Long elderlyId,
             @RequestParam(required = false) Long familyUserId) {
         return Result.success(recommendationService.preview(elderlyId, familyUserId));
+    }
+
+    @GetMapping("/performance/{elderlyId}")
+    public Result<RecommendationPerformanceVO> performance(
+            @PathVariable Long elderlyId,
+            @RequestParam(required = false) Long familyUserId,
+            @RequestParam(defaultValue = "30") int days) {
+        return Result.success(recommendationService.performance(elderlyId, familyUserId, days));
     }
 
     @GetMapping("/triggers")

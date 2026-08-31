@@ -24,6 +24,24 @@ class MedicalAiPlannerTest {
     }
 
     @Test
+    void routesRecommendationEffectQuestionToPerformanceTool() {
+        MedicalAiPlan plan = planner.plan("王阿姨最近推荐投放效果怎么样，哪类内容反馈更好？");
+
+        assertEquals(List.of("recommendation_performance"), plan.toolNames());
+        assertTrue(plan.reason().contains("recommendation_performance"));
+    }
+
+    @Test
+    void canPlanPreviewAndPerformanceTogetherWhenQuestionContainsBothGoals() {
+        MedicalAiPlan plan = planner.plan("现在适合推什么，同时看一下最近投放效果和家属反馈");
+
+        assertEquals(
+                List.of("recommendation_preview", "recommendation_performance"),
+                plan.toolNames()
+        );
+    }
+
+    @Test
     void preservesProfileAndCareRoutingPreviouslyOwnedByService() {
         MedicalAiPlan plan = planner.plan("王阿姨的病史和过敏情况，以及近期护理安排？");
 

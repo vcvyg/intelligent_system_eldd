@@ -16,7 +16,8 @@ public final class MedicalAiToolPolicy {
             "health_recent",
             "alerts_recent",
             "care_schedule",
-            "recommendation_preview"
+            "recommendation_preview",
+            "recommendation_performance"
     );
 
     private static final Set<String> ALLOWED = Set.copyOf(READ_ONLY_TOOLS);

@@ -22,6 +22,7 @@ import org.example.persion.repository.RecommendationFeedbackMapper;
 import org.example.persion.service.RecommendationService;
 import org.example.persion.vo.AlertRecordVO;
 import org.example.persion.vo.RecommendationItemVO;
+import org.example.persion.vo.RecommendationPerformanceVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +57,74 @@ public class RecommendationServiceImpl implements RecommendationService {
     public List<RecommendationItemVO> preview(Long elderlyId, Long familyUserId) {
         requireElderly(elderlyId);
         return rank(elderlyId, familyUserId);
+    }
+
+    @Override
+    public RecommendationPerformanceVO performance(Long elderlyId, Long familyUserId, int windowDays) {
+        requireElderly(elderlyId);
+        int boundedDays = Math.max(7, Math.min(windowDays <= 0 ? 30 : windowDays, 90));
+        LocalDateTime since = LocalDateTime.now().minusDays(boundedDays);
+
+        LambdaQueryWrapper<RecommendationDelivery> deliveryQuery = new LambdaQueryWrapper<RecommendationDelivery>()
+                .eq(RecommendationDelivery::getElderlyId, elderlyId)
+                .ge(RecommendationDelivery::getCreateTime, since)
+                .orderByDesc(RecommendationDelivery::getCreateTime);
+        if (familyUserId != null) {
+            deliveryQuery.eq(RecommendationDelivery::getFamilyUserId, familyUserId);
+        }
+
+        List<RecommendationDelivery> deliveries = deliveryMapper.selectList(deliveryQuery);
+        deliveries = deliveries == null ? List.of() : deliveries;
+
+        Set<Long> contentIds = deliveries.stream()
+                .map(RecommendationDelivery::getContentId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        Map<Long, RecommendationContent> contentById = new HashMap<>();
+        if (!contentIds.isEmpty()) {
+            List<RecommendationContent> contents = contentMapper.selectBatchIds(contentIds);
+            if (contents != null) {
+                for (RecommendationContent content : contents) {
+                    if (content != null && content.getId() != null) {
+                        contentById.put(content.getId(), content);
+                    }
+                }
+            }
+        }
+
+        PerformanceBucket total = new PerformanceBucket("ALL");
+        Map<String, PerformanceBucket> byCategory = new LinkedHashMap<>();
+        for (RecommendationDelivery delivery : deliveries) {
+            total.accept(delivery);
+            RecommendationContent content = contentById.get(delivery.getContentId());
+            String category = content == null || content.getCategory() == null || content.getCategory().isBlank()
+                    ? "UNKNOWN"
+                    : content.getCategory();
+            byCategory.computeIfAbsent(category, PerformanceBucket::new).accept(delivery);
+        }
+
+        List<RecommendationPerformanceVO.CategoryPerformance> categories = byCategory.values().stream()
+                .map(PerformanceBucket::toView)
+                .sorted(Comparator
+                        .comparingInt(RecommendationPerformanceVO.CategoryPerformance::deliveryCount)
+                        .reversed()
+                        .thenComparing(RecommendationPerformanceVO.CategoryPerformance::category))
+                .toList();
+
+        RecommendationPerformanceVO.CategoryPerformance totalView = total.toView();
+        List<String> suggestions = buildStrategySuggestions(totalView, categories);
+        return new RecommendationPerformanceVO(
+                boundedDays,
+                totalView.deliveryCount(),
+                totalView.clickCount(),
+                totalView.usefulCount(),
+                totalView.notInterestedCount(),
+                totalView.clickThroughRate(),
+                totalView.usefulRate(),
+                totalView.negativeRate(),
+                categories,
+                suggestions
+        );
     }
 
     @Override
@@ -267,6 +337,46 @@ public class RecommendationServiceImpl implements RecommendationService {
         return diversify(scored, TOP_K);
     }
 
+    private List<String> buildStrategySuggestions(
+            RecommendationPerformanceVO.CategoryPerformance total,
+            List<RecommendationPerformanceVO.CategoryPerformance> categories) {
+        List<String> suggestions = new ArrayList<>();
+        if (total.deliveryCount() < 5) {
+            suggestions.add("当前样本较少，先保持人工复核与频控，积累更多投放反馈后再调整策略");
+        } else {
+            if (total.clickThroughRate() < 0.20) {
+                suggestions.add("整体点击反馈偏低，可优先优化内容标题、行动入口与投放时机");
+            }
+            if (total.negativeRate() >= 0.25) {
+                suggestions.add("不感兴趣反馈偏高，建议降低重复触达并扩大内容类别多样性");
+            }
+        }
+
+        RecommendationPerformanceVO.CategoryPerformance best = categories.stream()
+                .filter(item -> item.deliveryCount() >= 2)
+                .max(Comparator
+                        .comparingDouble(RecommendationPerformanceVO.CategoryPerformance::usefulRate)
+                        .thenComparingDouble(RecommendationPerformanceVO.CategoryPerformance::clickThroughRate))
+                .orElse(null);
+        if (best != null && (best.usefulRate() > 0 || best.clickThroughRate() > 0)) {
+            suggestions.add("类别 " + best.category() + " 的正向反馈相对更好，可作为下一轮候选策略的优先参考");
+        }
+
+        RecommendationPerformanceVO.CategoryPerformance worst = categories.stream()
+                .filter(item -> item.deliveryCount() >= 2)
+                .max(Comparator.comparingDouble(RecommendationPerformanceVO.CategoryPerformance::negativeRate))
+                .orElse(null);
+        if (worst != null && worst.negativeRate() >= 0.25
+                && (best == null || !worst.category().equals(best.category()))) {
+            suggestions.add("类别 " + worst.category() + " 的负反馈偏高，建议降权或减少连续投放");
+        }
+
+        if (suggestions.isEmpty()) {
+            suggestions.add("当前整体反馈稳定，继续保持类别打散、按日幂等和人工复核，并观察后续趋势");
+        }
+        return suggestions;
+    }
+
     private List<RecommendationItemVO> diversify(List<RecommendationItemVO> scored, int limit) {
         LinkedHashMap<String, RecommendationItemVO> firstByCategory = new LinkedHashMap<>();
         for (RecommendationItemVO item : scored) {
@@ -327,5 +437,48 @@ public class RecommendationServiceImpl implements RecommendationService {
         String status = alert.getStatus();
         if (status == null) return true;
         return !(status.contains("已处理") || status.contains("已关闭") || status.contains("已忽略") || status.equalsIgnoreCase("CLOSED"));
+    }
+
+    private static double rate(int numerator, int denominator) {
+        if (denominator <= 0 || numerator <= 0) return 0.0;
+        return Math.round((numerator * 1.0 / denominator) * 1000.0) / 1000.0;
+    }
+
+    private static final class PerformanceBucket {
+        private final String category;
+        private int deliveryCount;
+        private int clickCount;
+        private int usefulCount;
+        private int notInterestedCount;
+
+        private PerformanceBucket(String category) {
+            this.category = category;
+        }
+
+        private void accept(RecommendationDelivery delivery) {
+            deliveryCount++;
+            if (delivery.getClickedAt() != null || "CLICKED".equalsIgnoreCase(delivery.getStatus())) {
+                clickCount++;
+            }
+            if ("USEFUL".equalsIgnoreCase(delivery.getStatus())) {
+                usefulCount++;
+            }
+            if ("NOT_INTERESTED".equalsIgnoreCase(delivery.getStatus())) {
+                notInterestedCount++;
+            }
+        }
+
+        private RecommendationPerformanceVO.CategoryPerformance toView() {
+            return new RecommendationPerformanceVO.CategoryPerformance(
+                    category,
+                    deliveryCount,
+                    clickCount,
+                    usefulCount,
+                    notInterestedCount,
+                    rate(clickCount, deliveryCount),
+                    rate(usefulCount, deliveryCount),
+                    rate(notInterestedCount, deliveryCount)
+            );
+        }
     }
 }
